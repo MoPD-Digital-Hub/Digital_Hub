@@ -10,16 +10,21 @@ from rest_framework.decorators import api_view, permission_classes
 @permission_classes([IsAuthenticated])
 def user(request):
     user = request.user
+
     if request.method == 'GET':
         serializer = UserSerializer(user)
-        serializer
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        data = serializer.data
+        return Response({"result" : "SUCCUSS", "message" : "SUCCUSS",  "data" : data}, status=status.HTTP_200_OK)
+    
     elif request.method == 'PUT':
         serializer = UserSerializer(user, data=request.data, partial=True)
+
         if serializer.is_valid():
           serializer.save()
-          return Response(data=serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+          data = serializer.data
+          return Response({"result" : "SUCCUSS", "message" : "SUCCUSS",  "data" : data},status=status.HTTP_200_OK)
+        
+        return Response({"result" : "FAILURE", "data" : None, "message" : serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
     
     
