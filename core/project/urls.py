@@ -11,7 +11,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/user/', include('userManagement.urls')),
     path('api-auth/', include('rest_framework.urls')),
+    path('api/ai-chat/', include('AI.urls')),
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('comment/', include('comment.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
