@@ -31,8 +31,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'userManagement',
     'corsheaders',
-    'comment.apps.CommentConfig',
-    'Post'
+    'Post',
+    'AI',
 ]
 
 
