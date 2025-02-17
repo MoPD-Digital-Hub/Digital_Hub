@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-n-h_z%7ad5nqro^ehv$ak)*d-hbom6y)p+xnn6#prqu^i__*_)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -30,7 +30,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'userManagement',
-    'corsheaders'
+    'corsheaders',
+    'comment.apps.CommentConfig',
+    'Post'
 ]
 
 
