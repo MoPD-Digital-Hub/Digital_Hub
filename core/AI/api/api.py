@@ -53,7 +53,7 @@ def get_answer(request, chat_id):
             none_instances = ChatInstance.objects.filter(title=None)
             none_instances.delete()
 
-            context_docs = retriever.get_relevant_documents(question)
+            context_docs = retriever.invoke(question)
             formatted_context = format_docs(context_docs)
 
 
