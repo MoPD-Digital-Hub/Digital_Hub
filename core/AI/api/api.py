@@ -23,6 +23,7 @@ def get_chat_history(instance):
         conversation_list.append(AIMessage(content=record.response))
     return conversation_list
 
+
 @api_view(['POST', 'GET'])
 @permission_classes([IsAuthenticated])
 def get_answer(request, chat_id):
@@ -121,32 +122,44 @@ def get_answer(request, chat_id):
         return Response({"result" : "FAILURE", "data" : None, "message" : "No Question Provided!"}, status=status.HTTP_400_BAD_REQUEST)
     
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_chat_list(request, chat_instance_id):
+    """
+    Get all the chat history of a particular chat instance
+    """
+    try:
+        chat_instances = ChatInstance.objects.get(id = chat_instance_id)
+    except ChatInstance.DoesNotExist:
+        return Response({"result" : "FAILURE", "data" : None, "message" : "Instance doesn't exist!"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if request.method == 'GET':
+        histories = QuestionHistory.objects.filter(instance = chat_instances)
+        histories_serializer = QuestionHistorySerializer(histories, many=True)
+        return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : histories_serializer.data,}, status=status.HTTP_200_OK)
+
 
 @api_view(['POST', 'GET'])
 @permission_classes([IsAuthenticated])
-def chat(request, chat_id):
+def chat(request):
+    """
+    Create a new chat instance or get all chat instances
+    """
     chat_instances = ChatInstance.objects.filter(user=request.user)
     global is_new
     seriliazer = ChatInstanceSerializer(chat_instances, many=True)
 
     if request.method == 'GET':
-        return Response(seriliazer.data, status=status.HTTP_200_OK)
+        return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : seriliazer.data,}, status=status.HTTP_200_OK)
     
     elif request.method == 'POST':
-        if chat_id == 0:
-            instance = ChatInstance()
-            instance.user = request.user
-            instance.save()
-            is_new = True
-        else:
-            try:
-                instance = ChatInstance.objects.get(id=chat_id)
-            except ChatInstance.DoesNotExist:
-                return Response({"result" : "FAILURE", "data" : None, "message" : "Page not found!"}, status=status.HTTP_400_BAD_REQUEST)
+        instance = ChatInstance()
+        instance.user = request.user
+        instance.save()
+        is_new = True
             
-        histories = QuestionHistory.objects.filter(instance = instance)
-        histories_serializer = QuestionHistorySerializer(histories, many=True)
-        return Response(histories_serializer.data, status=status.HTTP_200_OK)
+        chat_serializer = ChatInstanceSerializer(instance)
+        return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : chat_serializer.data,}, status=status.HTTP_200_OK)
         
     
     return Response({"result" : "FAILURE", "data" : None, "message" : "Page not found!"}, status=status.HTTP_400_BAD_REQUEST)
