@@ -13,6 +13,7 @@ urlpatterns = [
     path('api/user/', include('userManagement.urls')),
     path('api-auth/', include('rest_framework.urls')),
     path('api/ai-chat/', include('AI.urls')),
+    path('api/video/', include('Videos.urls')),
     path('api/auth/token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,6 +1,5 @@
 from AI.doc_init_ai import  retriever, format_docs,  llm, chain
 from AI.models import QuestionHistory, ChatInstance
-from django.shortcuts import render, HttpResponse
 from .serializer import ChatInstanceSerializer, QuestionHistorySerializer
 from rest_framework.response import Response
 from rest_framework import status
