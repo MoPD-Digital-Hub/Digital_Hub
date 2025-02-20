@@ -9,7 +9,7 @@ from userManagement.api.serializer import EmailSerializer
 import datetime
 from datetime import timedelta
 from userManagement.models import CustomUser
-
+from .services.email import send_email
 
 
 
@@ -52,6 +52,9 @@ def reset_password(request):
         user.token = secret_token
         user.tokenExpiration = expire_date
         user.save()
+        
+        send_email()
+        print("email sent")
         return Response({"result" : "SUCCESS", "message" : "EMAIL_SENT"}, status=status.HTTP_200_OK)
 
         
