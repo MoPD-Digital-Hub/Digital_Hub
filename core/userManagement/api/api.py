@@ -18,3 +18,4 @@ class CustomTokenRefreshView(TokenRefreshView):
             "Message": "TOKEN_REFRESHED",
             "data": response.data
         })
+
