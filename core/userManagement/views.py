@@ -44,7 +44,7 @@ def reset_password(request):
         except CustomUser.DoesNotExist: 
             return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND"}, status=status.HTTP_400_BAD_REQUEST)
         
-        secret_token = secrets.token_hex(20)
+        secret_token = str(secrets.randbelow(10**6)).zfill(6)
         
         now = datetime.datetime.now()
         expire_date = now + timedelta(minutes=20)
@@ -52,9 +52,8 @@ def reset_password(request):
         user.token = secret_token
         user.tokenExpiration = expire_date
         user.save()
+        print(secret_token)
         
-        send_email()
-        print("email sent")
         return Response({"result" : "SUCCESS", "message" : "EMAIL_SENT"}, status=status.HTTP_200_OK)
 
         
