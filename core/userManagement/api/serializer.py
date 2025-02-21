@@ -14,6 +14,15 @@ class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField()
+
+
+class ValidateOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.IntegerField()
+
 class PasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     token = serializers.CharField()
