@@ -1,18 +1,111 @@
 import secrets
-from django.shortcuts import render
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework import status
 from userManagement.api.serializer import UserSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from userManagement.api.serializer import EmailSerializer, PasswordSerializer
-import datetime
 from datetime import timedelta
 from django.utils import timezone
 from userManagement.models import CustomUser
 from .services.email import send_email
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth import authenticate
+from .api.serializer import LoginSerializer, ValidateOTPSerializer
+import random
 
+
+@api_view(['POST'])
+def generate_login_opt(request):
+
+    if request.method == 'POST':
+        serializer = LoginSerializer(data = request.data)
+
+        if serializer.is_valid():
+            user = authenticate(email=serializer.data['email'], password=serializer.data['password'])
+
+            if user is not None:
+                # Generate 6-digit OTP
+                otp = random.randint(100000, 999999)
+                
+                now = timezone.now()
+                expire_date = now + timedelta(minutes=20)
+
+                user.token = otp
+                user.tokenExpiration = expire_date
+                user.save()
+
+                ## send email
+                send_email(user.email, otp)
+
+                return Response({
+                    "result": "SUCCESS",
+                    "message": "OTP_GENERATED",
+                    "data": None
+                }, status=status.HTTP_200_OK)
+            
+            else:
+                return Response({
+                    "result": "FAILURE",
+                    "message": "LOGIN_FAILED",
+                    "data": None
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            
+        else:
+            return Response({
+                "result": "FAILURE",
+                "message": "INVALID_INPUT",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({
+            "result": "FAILURE",
+            "message": "INVALID_METHOD",
+            "errors": None
+        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+@api_view(['POST'])
+def validate_login_opt(request):
+    serializer = ValidateOTPSerializer(data=request.data)
+
+    if serializer.is_valid():
+        try:
+            user = CustomUser.objects.get(email=serializer.data['email'])
+        except CustomUser.DoesNotExist:
+            return Response({
+                "result": "FAILURE",
+                "message": "USER_NOT_FOUND",
+                "data" : None
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validate token and expiration
+        otp = serializer.data['otp']
+ 
+        if str(user.token) != str(otp):
+            return Response({"result": "FAILURE", "message": "INVALID_OTP", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if timezone.now() > user.tokenExpiration:
+            return Response({"result": "FAILURE", "message": "OTP_EXPIRED", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if str(user.token) == str(otp) and user.tokenExpiration > timezone.now():
+            refresh = RefreshToken.for_user(user)
+            user.token = None
+            user.tokenExpiration = None
+            user.save()
+
+            return Response({
+            "result": "SUCCESS",
+            "message": "TOKEN_CREATED",
+            "data": {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token)
+            }
+        }, status=status.HTTP_200_OK)
+
+
+        return Response({"result" : "FAILURE", "message" : "INVALID_OTP", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({"result" : "FAILURE", "message" : "INVALID_INPUT", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET' , 'PUT'])
 @permission_classes([IsAuthenticated])
