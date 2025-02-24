@@ -9,7 +9,7 @@ from userManagement.api.serializer import EmailSerializer, PasswordSerializer
 from datetime import timedelta
 from django.utils import timezone
 from userManagement.models import CustomUser
-from .services.email import send_email
+from .tasks import send_email
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .api.serializer import LoginSerializer, ValidateOTPSerializer
@@ -37,7 +37,7 @@ def generate_login_opt(request):
                 user.save()
 
                 ## send email
-                send_email(user.email, otp)
+                send_email.delay(user.email, otp)
 
                 return Response({
                     "result": "SUCCESS",
