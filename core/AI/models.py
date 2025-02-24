@@ -2,7 +2,7 @@ from django.db import models
 from userManagement.models import CustomUser as User
 
 class Document(models.Model):
-    file = models.FileField()
+    file = models.FileField(upload_to='documents/')
     is_loaded = models.BooleanField(default=False)
 
 class LoadedFile(models.Model):
