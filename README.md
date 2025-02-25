@@ -77,6 +77,36 @@ poetry run python manage.py runserver
 
 Visit `http://localhost:8000/` in your browser.
 
+
+
+# Server Installation (Linux)
+
+1. **Install Celery**:
+   ```bash
+   pip install celery
+   ```
+
+2. **Install RabbitMQ**:
+   ```bash
+   sudo apt-get install rabbitmq-server
+   ```
+
+3. **Enable and start RabbitMQ**:
+   ```bash
+   sudo systemctl enable rabbitmq-server
+   sudo systemctl start rabbitmq-server
+   ```
+
+4. **Check RabbitMQ server status**:
+   ```bash
+   systemctl status rabbitmq-server
+   ```
+
+5. **Run Celery worker**:
+   ```bash
+   celery -A project worker -l info
+   ```
+
 ## 📦 Dependencies
 
 - Django `==4.2.6`
