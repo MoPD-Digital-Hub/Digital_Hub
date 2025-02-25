@@ -9,7 +9,7 @@ from userManagement.api.serializer import EmailSerializer, PasswordSerializer
 from datetime import timedelta
 from django.utils import timezone
 from userManagement.models import CustomUser
-from .tasks import send_email
+from .tasks.email_tasks import send_email
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .api.serializer import LoginSerializer, ValidateOTPSerializer
@@ -23,7 +23,7 @@ def generate_login_opt(request):
         serializer = LoginSerializer(data = request.data)
 
         if serializer.is_valid():
-            user = authenticate(email=serializer.data['email'], password=serializer.data['password'])
+            user = authenticate(email=serializer.data['email'].lower(), password=serializer.data['password'])
 
             if user is not None:
                 # Generate 6-digit OTP
@@ -135,7 +135,7 @@ def reset_password(request):
         serializer = EmailSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                user = CustomUser.objects.get(email=serializer.data['email'])
+                user = CustomUser.objects.get(email=serializer.data['email'].lower())
             except CustomUser.DoesNotExist: 
                 return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
             
