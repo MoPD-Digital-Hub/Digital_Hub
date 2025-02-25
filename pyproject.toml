@@ -3,7 +3,8 @@ name = "digital-hub"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Mikiyas Mebrate",email = "mikiyasmebrate@gmail.com"}
+    {name = "Mikiyas Degefu",email = "mikiyas.m.degefu@gmail.com"},
+    {name = "Kaleab Hegie",email = "benjiyg400@gmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
