@@ -18,7 +18,6 @@ import random
 
 @api_view(['POST'])
 def generate_login_opt(request):
-
     if request.method == 'POST':
         serializer = LoginSerializer(data = request.data)
 
