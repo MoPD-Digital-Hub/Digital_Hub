@@ -109,18 +109,19 @@ def validate_login_opt(request):
 @api_view(['GET' , 'PUT'])
 @permission_classes([IsAuthenticated])
 def user(request):
-    user = request.user
+    user_instance = request.user
 
     if request.method == 'GET':
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(user_instance)
         data = serializer.data
         return Response({"result" : "SUCCUSS", "message" : "SUCCUSS",  "data" : data}, status=status.HTTP_200_OK)
     
     elif request.method == 'PUT':
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer = UserSerializer(user_instance, data=request.data, partial=True)
 
         if serializer.is_valid():
           serializer.save()
+          
           data = serializer.data
           return Response({"result" : "SUCCUSS", "message" : "SUCCUSS",  "data" : data},status=status.HTTP_200_OK)
         
