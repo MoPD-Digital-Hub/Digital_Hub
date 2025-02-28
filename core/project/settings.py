@@ -23,6 +23,7 @@ APPEND_SLASH=False
 
 ALLOWED_HOSTS = ['*']
 
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
 
@@ -44,7 +45,6 @@ INSTALLED_APPS = [
 
 
 
-CORS_ALLOW_ALL_ORIGINS = True
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -55,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 
