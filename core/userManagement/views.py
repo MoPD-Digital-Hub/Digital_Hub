@@ -97,6 +97,7 @@ def validate_login_opt(request):
             "result": "SUCCESS",
             "message": "TOKEN_CREATED",
             "data": {
+                "user" : UserSerializer(user).data,
                 "refresh": str(refresh),
                 "access": str(refresh.access_token)
             }
