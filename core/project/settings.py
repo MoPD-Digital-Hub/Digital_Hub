@@ -139,7 +139,7 @@ testing_database = {
 
 server_database = {
     'ENGINE': 'django.db.backends.postgresql',
-    'NAME': 'postgres',
+    'NAME': os.getenv('DATABASE_NAME'),
     'USER': os.getenv('DATABASE_USER'),
     'PASSWORD': os.getenv('DATABASE_PASSWORD'),
     'HOST': os.getenv('DATABASE_HOST'),
