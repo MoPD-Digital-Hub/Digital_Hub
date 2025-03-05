@@ -10,6 +10,7 @@ import logging.handlers
 BASE_DIR = Path(__file__).resolve().parent.parent
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 
+
 load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -18,7 +19,7 @@ load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
 SECRET_KEY = 'django-insecure-n-h_z%7ad5nqro^ehv$ak)*d-hbom6y)p+xnn6#prqu^i__*_)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG') or False 
+DEBUG = os.getenv('DEBUG') == 'TRUE' or False 
 APPEND_SLASH=False
 
 ALLOWED_HOSTS = ['*']
@@ -147,7 +148,7 @@ server_database = {
 
 
 DATABASES = {
-    'default': testing_database if os.getenv('DATABASE_DEV') else server_database
+    'default': testing_database if os.getenv('DATABASE_DEV') == 'True' else server_database
 }
 
 
