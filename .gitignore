@@ -1,10 +1,15 @@
 # Created by https://www.toptal.com/developers/gitignore/api/django
 # Edit at https://www.toptal.com/developers/gitignore?templates=django
 
+##Server
+*.ini
+*/uwsgi_params
+
 ### Django ###
 *.log
 *.pot
 *.pyc
+*.sock
 __pycache__/
 local_settings.py
 core/db.sqlite3
