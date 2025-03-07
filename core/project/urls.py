@@ -22,4 +22,4 @@ urlpatterns = [
 
 
 if is_dev:
-    urlpatterns.append(path('api/ai-chat/', include('Videos.urls')))
+    urlpatterns+=[path('api/ai-chat/', include('AI.urls'))]
