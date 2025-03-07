@@ -2,11 +2,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-from userManagement.api.api import CustomTokenObtainPairView, CustomTokenRefreshView
+from dotenv import load_dotenv
+from userManagement.api.api import CustomTokenRefreshView
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
+is_dev = os.getenv('DEBUG') == 'True' or False 
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,3 +19,7 @@ urlpatterns = [
     path('api/video/', include('Videos.urls')),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+if is_dev:
+    urlpatterns.append(path('api/ai-chat/', include('Videos.urls')))

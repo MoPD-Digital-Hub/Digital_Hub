@@ -20,7 +20,6 @@ from .models import Document as doc
 from .models import LoadedFile
 
 doc_data = doc.objects.filter(is_loaded = False)
-
 all_docs = doc.objects.all().count()
 
 
@@ -55,7 +54,7 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 loaded_file = LoadedFile.objects.filter().first()
 # Load and process documents if vector store is empty
-if not os.path.exists(persist_directory) or vector_store._collection.count() == 0:
+if not os.path.exists(persist_directory) or doc_data.count() > 0:
     print("Loading and processing documents...")
 
     # Load PDF using PyMuPDFLoader
@@ -94,8 +93,6 @@ if not os.path.exists(persist_directory) or vector_store._collection.count() == 
     
     for doc_ii in doc_data:
         load_and_split_documents(doc_ii)
-
-
 else:
     print("Using persisted vector store.")
 
