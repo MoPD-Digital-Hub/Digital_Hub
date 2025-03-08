@@ -13,7 +13,7 @@ def video_api(request):
     """
     if request.method == 'GET':
         videos = Video.objects.all()
-        serializer = VideoSerializer(videos, many=True)
+        serializer = VideoSerializer(videos, many=True, context={'request': request})
         return Response({"result" : "SUCCESS", "message" : "Videos fetched successfully!", "data" : serializer.data}, status=status.HTTP_200_OK)
        
     
@@ -48,7 +48,7 @@ def comments_api(request, video_id):
     
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def like_video_api(request, video_id):
     """
