@@ -11,7 +11,6 @@ class VideoSerializer(serializers.ModelSerializer):
     
     def get_is_liked(self, obj):
         request = self.context.get('request')
-        print(request.user, "userrrrr")
         if request.user.is_authenticated:
             return obj.video_likes.filter(user=request.user).exists()
         return False
