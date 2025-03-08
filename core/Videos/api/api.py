@@ -82,9 +82,9 @@ def toggle_like(request, video_id):
         )
 
 
-@api_view(['POST'])
+@api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def like_comment_api(request, comment_id):
+def toogle_like_comment(request, comment_id):
     """
     Like / Unlike a comment.
     """
