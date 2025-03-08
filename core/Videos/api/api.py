@@ -50,7 +50,7 @@ def comments_api(request, video_id):
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
-def like_video_api(request, video_id):
+def toggle_like(request, video_id):
     """
     Like / Unlike a video.
     """
