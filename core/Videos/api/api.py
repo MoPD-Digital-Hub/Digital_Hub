@@ -24,7 +24,7 @@ def comments_api(request, video_id):
     Fetch all comments for a specific video.
     """
     if request.method == 'GET':
-        videos = VideoComment.objects.filter(video__id=video_id)
+        videos = VideoComment.objects.filter(video__id=video_id, replay__isnull=True)
         serializer = VideoCommentSerializer(videos, many=True)
         return Response({"result": "SUCCESS", "message": "Comments fetched successfully!", "data": serializer.data},status=status.HTTP_200_OK)
     elif request.method == 'POST':

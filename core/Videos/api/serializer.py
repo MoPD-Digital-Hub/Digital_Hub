@@ -15,9 +15,16 @@ class VideoSerializer(serializers.ModelSerializer):
             return obj.video_likes.filter(user=request.user).exists()
         return False
 class VideoCommentSerializer(serializers.ModelSerializer):
+    replies = serializers.SerializerMethodField()
+
     class Meta:
         model = VideoComment
-        fields = '__all__'
+        fields = ['id', 'comment', 'like', 'created_at', 'video', 'user', 'replay', 'replies']
+
+    def get_replies(self, obj):
+        replies = VideoComment.objects.filter(replay=obj)
+        return VideoCommentSerializer(replies, many=True).data
+
 
 
 class VideoLikeSerializer(serializers.ModelSerializer):
