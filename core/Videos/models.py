@@ -42,7 +42,7 @@ class VideoComment(models.Model):
     
     
 class VideoCommentLike(models.Model):
-    comment = models.ForeignKey(VideoComment, on_delete=models.CASCADE)
+    comment = models.ForeignKey(VideoComment, on_delete=models.CASCADE, related_name='comment_likes')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)  
 
