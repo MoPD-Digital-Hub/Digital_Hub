@@ -15,15 +15,24 @@ class VideoSerializer(serializers.ModelSerializer):
             return obj.video_likes.filter(user=request.user).exists()
         return False
 class VideoCommentSerializer(serializers.ModelSerializer):
+    is_liked = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
-
     class Meta:
         model = VideoComment
-        fields = ['id', 'comment', 'like', 'created_at', 'video', 'user', 'replay', 'replies']
+        fields = '__all__'
 
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if request.user.is_authenticated:
+            return obj.comment_likes.filter(user=request.user).exists()
+        return False
+    
     def get_replies(self, obj):
         replies = VideoComment.objects.filter(replay=obj)
-        return VideoCommentSerializer(replies, many=True).data
+        request = self.context.get('request')
+        return VideoCommentSerializer(replies, many=True, context = {"request" : request}).data
+    
+    
 
 
 

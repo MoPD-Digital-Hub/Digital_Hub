@@ -25,8 +25,10 @@ def comments_api(request, video_id):
     """
     if request.method == 'GET':
         videos = VideoComment.objects.filter(video__id=video_id, replay__isnull=True)
-        serializer = VideoCommentSerializer(videos, many=True)
+        serializer = VideoCommentSerializer(videos, many=True, context={'request': request})
+        print(request.user, "dddddd")
         return Response({"result": "SUCCESS", "message": "Comments fetched successfully!", "data": serializer.data},status=status.HTTP_200_OK)
+    
     elif request.method == 'POST':
         user = request.user  # Get the logged-in user
         try:
@@ -38,7 +40,7 @@ def comments_api(request, video_id):
         data = request.data.copy()
         data['user'] = user.id  # Assign user ID
         data['video'] = video_id  # Assign video ID
-        serializer = VideoCommentSerializer(data=data)
+        serializer = VideoCommentSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(
