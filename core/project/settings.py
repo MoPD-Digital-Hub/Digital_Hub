@@ -207,51 +207,51 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'formatters': {
-#         'detailed': {
-#             'format': '{levelname} {asctime} {module} {filename}:{lineno} {funcName} {message}',
-#             'style': '{',
-#         },
-#     },
-#     'handlers': {
-#         'log_file': {
-#             'level': 'WARNING',
-#             'class': 'logging.handlers.RotatingFileHandler',
-#             'filename': os.path.join(LOG_DIR, 'warnings_and_errors.log'),
-#             'maxBytes': 1024 * 1024 * 5,  # 5MB max per file
-#             'backupCount': 5,  # Keep last 5 log files
-#             'formatter': 'detailed',
-#         },
-#     },
-#     'loggers': {
-#         'django': {
-#             'handlers': ['log_file'],
-#             'level': 'WARNING', 
-#             'propagate': True,
-#         },
-#         'django.request': {
-#             'handlers': ['log_file'],
-#             'level': 'WARNING',
-#             'propagate': False,
-#         },
-#         'django.server': {
-#             'handlers': ['log_file'],
-#             'level': 'WARNING',
-#             'propagate': False,
-#         },
-#     },
-# }
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '{levelname} {asctime} {module} {filename}:{lineno} {funcName} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'log_file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOG_DIR, 'warnings_and_errors.log'),
+            'maxBytes': 1024 * 1024 * 5,  # 5MB max per file
+            'backupCount': 5,  # Keep last 5 log files
+            'formatter': 'detailed',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['log_file'],
+            'level': 'WARNING', 
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['log_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['log_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
 
 # Catch uncaught exceptions
-# def handle_uncaught_exceptions(exc_type, exc_value, exc_traceback):
-#     logger = logging.getLogger("django")
-#     logger.critical("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
+def handle_uncaught_exceptions(exc_type, exc_value, exc_traceback):
+    logger = logging.getLogger("django")
+    logger.critical("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
 
-# import sys
-# sys.excepthook = handle_uncaught_exceptions
+import sys
+sys.excepthook = handle_uncaught_exceptions
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
