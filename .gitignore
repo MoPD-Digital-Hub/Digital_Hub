@@ -5,6 +5,8 @@
 *.ini
 */uwsgi_params
 
+
+*/chroma_db/
 ### Django ###
 *.log
 *.pot
