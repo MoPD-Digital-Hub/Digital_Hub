@@ -41,7 +41,6 @@ class VideoComment(models.Model):
             self.save()
     
     
-
 class VideoCommentLike(models.Model):
     comment = models.ForeignKey(VideoComment, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -50,10 +49,8 @@ class VideoCommentLike(models.Model):
     def __str__(self):
         return self.user.email
 
-    
-
 class VideoLike(models.Model):
-    video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='video_likes')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
