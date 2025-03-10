@@ -1,6 +1,7 @@
 from django.urls import path
-from mobile.api.api import app
+from mobile.api import api
 
 urlpatterns = [
-    path('', app),
+    path('dashbord/apps/', api.app),
+    path('dashbord/lastest-videos/', api.latest_videos),
 ]
