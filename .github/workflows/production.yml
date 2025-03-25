@@ -14,49 +14,35 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Step 2: Set up Python and install Poetry
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.11'  # Use your desired Python version
-
-    # Step 3: Install project dependencies using Poetry
-    - name: Install dependencies
-      run: |
-        poetry install --no-root  # Install dependencies without installing the project itself
-
-    # Step 4: Deploy to the server via SSH
+    # Step 2: Deploy to the server via SSH
     - name: Deploy to server via SSH
       uses: appleboy/ssh-action@v0.1.4
       with:
-        host: ${{ secrets.SSH_HOST }}     # Your server's IP
-        username: ${{ secrets.SSH_USER }} # Your server's username (e.g., mopd)
-        key: ${{ secrets.SSH_PRIVATE_KEY }} # The private SSH key stored in GitHub secrets
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: 22
         script: |
           # Navigate to the project directory
           cd /home/mopd/Digital_Hub
           
           # Pull the latest changes from GitHub
-          git pull origin production  # Pull from the production branch
+          git pull origin production
           
           # Activate virtual environment 
-          source .venv/bin/activate  # Adjust this if the virtualenv is elsewhere
+          source .venv/bin/activate  
 
           # Navigate to the 'core' directory (where your migrations are located)
           cd core
           
-          # Install any new dependencies
-          poetry install
-          
           # Run migrations
           poetry run python manage.py migrate
           
-          # Collect static files (if using static files in production)
+          # Collect static files
           poetry run python manage.py collectstatic --noinput
           
           # Restart the application server
           uwsgi --ini domains_uwsgi.ini
           
           # Restart the uWSGI service
-          sudo systemctl restart emperor.uwsgi.service 
+          sudo systemctl restart emperor.uwsgi.service
