@@ -14,15 +14,16 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # Step 2: Deploy to the server via SSH
-    - name: Deploy to server via SSH
-      uses: appleboy/ssh-action@v0.1.4
+    # Step 2: Set up SSH key for authentication
+    - name: Set up SSH key for authentication
+      uses: webfactory/ssh-agent@v0.5.3
       with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: 22
-        script: |
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} # The private SSH key stored in GitHub secrets
+
+    # Step 3: Deploy to the server via SSH
+    - name: Deploy to server via SSH
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           # Navigate to the project directory
           cd /home/mopd/Digital_Hub
           
@@ -46,3 +47,4 @@ jobs:
           
           # Restart the uWSGI service
           sudo systemctl restart emperor.uwsgi.service
+        EOF
