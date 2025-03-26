@@ -25,7 +25,7 @@ def validate_login_opt(request):
             else:
                 return Response({
                     "result": "FAILURE",
-                    "message": "LOGIN_FAILED",
+                    "message": "Email or password is incorrect",
                     "data": None
                 }, status=status.HTTP_401_UNAUTHORIZED)
         else:
