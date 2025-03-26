@@ -164,4 +164,17 @@ def chat(request):
     return Response({"result" : "FAILURE", "data" : None, "message" : "Page not found!"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_chat_instance(request, chat_instance_id):
+    """
+    Delete a chat instance
+    """
+    try:
+        chat_instance = ChatInstance.objects.get(user = request.user, id = chat_instance_id)
+    except ChatInstance.DoesNotExist:
+        return Response({"result" : "FAILURE", "data" : None, "message" : "Instance doesn't exist!"}, status=status.HTTP_400_BAD_REQUEST)
     
+    chat_instance.is_deleted = True
+    chat_instance.save()
+    return Response({"result" : "SUCCUSS", "message" : "Instance deleted successfully!", "data" : None}, status=status.HTTP_200_OK)
