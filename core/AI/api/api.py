@@ -144,7 +144,7 @@ def chat(request):
     """
     Create a new chat instance or get all chat instances
     """
-    chat_instances = ChatInstance.objects.filter(user=request.user)
+    chat_instances = ChatInstance.objects.filter(user=request.user, is_deleted = False)
     global is_new
     seriliazer = ChatInstanceSerializer(chat_instances, many=True)
 

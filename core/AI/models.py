@@ -12,6 +12,7 @@ class LoadedFile(models.Model):
 class ChatInstance(models.Model):
     user = models.ForeignKey(User, null=True, blank=True ,on_delete=models.SET_NULL)
     title = models.CharField(null=True, blank=True, max_length=100)
+    is_deleted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now=True, auto_now_add=False)
 
     class Meta:
