@@ -6,6 +6,7 @@ class Video(models.Model):
     description = models.TextField()
     like = models.IntegerField(default=0)
     video = models.FileField(upload_to='videos/')
+    thumbnail = models.ImageField(upload_to='video/thubnails/', null = True, blank = True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
