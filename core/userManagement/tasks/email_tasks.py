@@ -1,6 +1,6 @@
+from __future__ import absolute_import, unicode_literals
 import os
 from pathlib import Path
-from __future__ import absolute_import, unicode_literals
 from django.core.mail import send_mail
 from celery import shared_task
 from dotenv import load_dotenv
