@@ -47,4 +47,7 @@ jobs:
           
           # Restart the uWSGI service
           sudo systemctl restart emperor.uwsgi.service
+
+          # Restart the Celery service
+          sudo systemctl restart celery.service
         EOF
