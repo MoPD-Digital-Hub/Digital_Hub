@@ -5,5 +5,5 @@ urlpatterns = [
     path('', chat),
     path('history/<int:chat_instance_id>/', get_chat_list),
     path('answer/<int:chat_id>/', get_answer),
-    path('delete/<int:chat_id>/<int:chat_instance_id>', delete_chat_instance)
+    path('delete/<int:chat_instance_id>/', delete_chat_instance)
 ]
