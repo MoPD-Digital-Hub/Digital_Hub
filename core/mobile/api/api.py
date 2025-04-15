@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from Videos.models import Video
 from Videos.api.serializer import VideoSerializer
+from collections import defaultdict
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -38,10 +39,19 @@ def setting(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def faq(request):
-    faq = FAQ.objects.all()
-    serializer = FAQSerializer(faq , many=True, context={"request": request})
+    faq_items = FAQ.objects.all()
+    serializer = FAQSerializer(faq_items, many=True, context={"request": request})
 
-    return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
+    grouped_data = defaultdict(list)
+    for item in serializer.data:
+        faq_type = item.get('faq_type')
+        grouped_data[faq_type].append(item)
+
+    return Response({
+        "result": "SUCCESS",
+        "message": "SUCCESS",
+        "data": grouped_data
+    }, status=status.HTTP_200_OK)
     
 
 
