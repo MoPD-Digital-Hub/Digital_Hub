@@ -22,5 +22,5 @@ urlpatterns = [
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
-# if is_dev == 'True':
-#     urlpatterns+=[path('api/ai-chat/', include('AI.urls'))]
+if is_dev == 'True':
+    urlpatterns+=[path('api/ai-chat/', include('AI.urls'))]
