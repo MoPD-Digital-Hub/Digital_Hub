@@ -72,17 +72,23 @@ class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
 
-        if serializer.is_valid():
-            return Response({
-                "result": "SUCCESS",
-                "message": "TOKEN_REFRESHED",
-                "data": serializer.validated_data
-            }, status=status.HTTP_200_OK)
-        else:
+        try:
+            if serializer.is_valid():
+                return Response({
+                    "result": "SUCCESS",
+                    "message": "TOKEN_REFRESHED",
+                    "data": serializer.validated_data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "result": "FAILURE",
+                    "message": "INVALID_TOKEN",
+                    "errors": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
             return Response({
                 "result": "FAILURE",
-                "message": "INVALID_TOKEN",
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+                "message": "EXCEPTION_OCCURRED",
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
