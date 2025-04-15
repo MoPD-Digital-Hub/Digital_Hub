@@ -1,5 +1,5 @@
-from .serializer import AppSerializer
-from mobile.models import App
+from .serializer import AppSerializer , SettingSerializer , FAQSerializer , ContactUsSerializer
+from mobile.models import App , Setting , FAQ , ContactUs
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -23,3 +23,33 @@ def latest_videos(request):
     serializer = VideoSerializer(videos, many=True, context={"request": request})
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def setting(request):
+    settings = Setting.objects.all()
+    serializer = SettingSerializer(settings , many=True, context={"request": request})
+
+    return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
+    
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def faq(request):
+    faq = FAQ.objects.all()
+    serializer = FAQSerializer(faq , many=True, context={"request": request})
+
+    return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
+    
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def contact_us(request):
+    contact_us = ContactUs.objects.all()
+    serializer = ContactUsSerializer(contact_us , many=True, context={"request": request})
+
+    return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
+    
