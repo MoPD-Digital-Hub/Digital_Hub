@@ -44,7 +44,7 @@ def faq(request):
 
     grouped_data = defaultdict(list)
     for item in serializer.data:
-        faq_type = item.get('faq_type')
+        faq_type = item.get('type')
         grouped_data[faq_type].append(item)
 
     return Response({
