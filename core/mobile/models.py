@@ -6,6 +6,7 @@ class App(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
     icon = models.FileField(upload_to='app/icons/')
+    route = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return self.name
