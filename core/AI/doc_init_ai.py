@@ -2,20 +2,21 @@ import os
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_chroma import Chroma
-from AI.utils import process_document, format_docs
+from AI.utils import process_document
 from .models import Document as doc
-from .models import LoadedFile
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
+ChatOllama.model_rebuild()
 # Initialize LLM
 llm = ChatOllama(
-    model="llama3.2",
+    model="llama3.2:3b",
     temperature=0.7,
     stream=True,
 )
 
 # Initialize Embeddings
-embeddings = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
+embeddings = OllamaEmbeddings(
+    model="znbang/bge:large-en-v1.5-f16",
+)
 
 # Set persistence directory
 persist_directory = "./chroma_db"
