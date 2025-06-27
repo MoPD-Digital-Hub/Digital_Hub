@@ -45,7 +45,10 @@ jobs:
           # Restart the uWSGI service
           sudo systemctl restart uwsgi.service
 
-           # Restart the Nginx service
+          # Restart the Nginx service
           sudo systemctl restart nginx.service
+
+          # Restart the celery service
+          sudo systemctl restart celery.service
 
         EOF
