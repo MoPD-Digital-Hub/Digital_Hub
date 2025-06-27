@@ -22,7 +22,7 @@ def generate_login_opt(request):
         serializer = LoginSerializer(data = request.data)
 
         if serializer.is_valid():
-            user = authenticate(email__iexact=serializer.data['email'].strip(), password=serializer.data['password'])
+            user = authenticate(email=serializer.data['email'].lower().strip(), password=serializer.data['password'])
 
             if user is not None:
                 # Generate 6-digit OTP
