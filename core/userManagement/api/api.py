@@ -14,7 +14,7 @@ def validate_login_opt(request):
         serializer = LoginSerializer(request.data)
 
         if serializer.is_valid():
-            user = authenticate(email=serializer.data['email'], password=serializer.data['password'])
+            user = authenticate(email=serializer.data['email'].lower(), password=serializer.data['password'])
 
             if user is not None:
                 return Response({
