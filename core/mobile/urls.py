@@ -9,9 +9,4 @@ urlpatterns = [
     path('faq/' , api.faq),
     path('contact-us/' , api.contact_us),
 
-
-    path('privacy_policy/' , privacy_policy , name='privacy_policy' )
-
-    
-    
 ]
