@@ -70,7 +70,7 @@ def validate_login_opt(request):
 
     if serializer.is_valid():
         try:
-            user = CustomUser.objects.get(email=serializer.data['email'])
+            user = CustomUser.objects.get(email=serializer.data['email'].lower())
         except CustomUser.DoesNotExist:
             return Response({
                 "result": "FAILURE",

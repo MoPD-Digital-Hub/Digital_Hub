@@ -8,7 +8,7 @@ from .models import Document as doc
 ChatOllama.model_rebuild()
 # Initialize LLM
 llm = ChatOllama(
-    model="llama3.2:3b",
+    model="llama3.2:latest",
     temperature=0.7,
     stream=True,
 )

@@ -1,6 +1,8 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.documents import Document
+from langchain.tools import tool
+import requests
 from langchain_community.document_loaders import (
     PyMuPDFLoader,
     UnstructuredWordDocumentLoader,
@@ -11,6 +13,15 @@ from langchain_community.document_loaders import (
 import pandas as pd
 import os
 
+##
+
+
+@tool
+def get_policy_area(year: str) -> str:
+ """Fetches policy areas using a REST API."""
+ url = f"https://dpmes.mopd.gov.et/api/digital-hub/all-policy-area/?year=2017&quarter=3month"
+ response = requests.get(url)
+ return response.json()["data"]
 
 def build_prompt(context: str, question: str) -> ChatPromptTemplate:
     """

@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 
-from AI.doc_init_ai import retriever, llm
+from AI.ai_instance import retriever, llm
 from AI.utils import build_prompt, run_chain, format_docs
 from AI.models import QuestionHistory, ChatInstance
 from .serializer import ChatInstanceSerializer, QuestionHistorySerializer
