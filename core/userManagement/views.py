@@ -67,7 +67,6 @@ def generate_login_opt(request):
 @api_view(['POST'])
 def validate_login_opt(request):
     serializer = ValidateOTPSerializer(data=request.data)
-
     if serializer.is_valid():
         try:
             user = CustomUser.objects.get(email__iexact=serializer.data['email'].strip())
