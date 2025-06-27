@@ -25,7 +25,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           # Navigate to the project directory
-          cd /home/mopd/Digital_Hub
+          cd /mnt/data/Digital_Hub
           
           # Pull the latest changes from GitHub
           git pull origin production
@@ -41,13 +41,11 @@ jobs:
           
           # Collect static files
           poetry run python manage.py collectstatic --noinput
-          
-          # Restart the application server
-          uwsgi --ini domains_uwsgi.ini
-          
+            
           # Restart the uWSGI service
-          sudo systemctl restart emperor.uwsgi.service
+          sudo systemctl restart uwsgi.service
 
-          # Restart the Celery service
-          sudo systemctl restart celery.service
+           # Restart the Nginx service
+          sudo systemctl restart neginx.service
+
         EOF
