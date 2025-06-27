@@ -22,7 +22,7 @@ def generate_login_opt(request):
         serializer = LoginSerializer(data = request.data)
 
         if serializer.is_valid():
-            user = authenticate(email=serializer.data['email'].lower(), password=serializer.data['password'])
+            user = authenticate(email=serializer.data['email'], password=serializer.data['password'])
 
             if user is not None:
                 # Generate 6-digit OTP
@@ -70,7 +70,7 @@ def validate_login_opt(request):
 
     if serializer.is_valid():
         try:
-            user = CustomUser.objects.get(email=serializer.data['email'].lower())
+            user = CustomUser.objects.get(email__iexact=serializer.data['email'])
         except CustomUser.DoesNotExist:
             return Response({
                 "result": "FAILURE",
@@ -136,7 +136,7 @@ def reset_password(request):
         serializer = EmailSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                user = CustomUser.objects.get(email=serializer.data['email'].lower())
+                user = CustomUser.objects.get(email__iexact=serializer.data['email'])
             except CustomUser.DoesNotExist: 
                 return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -163,7 +163,7 @@ def reset_password(request):
             new_password = serializer.validated_data.get('password')
 
             try:
-                user = CustomUser.objects.get(email=email)
+                user = CustomUser.objects.get(email__iexact=email)
 
             except CustomUser.DoesNotExist: 
                 return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
