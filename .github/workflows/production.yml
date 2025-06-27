@@ -46,6 +46,6 @@ jobs:
           sudo systemctl restart uwsgi.service
 
            # Restart the Nginx service
-          sudo systemctl restart neginx.service
+          sudo systemctl restart nginx.service
 
         EOF
