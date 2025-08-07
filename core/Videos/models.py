@@ -32,6 +32,9 @@ class VideoComment(models.Model):
     def __str__(self):
         return self.comment
     
+    class Meta:
+        ordering = ['-created_at']
+    
     def add_like(self):
         self.like += 1
         self.save()
