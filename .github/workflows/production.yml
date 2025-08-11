@@ -28,7 +28,7 @@ jobs:
           cd /mnt/data/Digital_Hub
           
           # Pull the latest changes from GitHub
-          git reset --hard 6f7c53e105f16f56fe310afb417cffd26634484b
+          git pull origin production
           
           # Activate virtual environment 
           source .venv/bin/activate  

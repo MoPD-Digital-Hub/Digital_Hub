@@ -12,6 +12,7 @@ from langchain_community.document_loaders import (
 )
 import pandas as pd
 import os
+import json
 
 ##
 
@@ -133,11 +134,14 @@ def split_docx(raw_docs):
     return raw_docs
 
 def split_excel(file_path):
-    documents = []
     df = pd.read_excel(file_path)
+    documents = []
     for i, row in df.iterrows():
-        content = row.to_json()  # or ', '.join(row.astype(str).values)
-        documents.append(Document(page_content=content, metadata={"row": i}))
+        row_dict = row.to_dict()
+        content = json.dumps(row_dict, ensure_ascii=False)
+        documents.append(
+            Document(page_content=content, metadata={"row_index": i, **row_dict})
+        )
     return documents
 
 def split_csv(file_path):
