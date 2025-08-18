@@ -44,4 +44,11 @@ else:
     print("Using persisted vector store.")
 
 # Initialize retriever
-retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 15})
+retriever = vector_store.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 4,        # number of chunks to return
+        "fetch_k": 10, # candidate pool before reranking
+        "lambda_mult": 0.5  # balance relevance vs diversity
+    }
+)
