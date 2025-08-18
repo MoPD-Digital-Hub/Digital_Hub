@@ -8,31 +8,29 @@ from .models import Document as doc
 ChatOllama.model_rebuild()
 # Initialize LLM
 llm = ChatOllama(
-    model="llama3:8b",
-    temperature=0.7,
+    model="gpt-oss:latest",
+    temperature=0.2,
     stream=True,
 )
 
 # Initialize Embeddings
 embeddings = OllamaEmbeddings(
     model="znbang/bge:large-en-v1.5-f16",
+    base_url="http://127.0.0.1:11434"
 )
 
 # Set persistence directory
 persist_directory = "./chroma_db"
 
-# Initialize Chroma vector store
 vector_store = Chroma(
     collection_name="foo",
     embedding_function=embeddings,
     persist_directory=persist_directory,
 )
 
-# Initialize text splitter
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=250,
-)
+# Initialize text splitter for text-based documents (PDF, DOCX, TXT)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+
 
 doc_data = doc.objects.filter(is_loaded=False)
 
@@ -41,9 +39,9 @@ if not os.path.exists(persist_directory) or doc_data.count() > 0:
     print("Loading and processing documents...")
 
     for document in doc_data:
-        process_document(document, text_splitter, vector_store)
+        process_document(document, text_splitter, vector_store)  # pass both
 else:
     print("Using persisted vector store.")
 
 # Initialize retriever
-retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 15})
