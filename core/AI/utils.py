@@ -30,8 +30,8 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
     The model should respond in clean HTML format without markdown code fences.
     """
     return ChatPromptTemplate.from_messages([
-    SystemMessage(
-        content=f'''
+        SystemMessage(
+            content=f'''
                 You are a highly knowledgeable and professional economics expert specializing in Ethiopia's economic data. 
                 Your name is **MoPD Chat Bot**. Your task is to answer all questions focusing on economic principles, theories, and real-world applications.
 
@@ -42,6 +42,10 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                 - Clearly indicate whether the information is **verified** (from the document) or **not verified** (external or uncertain).
                 - If no relevant information is found in the provided documents, state: "Can't find relevant information in the provided document."
                 - **Do not generate or add any data that is not explicitly provided in the document**, even if it is seemingly trivial or inferred (e.g., values like "3" or assumptions based on general knowledge).
+                - You must **never** answer from your own knowledge or assumptions. 
+                - Answer ONLY using the provided document context.
+                - If the document does not have the answer, say "Can't find relevant information in the provided document."
+                - Do not invent or speculate.
                 - If a user greets you (e.g., "hi," "hello," or any similar greeting), respond by introducing yourself, stating that your name is **MoPD Chat Bot**, and listing the available documents loaded into the system.
 
                 **Ethiopian Calendar Conversion**:
@@ -56,52 +60,6 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                     - Use `<table class="table">` for styling.
                     - Include a `<thead>` section for the table header.
                     - Close the `</div>` tag at the end to maintain proper layout.
-                - For charts and data visualizations:
-                    - You must use **ApexCharts** for all chart rendering.
-                    - Include the following CDN in the output:
-                      `<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>`
-                    - Use a `<div>` tag (not `<canvas>`) as the container for the chart.
-                    - Format your chart code using the following structure:
-                      ```html
-                      <div id="chart"></div>
-                      <script>
-                      var options = {{
-                          series: [{{
-                              name: "Desktops",
-                              data: [10, 41, 35, 51, 49, 62, 69, 91, 148]
-                          }}],
-                          chart: {{
-                              height: 350,
-                              type: 'line',
-                              zoom: {{
-                                  enabled: false
-                              }}
-                          }},
-                          dataLabels: {{
-                              enabled: false
-                          }},
-                          stroke: {{
-                              curve: 'straight'
-                          }},
-                          title: {{
-                              text: 'Product Trends by Month',
-                              align: 'left'
-                          }},
-                          grid: {{
-                              row: {{
-                                  colors: ['#f3f3f3', 'transparent'],
-                                  opacity: 0.5
-                              }},
-                          }},
-                          xaxis: {{
-                              categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'],
-                          }}
-                      }};
-
-                      var chart = new ApexCharts(document.querySelector("#chart"), options);
-                      chart.render();
-                      </script>
-                      ```
 
                 **Note**: Only documents loaded into the system are considered verified sources.
 
@@ -113,10 +71,10 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
 
                 ## Response:
                 Please provide your response using the structure outlined above, ensuring adherence to the specified HTML format. If no relevant information is found, state: "Can't find relevant information in the provided document."
-        '''
-    ),
-    MessagesPlaceholder(variable_name="messages"),
-])
+            '''
+        ),
+        MessagesPlaceholder(variable_name="messages"),
+    ])
 
 
 def split_pdf_or_txt(raw_docs, text_splitter):
@@ -138,7 +96,11 @@ def split_excel(file_path):
     documents = []
     for i, row in df.iterrows():
         row_dict = row.to_dict()
+
+        # Convert entire row dict to JSON string as content
         content = json.dumps(row_dict, ensure_ascii=False)
+
+        # Create Document with content and metadata (including row index)
         documents.append(
             Document(page_content=content, metadata={"row_index": i, **row_dict})
         )
@@ -150,6 +112,17 @@ def split_csv(file_path):
     for i, row in df.iterrows():
         content = row.to_json()
         documents.append(Document(page_content=content, metadata={"row": i}))
+    return documents
+
+
+def split_json(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)  # expect a list of dicts
+
+    documents = []
+    for i, record in enumerate(data):
+        content = json.dumps(record, ensure_ascii=False)
+        documents.append(Document(page_content=content, metadata={"row_index": i, **record}))
     return documents
 
 def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
@@ -180,6 +153,9 @@ def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
         elif ext == ".csv":
             documents = split_csv(file_path)
 
+        elif ext == ".json":
+            documents = split_json(file_path)
+
         else:
             print(f"Unsupported file extension {ext}, skipping.")
             return False
@@ -195,6 +171,8 @@ def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
     except Exception as e:
         print(f"Error processing document {file_path}: {e}")
         return False
+
+
 
 
 def run_chain(prompt, llm, conversation_list, context, question):

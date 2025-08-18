@@ -14,7 +14,7 @@ def get_chat_history(instance):
     """
     Fetch previous Q&A pairs for conversation context.
     """
-    history = QuestionHistory.objects.filter(instance=instance, response__isnull=False)
+    history = QuestionHistory.objects.filter(instance=instance, response__isnull=False).order_by('created_at')
     conversation = []
     for record in history:
         conversation.append(HumanMessage(content=record.question))
