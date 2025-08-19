@@ -4,18 +4,21 @@ from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_chroma import Chroma
 from AI.utils import process_document
 from .models import Document as doc
+from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import LLMChainExtractor
 
 ChatOllama.model_rebuild()
 # Initialize LLM
 llm = ChatOllama(
     model="gpt-oss:latest",
-    temperature=0.2,
+    temperature=0.5,
     stream=True,
 )
 
 # Initialize Embeddings
 embeddings = OllamaEmbeddings(
-    model="znbang/bge:large-en-v1.5-f16",
+    model="nomic-embed-text:latest",
     base_url="http://127.0.0.1:11434"
 )
 
@@ -29,7 +32,10 @@ vector_store = Chroma(
 )
 
 # Initialize text splitter for text-based documents (PDF, DOCX, TXT)
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=800,
+    chunk_overlap=160
+)
 
 
 doc_data = doc.objects.filter(is_loaded=False)
@@ -47,8 +53,28 @@ else:
 retriever = vector_store.as_retriever(
     search_type="mmr",
     search_kwargs={
-        "k": 4,        # number of chunks to return
-        "fetch_k": 10, # candidate pool before reranking
-        "lambda_mult": 0.5  # balance relevance vs diversity
-    }
+        "k": 6,            
+        "fetch_k": 50,    
+        "lambda_mult": 0.2 
+        
+    },
 )
+
+
+
+expanded_retriever = MultiQueryRetriever.from_llm(
+    retriever=retriever,
+    llm=llm,
+    include_original=True
+)
+
+retriever = expanded_retriever
+
+
+# compressor = LLMChainExtractor.from_llm(llm)
+# rerank_retriever = ContextualCompressionRetriever(
+#     base_retriever=expanded_retriever,
+#     base_compressor=compressor
+# )
+
+# retriever = rerank_retriever
