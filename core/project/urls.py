@@ -17,6 +17,6 @@ urlpatterns = [
     path('api/video/', include('Videos.urls')),
     path('api/mobile/', include('mobile.urls')),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
-    path('api/ai-chat/', include('AI.urls'))
+    path('api/ai-chat/', include('AI.urls')),
+    path('api/notification/', include('Notification.urls'))
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
