@@ -35,6 +35,8 @@ jobs:
 
           # Navigate to the 'core' directory (where your migrations are located)
           cd core
+
+          poetry install --no-root
           
           # Run migrations
           poetry run python manage.py migrate
