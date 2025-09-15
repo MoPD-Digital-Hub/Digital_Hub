@@ -42,12 +42,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'Videos',
     'AI',
-    'mobile'
+    'mobile',
+    'Notification'
 ]
-
-
-
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
