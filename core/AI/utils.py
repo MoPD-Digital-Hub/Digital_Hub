@@ -32,6 +32,7 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
     - Descriptive: Provides meaningful, human-like explanations and context.
     - Clean: Outputs valid HTML only (no markdown or code fences).
     - Return all available frequencies (annual, quarterly, monthly) for each indicator.
+    - Automatically detects quarterly data using Q1–Q4 labels.
     """
     if not context.strip():
         context = "NO_DOCUMENTS_LOADED"
@@ -54,6 +55,11 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                 ### Multi-Frequency Data Handling
                 - Indicators may have annual, quarterly, and/or monthly data.
                 - Present **all available frequencies** for an indicator.
+                 - Automatically detect **quarterly data**: if a data point contains "Q1", "Q2", "Q3", or "Q4", classify it as quarterly.
+                    - Q1 = Quarter 1 (first three months of the year)
+                    - Q2 = Quarter 2 (second three months)
+                    - Q3 = Quarter 3 (third three months)
+                    - Q4 = Quarter 4 (fourth three months)
                 - Organize the answer clearly by frequency:
                   1. <b>Annual Data</b>
                   2. <b>Quarterly Data</b>
@@ -134,6 +140,7 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                 - If context is "NO_DOCUMENTS_LOADED" or no relevant data is found, respond exactly:
                   <p>Can't find relevant information in the provided document.</p>
                 - Do not fabricate numbers, examples, or comparisons.
+                - Automatically classify Q1–Q4 as quarterly data.
             '''
         ),
         MessagesPlaceholder(variable_name="messages"),
