@@ -64,7 +64,6 @@ def contact_us(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
 
-
 @api_view(['GET'])
 def check_update(request):
     user_version = request.query_params.get('version')
@@ -86,8 +85,23 @@ def check_update(request):
     min_supported = v.parse(app_version.min_supported_version)
     latest = v.parse(app_version.latest_version)
 
-    force_update = app_version.is_force_update or (current < min_supported)
-    optional_update = (not force_update) and (current < latest)
+    # --- Version comparison logic ---
+    if current < min_supported:
+        # Too old — must update
+        force_update = True
+        optional_update = False
+    elif current < latest:
+        # Behind latest, but still supported — optional update
+        force_update = False
+        optional_update = True
+    elif current == latest:
+        # Up to date — no update required
+        force_update = False
+        optional_update = False
+    else:
+        # Newer than latest (maybe internal/testing build)
+        force_update = False
+        optional_update = False
 
     data = {
         "force_update": force_update,
@@ -95,6 +109,8 @@ def check_update(request):
         "latest_version": app_version.latest_version,
         "message": app_version.message if force_update else "",
     }
-    return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : data,}, status=status.HTTP_200_OK)
-    
-    
+
+    return Response(
+        {"result": "SUCCESS", "message": "SUCCESS", "data": data},
+        status=status.HTTP_200_OK
+    )
