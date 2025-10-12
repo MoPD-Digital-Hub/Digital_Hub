@@ -85,21 +85,16 @@ def check_update(request):
     min_supported = v.parse(app_version.min_supported_version)
     latest = v.parse(app_version.latest_version)
 
-    # --- Version comparison logic ---
     if current < min_supported:
-        # Too old — must update
         force_update = True
         optional_update = False
     elif current < latest:
-        # Behind latest, but still supported — optional update
         force_update = False
         optional_update = True
     elif current == latest:
-        # Up to date — no update required
         force_update = False
         optional_update = False
     else:
-        # Newer than latest (maybe internal/testing build)
         force_update = False
         optional_update = False
 

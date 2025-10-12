@@ -31,6 +31,7 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
     - Strict: Never invent or assume data.
     - Descriptive: Provides meaningful, human-like explanations and context.
     - Clean: Outputs valid HTML only (no markdown or code fences).
+    - Return all available frequencies (annual, quarterly, monthly) for each indicator.
     """
     if not context.strip():
         context = "NO_DOCUMENTS_LOADED"
@@ -49,6 +50,16 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                 - If a question is unrelated to economics or planning, reply politely but briefly.
                 - Always assume Ethiopia as the default country.
                 - Maintain a professional, warm, and explanatory tone.
+
+                ### Multi-Frequency Data Handling
+                - Indicators may have annual, quarterly, and/or monthly data.
+                - Present **all available frequencies** for an indicator.
+                - Organize the answer clearly by frequency:
+                  1. <b>Annual Data</b>
+                  2. <b>Quarterly Data</b>
+                  3. <b>Monthly Data</b>
+                - If a frequency is missing, explicitly note: "No [annual/quarterly/monthly] data available."
+                - Describe trends and patterns within each frequency section without fabricating numbers.
 
                 ### Descriptive Explanation Style
                 - Go beyond quoting numbers — describe what those numbers or findings represent.
@@ -118,6 +129,7 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
 
                 ### Response Instructions
                 - Use descriptive, engaging language, but rely strictly on the context for facts.
+                - Provide all available frequencies for the requested indicator.
                 - Help the reader understand meaning, implication, and relevance — without adding anything new.
                 - If context is "NO_DOCUMENTS_LOADED" or no relevant data is found, respond exactly:
                   <p>Can't find relevant information in the provided document.</p>
