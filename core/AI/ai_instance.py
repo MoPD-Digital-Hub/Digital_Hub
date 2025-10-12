@@ -53,7 +53,7 @@ else:
 retriever = vector_store.as_retriever(
     search_type="mmr",
     search_kwargs={
-        "k": 6,            
+        "k": 10,            
         "fetch_k": 50,    
         "lambda_mult": 0.2 
         
