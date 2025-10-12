@@ -2,19 +2,16 @@
 chdir = /mnt/data/Digital_Hub/core/
 module = project.wsgi:application
 home = /mnt/data/Digital_Hub/.venv
-
 master = true
-processes = 16
 threads = 2
 enable-threads = true
-
-socket = /mnt/data/Digital_Hub/core/domains.sock
-chmod-socket = 660
-chown-socket = www-data:www-data
-vacuum = true
 die-on-term = true
 lazy-apps = true
-
+processes = 16
+socket = /mnt/data/Digital_Hub/core/domains.sock
+chmod-socket = 666
+vacuum = true
+daemonize = /mnt/data/Digital_Hub/core/uwsgi-emperor.log
 harakiri = 120
 max-requests = 5000
 max-requests-delta = 100
@@ -22,4 +19,3 @@ reload-on-rss = 512
 
 daemonize = /mnt/data/Digital_Hub/core/uwsgi-emperor.log
 log-date = true
-

@@ -142,7 +142,8 @@ server_database = {
     'USER': os.getenv('DATABASE_USER'),
     'PASSWORD': os.getenv('DATABASE_PASSWORD'),
     'HOST': os.getenv('DATABASE_HOST'),
-    'PORT': '5432'
+    'PORT': '5432',
+    'CONN_MAX_AGE': 300,
 }
 
 DATABASES = {
