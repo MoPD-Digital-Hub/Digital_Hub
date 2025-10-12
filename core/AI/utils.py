@@ -64,7 +64,7 @@ def build_prompt(context: str, question: str) -> ChatPromptTemplate:
                   1. <b>Annual Data</b>
                   2. <b>Quarterly Data</b>
                   3. <b>Monthly Data</b>
-                - Only include and describe the frequencies that exist in the data; do not mention any missing frequencies.
+                - If a frequency is missing, explicitly note: "No [annual/quarterly/monthly] data available."
                 - Describe trends and patterns within each frequency section without fabricating numbers.
 
                 ### Descriptive Explanation Style
