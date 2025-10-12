@@ -8,5 +8,5 @@ urlpatterns = [
     path('setting/' , api.setting),
     path('faq/' , api.faq),
     path('contact-us/' , api.contact_us),
-
+    path('check-update/', api.check_update, name='check-update'),
 ]
