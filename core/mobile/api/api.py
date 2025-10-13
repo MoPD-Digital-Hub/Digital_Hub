@@ -26,7 +26,6 @@ def latest_videos(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
 
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def setting(request):
@@ -35,8 +34,6 @@ def setting(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
     
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def faq(request):
@@ -54,8 +51,6 @@ def faq(request):
         "data": grouped_data
     }, status=status.HTTP_200_OK)
     
-
-
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def contact_us(request):
@@ -109,3 +104,4 @@ def check_update(request):
         {"result": "SUCCESS", "message": "SUCCESS", "data": data},
         status=status.HTTP_200_OK
     )
+
