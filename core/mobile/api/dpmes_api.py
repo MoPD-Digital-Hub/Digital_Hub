@@ -6,16 +6,16 @@ from django.conf import settings
 from rest_framework import status
 
 
-TIMESERIES_URL = "http://time-series.mopd.gov.et/"
+DPMES_URL = "https://dpmes.mopd.gov.et"
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def topic_list(request):
+def policy_areas(request):
     try:
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/topic-list/",
+            f"{DPMES_URL}/api/digital-hub/all-policy-area/",
             params=params,
             timeout=10
         )
@@ -24,18 +24,18 @@ def topic_list(request):
 
     except requests.exceptions.RequestException as e:
         return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def topic_detail(request, id):
+def policy_area_detail(request, id):
     try:
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/topic-detail/{id}/",
+            f"{DPMES_URL}/api/digital-hub/policy-area-detail/{id}/",
             params=params,
             timeout=10
         )
@@ -44,7 +44,155 @@ def topic_detail(request, id):
 
     except requests.exceptions.RequestException as e:
         return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def goal_detail(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/goal-detail/{id}",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def all_ministries(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/all-ministries/",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ministry_detail(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/ministry-detail/{id}",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ministry_goal_detail(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/ministry-goal-detail/{id}/",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ministry_performance(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/ministry-performance/{id}",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def single_ministry(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/single_ministry/",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def affiliated_ministries(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/affilated-ministries",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
     
@@ -57,7 +205,7 @@ def indicator_detail(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/indicator-detail/{id}/",
+            f"{DPMES_URL}/api/digital-hub/indicator-detail/{id}/",
             params=params,
             timeout=10
         )
@@ -66,19 +214,18 @@ def indicator_detail(request, id):
 
     except requests.exceptions.RequestException as e:
         return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
-    
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def topic_categories_auto_complete(request, id):
+def year_lists(request):
     try:
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/search-auto-complete/{id}/",
+            f"{DPMES_URL}/year_quarter_list",
             params=params,
             timeout=10
         )
@@ -87,7 +234,7 @@ def topic_categories_auto_complete(request, id):
 
     except requests.exceptions.RequestException as e:
         return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            {"detail": f"Failed to reach DPMES service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
     
@@ -99,90 +246,7 @@ def general_search(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/general_search",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def trending(request):
-    try:
-        params = request.query_params.dict()
-
-        res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/trending/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def month_lists(request):
-    try:
-        params = request.query_params.dict()
-
-        res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/month-lists/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def year_lists(request):
-    try:
-        params = request.query_params.dict()
-
-        res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/year-lists/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def initiatives(request):
-    try:
-        params = request.query_params.dict()
-
-        res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/initiatives/",
+            f"{DPMES_URL}/api/digital-hub/general_search/",
             params=params,
             timeout=10
         )
@@ -198,12 +262,12 @@ def initiatives(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def project_list(request):
+def overview_ministries(request):
     try:
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/project-list/",
+            f"{DPMES_URL}/api/digital-hub/dashboard/ministries/",
             params=params,
             timeout=10
         )
@@ -215,38 +279,15 @@ def project_list(request):
             {"detail": f"Failed to reach Time-Series service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
-    
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def project_detail(request, id):
+def overview_policy_area(request):
     try:
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/project-detail/{id}/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
-    
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def overview(request):
-    try:
-        params = request.query_params.dict()
-
-        res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/dashboard/overview",
+            f"{DPMES_URL}/api/digital-hub/dashboard/policy-area/",
             params=params,
             timeout=10
         )

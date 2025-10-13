@@ -1,5 +1,5 @@
 from django.urls import path
-from mobile.api import api, time_series_api 
+from mobile.api import api, time_series_api, dpmes_api
 from .views import *
 
 urlpatterns = [
@@ -22,4 +22,21 @@ urlpatterns = [
     path('initiatives/', time_series_api.initiatives, name='time-series-initiatives'),
     path('project-list/', time_series_api.project_list, name='time-series-project-list'),
     path('project-detail/<str:id>/', time_series_api.project_detail, name='time-series-project-detail'),
+    path('overview/', time_series_api.overview, name='time-series-overview'),
+
+    #DPMEs
+    path('policy-areas/', dpmes_api.policy_areas, name='dpmes-policy-area'),
+    path('policy-area-detail/<str:id>/', dpmes_api.policy_area_detail, name='dpmes-policy-area-detail'),
+    path('goal-detail/<str:id>/', dpmes_api.goal_detail, name='dpmes-goal-detail'),
+    path('ministries/', dpmes_api.all_ministries, name='dpmes-ministries'),
+    path('ministry-detail/<str:id>/', dpmes_api.ministry_detail, name='dpmes-ministry-detail'),
+    path('ministry-goal-detail/<str:id>/', dpmes_api.ministry_goal_detail, name='dpmes-ministry-goal-detail'),
+    path('ministry-performance/<str:id>/', dpmes_api.ministry_performance, name='dpmes-ministry-performance'),
+    path('single-ministry/', dpmes_api.single_ministry, name='dpmes-single-ministry'),
+    path('affiliated-ministries/', dpmes_api.affiliated_ministries, name='dpmes-affiliated-ministries'),
+    path('dpmes-indicator-detail/<str:id>/', dpmes_api.indicator_detail, name='dpmes-indicator-detail'),
+    path('dpmes-year-lists/', dpmes_api.year_lists, name='dpmes-year_lists'),
+    path('dpmes-general-search/', dpmes_api.general_search, name='dpmes-general-search'),
+    path('overview-ministries/', dpmes_api.overview_ministries, name='overview-ministries'),
+    path('overview-policy-area/', dpmes_api.overview_policy_area, name='overview-policy-area'),
 ]
