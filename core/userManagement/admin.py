@@ -10,7 +10,7 @@ class CustomUserAdmin(UserAdmin):
     
     # Fields for add/edit form
     fieldsets = (
-        (None, {'fields': ('email', 'username', 'first_name', 'last_name', 'password')}),
+        (None, {'fields': ('email', 'username', 'first_name', 'last_name', 'password' , 'trial', 'waiting_period')}),
         ('Permissions', {'fields': ('is_staff', 'is_active', 'is_superuser', 'groups', 'user_permissions')}),
         ('Additional Info', {'fields': ('photo','bio','excellence','token','tokenExpiration','is_first_time')}),
     )
