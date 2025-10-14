@@ -10,6 +10,8 @@ class CustomUser(AbstractUser):
     bio = models.CharField(max_length=100, null=True, blank=True)
     token = models.CharField(max_length=600, null=True, blank=True)
     tokenExpiration = models.DateTimeField(null=True, blank=True)
+    trial = models.IntegerField(default=0)  
+    waiting_period = models.DateTimeField(null=True, blank=True)  
 
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=['first_name','last_name', 'username']
