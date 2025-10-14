@@ -261,6 +261,3 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
 EMAIL_USE_TLS = True 
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL')
 
-if os.getenv('DATABASE_DEV') == 'True':
-    CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
-    CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
