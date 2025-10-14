@@ -37,6 +37,9 @@ jobs:
           cd core
           
           # Run migrations
+          poetry run python manage.py makemigrations
+          
+          # Run migrations
           poetry run python manage.py migrate
           
           # Collect static files
