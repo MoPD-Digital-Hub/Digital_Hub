@@ -5,7 +5,7 @@ from .models import CustomUser
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
     # Fields to display in admin list view
-    list_display = ('email', 'username', 'first_name', 'last_name', 'is_staff', 'is_active')
+    list_display = ('email', 'username', 'first_name', 'last_name', 'is_staff', 'is_active' , 'trial', 'waiting_period')
     list_filter = ('is_staff', 'is_active')
     
     # Fields for add/edit form
@@ -18,7 +18,7 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('email', 'username', 'first_name', 'last_name', 'password1', 'password2', 'is_staff', 'is_active')}
+            'fields': ('email', 'username', 'first_name', 'last_name', 'password1', 'password2', 'is_staff', 'is_active' , 'trial', 'waiting_period')}
         ),
     )
     

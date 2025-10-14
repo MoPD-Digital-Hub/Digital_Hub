@@ -25,9 +25,14 @@ def generate_login_opt(request):
             user = authenticate(email=serializer.data['email'].lower().strip(), password=serializer.data['password'])
 
             if user is not None:
+                if user.waiting_period and timezone.now() < user.waiting_period:
+                    remaining_time = user.waiting_period - timezone.now()
+                    minutes = int(remaining_time.total_seconds() // 60)
+                    return Response({"result": "FAILURE", "message": f"This account is temporarily blocked. Try again in {minutes} minutes.", "data": None }, status=status.HTTP_400_BAD_REQUEST)
+
                 # Generate 6-digit OTP
                 otp = random.randint(100000, 999999)
-                
+                print(otp)
                 now = timezone.now()
                 expire_date = now + timedelta(minutes=20)
 
@@ -72,43 +77,61 @@ def generate_login_opt(request):
 def validate_login_opt(request):
     serializer = ValidateOTPSerializer(data=request.data)
     if serializer.is_valid():
+        email = serializer.validated_data['email'].strip()
+        otp = serializer.validated_data['otp']
+
         try:
-            user = CustomUser.objects.get(email__iexact=serializer.data['email'].strip())
+            user = CustomUser.objects.get(email__iexact=email)
         except CustomUser.DoesNotExist:
             return Response({
                 "result": "FAILURE",
                 "message": "USER_NOT_FOUND",
-                "data" : None
+                "data": None
             }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Validate token and expiration
-        otp = serializer.data['otp']
- 
-        if str(user.token) != str(otp):
-            return Response({"result": "FAILURE", "message": "INVALID_OTP", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if timezone.now() > user.tokenExpiration:
-            return Response({"result": "FAILURE", "message": "OTP_EXPIRED", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if str(user.token) == str(otp) and user.tokenExpiration > timezone.now():
-            refresh = RefreshToken.for_user(user)
-            user.token = None
-            user.tokenExpiration = None
-            user.save()
 
-            return Response({
-            "result": "SUCCESS",
-            "message": "TOKEN_CREATED",
+        if user.waiting_period and timezone.now() < user.waiting_period:
+            remaining_time = user.waiting_period - timezone.now()
+            minutes = int(remaining_time.total_seconds() // 60)
+            return Response({"result": "FAILURE", "message": f"This account is temporarily blocked. Try again in {minutes} minutes.", "data": None }, status=status.HTTP_400_BAD_REQUEST)
+
+
+        if not user.token or timezone.now() > user.tokenExpiration:
+            return Response({ "result": "FAILURE", "message": "OTP_EXPIRED", "data": None }, status=status.HTTP_400_BAD_REQUEST)
+
+        
+        if str(user.token) != str(otp):
+            user.trial += 1
+            if user.trial >= 5:
+                user.waiting_period = timezone.now() + timedelta(minutes=30)
+                user.trial = 0  
+                user.save()
+                return Response({"result": "FAILURE", "message": "Too many invalid attempts. Account locked for 30 minutes.", "data": None}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.save()
+            return Response({"result": "FAILURE", "message": "INVALID_OTP", "data": None}, status=status.HTTP_400_BAD_REQUEST)
+
+     
+        refresh = RefreshToken.for_user(user)
+        user.token = None
+        user.tokenExpiration = None
+        user.trial = 0
+        user.waiting_period = None
+        user.save()
+
+        return Response({"result": "SUCCESS", "message": "TOKEN_CREATED",
             "data": {
-                "user" : UserSerializer(user).data,
+                "user": UserSerializer(user).data,
                 "refresh": str(refresh),
                 "access": str(refresh.access_token)
             }
         }, status=status.HTTP_200_OK)
 
+    return Response({
+        "result": "FAILURE",
+        "message": "INVALID_INPUT",
+        "data": None
+    }, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({"result" : "FAILURE", "message" : "INVALID_OTP", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({"result" : "FAILURE", "message" : "INVALID_INPUT", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET' , 'PUT'])
 @permission_classes([IsAuthenticated])
