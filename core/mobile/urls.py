@@ -39,4 +39,5 @@ urlpatterns = [
     path('dpmes-general-search/', dpmes_api.general_search, name='dpmes-general-search'),
     path('overview-ministries/', dpmes_api.overview_ministries, name='overview-ministries'),
     path('overview-policy-area/', dpmes_api.overview_policy_area, name='overview-policy-area'),
+    path('default-time/', dpmes_api.time_frame, name='default-time'),
 ]

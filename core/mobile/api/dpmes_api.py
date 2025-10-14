@@ -299,3 +299,23 @@ def overview_policy_area(request):
             {"detail": f"Failed to reach Time-Series service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def time_frame(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{DPMES_URL}/api/digital-hub/default-time/",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
