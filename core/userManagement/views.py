@@ -72,7 +72,7 @@ def generate_login_opt(request):
             }, status=status.HTTP_200_OK)
 
         else:
-            user_login_failed.send(sender=None, request=request, credentials=serializer.data)
+            #user_login_failed.send(sender=None, request=request, credentials=serializer.data)
 
             return Response({
                 "result": "FAILURE",
