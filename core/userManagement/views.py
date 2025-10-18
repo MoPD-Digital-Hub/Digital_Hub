@@ -36,7 +36,7 @@ def generate_login_opt(request):
                 now = timezone.now()
                 expire_date = now + timedelta(minutes=20)
 
-                if user.email == 'testuser@mopd.gov.et':
+                if user.email == 'testuser@mopd.gov.et' or user.email == 'admas@mopd.gov.et' :
                     user.token = 123456
                     user.tokenExpiration = now + timedelta(days=90)
                 else:
