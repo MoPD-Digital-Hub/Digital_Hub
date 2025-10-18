@@ -14,8 +14,9 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .api.serializer import LoginSerializer, ValidateOTPSerializer
 import random
-from axes.utils import reset_request, get_client_username
-from axes.helpers import AxesProxyHandler
+from axes.utils import reset_request
+from axes.helpers import get_client_username
+from axes.handlers.proxy import AxesProxyHandler
 
 
 @api_view(['POST'])
