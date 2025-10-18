@@ -18,6 +18,8 @@ from axes.utils import reset_request
 from axes.helpers import get_client_username
 from axes.handlers.proxy import AxesProxyHandler
 from axes.signals import user_login_failed
+from ipware import get_client_ip
+
 
 
 @api_view(['POST'])
@@ -38,8 +40,6 @@ def generate_login_opt(request):
         user = authenticate(request=request, email=email, password=password)
 
         if user is not None:
-            handler.reset_attempts(request=request)
-
             if user.waiting_period and timezone.now() < user.waiting_period:
                 remaining_time = user.waiting_period - timezone.now()
                 minutes = int(remaining_time.total_seconds() // 60)
