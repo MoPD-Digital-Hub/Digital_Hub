@@ -20,69 +20,68 @@ from axes.helpers import AxesProxyHandler
 
 @api_view(['POST'])
 def generate_login_opt(request):
-    if request.method == 'POST':
-        serializer = LoginSerializer(data = request.data)
+    serializer = LoginSerializer(data=request.data)
+    handler = AxesProxyHandler()
 
-        handler = AxesProxyHandler()
+    if handler.is_locked(request):
+        return Response({
+            "result": "FAILURE",
+            "message": "Too many failed attempts. Try again later.",
+            "data": None
+        }, status=status.HTTP_403_FORBIDDEN)
 
-        if handler.is_locked(request):
-            return Response({
-                "result": "FAILURE",
-                "message": "Too many failed attempts. Try again later.",
-                "data": None
-            }, status=status.HTTP_403_FORBIDDEN)
+    if serializer.is_valid():
+        email = serializer.data['email'].lower().strip()
+        password = serializer.data['password']
+        user = authenticate(email=email, password=password)
 
-        if serializer.is_valid():
-            user = authenticate(email=serializer.data['email'].lower().strip(), password=serializer.data['password'])
+        if user is not None:
+            handler.reset_attempts(request=request)
 
-            if user is not None:
-                if user.waiting_period and timezone.now() < user.waiting_period:
-                    remaining_time = user.waiting_period - timezone.now()
-                    minutes = int(remaining_time.total_seconds() // 60)
-                    return Response({"result": "FAILURE", "message": f"This account is temporarily blocked. Try again in {minutes} minutes.", "data": None }, status=status.HTTP_400_BAD_REQUEST)
-
-                # Generate 6-digit OTP
-                otp = random.randint(100000, 999999)
-                print(otp)
-                now = timezone.now()
-                expire_date = now + timedelta(minutes=20)
-
-                if user.email == 'testuser@mopd.gov.et' or user.email == 'admas@mopd.gov.et' :
-                    user.token = 123456
-                    user.tokenExpiration = now + timedelta(days=90)
-                else:
-                    user.token = otp
-                    user.tokenExpiration = expire_date
-                user.save()
-
-                ## send email
-                send_email.delay(user.email, otp)
-
-                return Response({
-                    "result": "SUCCESS",
-                    "message": "OTP_GENERATED",
-                    "data": None
-                }, status=status.HTTP_200_OK)
-            
-            else:
+            if user.waiting_period and timezone.now() < user.waiting_period:
+                remaining_time = user.waiting_period - timezone.now()
+                minutes = int(remaining_time.total_seconds() // 60)
                 return Response({
                     "result": "FAILURE",
-                    "message": "LOGIN_FAILED",
+                    "message": f"This account is temporarily blocked. Try again in {minutes} minutes.",
                     "data": None
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            otp = random.randint(100000, 999999)
+            now = timezone.now()
+            expire_date = now + timedelta(minutes=20)
+
+            if user.email in ['testuser@mopd.gov.et', 'admas@mopd.gov.et']:
+                user.token = 123456
+                user.tokenExpiration = now + timedelta(days=90)
+            else:
+                user.token = otp
+                user.tokenExpiration = expire_date
+            user.save()
+
+            send_email.delay(user.email, otp)
+
+            return Response({
+                "result": "SUCCESS",
+                "message": "OTP_GENERATED",
+                "data": None
+            }, status=status.HTTP_200_OK)
+
         else:
+            handler.user_login_failed(request=request, credentials=serializer.data)
+
             return Response({
                 "result": "FAILURE",
-                "message": "INVALID_INPUT",
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+                "message": "LOGIN_FAILED",
+                "data": None
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
     else:
         return Response({
             "result": "FAILURE",
-            "message": "INVALID_METHOD",
-            "errors": None
-        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            "message": "INVALID_INPUT",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def validate_login_opt(request):
