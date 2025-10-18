@@ -14,12 +14,23 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .api.serializer import LoginSerializer, ValidateOTPSerializer
 import random
+from axes.utils import reset_request, get_client_username
+from axes.helpers import AxesProxyHandler
 
 
 @api_view(['POST'])
 def generate_login_opt(request):
     if request.method == 'POST':
         serializer = LoginSerializer(data = request.data)
+
+        handler = AxesProxyHandler()
+
+        if handler.is_locked(request):
+            return Response({
+                "result": "FAILURE",
+                "message": "Too many failed attempts. Try again later.",
+                "data": None
+            }, status=status.HTTP_403_FORBIDDEN)
 
         if serializer.is_valid():
             user = authenticate(email=serializer.data['email'].lower().strip(), password=serializer.data['password'])
