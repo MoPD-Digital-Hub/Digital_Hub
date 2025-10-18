@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'Videos',
     'AI',
     'mobile',
-    'Notification'
+    'Notification',
+    'axes',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'axes.middleware.AxesMiddleware',
 ]
 
 
@@ -103,6 +105,21 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
+
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 7
+AXES_COOLOFF_TIME = timedelta(hours=1)
+AXES_LOG_LOCKOUT = True
+AXES_RESET_ON_SUCCESS = True
+AXES_FAILURES_PER_USERNAME_AND_IP_ADDRESS = True
+AXES_USE_IPWARE = True
+AXES_LOCK_OUT_AT_FAILURE = True
+
 
 ROOT_URLCONF = 'project.urls'
 
