@@ -17,6 +17,7 @@ import random
 from axes.utils import reset_request
 from axes.helpers import get_client_username
 from axes.handlers.proxy import AxesProxyHandler
+from axes.signals import user_login_failed
 
 
 @api_view(['POST'])
@@ -34,7 +35,7 @@ def generate_login_opt(request):
     if serializer.is_valid():
         email = serializer.data['email'].lower().strip()
         password = serializer.data['password']
-        user = authenticate(email=email, password=password)
+        user = authenticate(request=request, email=email, password=password)
 
         if user is not None:
             handler.reset_attempts(request=request)
@@ -69,7 +70,7 @@ def generate_login_opt(request):
             }, status=status.HTTP_200_OK)
 
         else:
-            handler.user_login_failed(request=request, credentials=serializer.data)
+            user_login_failed.send(sender=None, request=request, credentials=serializer.data)
 
             return Response({
                 "result": "FAILURE",
