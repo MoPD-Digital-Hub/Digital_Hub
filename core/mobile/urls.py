@@ -23,6 +23,7 @@ urlpatterns = [
     path('project-list/', time_series_api.project_list, name='time-series-project-list'),
     path('project-detail/<str:id>/', time_series_api.project_detail, name='time-series-project-detail'),
     path('overview/', time_series_api.overview, name='time-series-overview'),
+    path('filter-initiative-indicator-by-region/', time_series_api.filter_initiative_indicator_by_region, name='filter_initiative_indicator_by_region'),
 
     #DPMEs
     path('policy-areas/', dpmes_api.policy_areas, name='dpmes-policy-area'),
