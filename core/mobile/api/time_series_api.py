@@ -6,7 +6,7 @@ from django.conf import settings
 from rest_framework import status
 
 
-TIMESERIES_URL = "http://time-series.mopd.gov.et/"
+TIMESERIES_URL = "https://time-series.mopd.gov.et/"
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -247,6 +247,27 @@ def overview(request):
 
         res = requests.get(
             f"{TIMESERIES_URL}/api/mobile/dashboard/overview",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def filter_initiative_indicator_by_region(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/indicators_filter/",
             params=params,
             timeout=10
         )
