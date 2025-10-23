@@ -2,8 +2,7 @@ from userManagement.models import CustomUser
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import AuthenticationFailed
-
-
+import re
 from rest_framework import serializers
 from django.contrib.auth.hashers import make_password
 
@@ -45,6 +44,32 @@ class PasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
     token = serializers.CharField()
     password = serializers.CharField()
+
+    def validate_password(self, value):
+        """
+        Validate password strength:
+        - At least 8 characters
+        - At least one uppercase letter
+        - At least one lowercase letter
+        - At least one digit
+        - At least one special character
+        """
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        
+        if not re.search(r"[A-Z]", value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter.")
+        
+        if not re.search(r"[a-z]", value):
+            raise serializers.ValidationError("Password must contain at least one lowercase letter.")
+        
+        if not re.search(r"\d", value):
+            raise serializers.ValidationError("Password must contain at least one digit.")
+        
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", value):
+            raise serializers.ValidationError("Password must contain at least one special character.")
+
+        return value
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

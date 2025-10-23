@@ -175,7 +175,8 @@ def reset_password(request):
         serializer = EmailSerializer(data=request.data)
         if serializer.is_valid():
             try:
-                user = CustomUser.objects.get(email__iexact=serializer.data['email'])
+                email = serializer.data['email'].lower().strip()
+                user = CustomUser.objects.get(email__iexact=email)
             except CustomUser.DoesNotExist: 
                 return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -196,31 +197,50 @@ def reset_password(request):
     
     elif request.method == 'PUT':
         serializer = PasswordSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data.get('email')
-            token = serializer.validated_data.get('token')
-            new_password = serializer.validated_data.get('password')
+        if not serializer.is_valid():
+            # Return serializer validation errors (e.g., weak password, invalid email, etc.)
+            return Response(
+                {"result": "FAILURE", "message": serializer.errors, "data": None},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-            try:
-                user = CustomUser.objects.get(email__iexact=email)
+        email = serializer.validated_data.get('email')
+        token = serializer.validated_data.get('token')
+        new_password = serializer.validated_data.get('password')
 
-            except CustomUser.DoesNotExist: 
-                return Response({"result" : "FAILURE", "message" : "USER_NOT_FOUND", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Validate token and expiration
-            if user.token != token:
-                return Response({"result": "FAILURE", "message": "INVALID_TOKEN", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            user = CustomUser.objects.get(email__iexact=email)
+        except CustomUser.DoesNotExist:
+            return Response(
+                {"result": "FAILURE", "message": "USER_NOT_FOUND", "data": None},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-            if timezone.now() > user.tokenExpiration:
-                return Response({"result": "FAILURE", "message": "TOKEN_EXPIRED", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-            
-            
-            if user.token == serializer.data['token'] and user.tokenExpiration > timezone.now():
-                user.set_password(new_password)
-                user.save()
-                return Response({"result" : "SUCCESS", "message" : "PASSWORD_CHANGED", "data" : None}, status=status.HTTP_200_OK)
-            
-            return Response({"result" : "FAILURE", "message" : "INVALID_TOKEN", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+        # Validate token
+        if user.token != token:
+            return Response(
+                {"result": "FAILURE", "message": "INVALID_TOKEN", "data": None},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check token expiration
+        if timezone.now() > user.tokenExpiration:
+            return Response(
+                {"result": "FAILURE", "message": "TOKEN_EXPIRED", "data": None},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Token is valid and active → update password
+        user.set_password(new_password)
+        user.token = None  # Optional: clear token after successful reset
+        user.tokenExpiration = None
+        user.save()
+
+        return Response(
+            {"result": "SUCCESS", "message": "PASSWORD_CHANGED", "data": None},
+            status=status.HTTP_200_OK
+        )
+
 
         
     return Response({"result" : "FAILURE", "data" : None, "message" : "Invalid Input!", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
