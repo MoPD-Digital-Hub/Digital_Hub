@@ -67,7 +67,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 "errors": None
             }, status=status.HTTP_400_BAD_REQUEST)
         
-
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
