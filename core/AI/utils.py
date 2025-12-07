@@ -171,11 +171,13 @@ def split_csv(file_path):
     return documents
 
 
-def split_json(file_path, chunk_size=10):
+from langchain_core.documents import Document
+import json
+
+def split_json(file_path):
     """
-    Load JSON indicators and split long time series into smaller chunks
-    for better embeddings and retrieval.
-    chunk_size: number of years per chunk
+    Load JSON indicators and create Chroma-compatible Documents
+    without including time series values. Only metadata and description.
     """
     with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -183,44 +185,39 @@ def split_json(file_path, chunk_size=10):
     documents = []
     for i, record in enumerate(data):
 
-        # Collect all year keys and sort
-        year_keys = sorted([k for k in record.keys() if k.startswith("year_")])
-        
-        # Split years into chunks
-        for j in range(0, len(year_keys), chunk_size):
-            chunk_years = year_keys[j:j+chunk_size]
-            
-            # Build chunk text
-            summary_text = f"""
+        # Build summary text (semantic/natural language description)
+        summary_text = f"""
 Indicator: {record.get('name', '')} ({record.get('code', '')})
+code: {record.get('code', '')}
 Description: {record.get('description', '')}
 
 Topic: {record.get('topic', '')}
 Category: {record.get('category', '')}
 Unit: {record.get('unit', '')}
 Source: {record.get('source', '')}
-
-Time series chunk:
+KPI Type: {record.get('kpi_type', '')}
+Parent: {record.get('parent', '')}
+Version: {record.get('version', '')}
 """
-            for key in chunk_years:
-                year = key.replace("year_", "")
-                summary_text += f"\nYear {year}: {record[key]}"
 
-            # Metadata (flat, safe)
-            metadata = {
-                "row_index": i,
-                "code": record.get("code", ""),
-                "name": record.get("name", ""),
-                "topic": record.get("topic", ""),
-                "category": record.get("category", ""),
-                "unit": record.get("unit", ""),
-                "chunk_start_year": chunk_years[0].replace("year_", ""),
-                "chunk_end_year": chunk_years[-1].replace("year_", ""),
-            }
+        # Flat metadata for Chroma
+        metadata = {
+            "row_index": i,
+            "code": record.get("code", ""),
+            "name": record.get("name", ""),
+            "topic": record.get("topic", ""),
+            "category": record.get("category", ""),
+            "unit": record.get("unit", ""),
+            "source": record.get("source", ""),
+            "kpi_type": record.get("kpi_type", ""),
+            "parent": record.get("parent", ""),
+            "version": record.get("version", ""),
+        }
 
-            documents.append(Document(page_content=summary_text, metadata=metadata))
+        documents.append(Document(page_content=summary_text, metadata=metadata))
 
     return documents
+
 
 
 def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:

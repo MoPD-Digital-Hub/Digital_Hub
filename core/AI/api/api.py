@@ -8,6 +8,29 @@ from AI.utils import build_prompt, run_chain, format_docs
 from AI.models import QuestionHistory, ChatInstance
 from .serializer import ChatInstanceSerializer, QuestionHistorySerializer
 from langchain_core.messages import AIMessage, HumanMessage
+import requests
+import re
+
+def fetch_annual_value(indicator_code, year):
+    url = "https://time-series.mopd.gov.et/api/mobile/annual_value/"
+    params = {"code": indicator_code, "year": year}
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+
+
+def extract_year_from_question(question):
+    """
+    Extract a 4-digit year from the question string.
+    Returns the year as int, or None if not found.
+    """
+    match = re.search(r"\b(19|20)\d{2}\b", question)
+    if match:
+        return int(match.group())
+    return None
+
 
 
 def get_chat_history(instance):
@@ -48,13 +71,71 @@ def get_answer(request, chat_id):
             # Remove instances with no title
             ChatInstance.objects.filter(title=None).delete()
 
-            context_docs = retriever.invoke(question)
-            formatted_context = format_docs(context_docs)
+            year_requested = extract_year_from_question(question)
+
+            # 1️⃣ Retrieve indicator info from Chroma
+            docs = retriever.get_relevant_documents(question)
+            if not docs:
+                full_context = "No relevant indicator found."
+            else:
+                indicator_doc = docs[0] 
+                metadata = indicator_doc.metadata
+                indicator_code = metadata.get("code", "")
+                unit = metadata.get("Unit", "")
+                name = metadata.get("Indicator", "")
+                topic = metadata.get("Topic", "")
+                category = metadata.get("Category", "")
+                source = metadata.get("Source", "")
+                kpi_type = metadata.get("KPI Type", "")
+                parent = metadata.get("Parent", "")
+                version = metadata.get("Version", "")
+
+
+
+                response = fetch_annual_value(indicator_code, year_requested)
+
+                historical_info = ""
+
+                if "time_series" in response:
+                    # full historical series
+                    time_series = response["time_series"]
+                    for item in time_series:
+                        historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
+                elif "value" in response:
+                    # single year
+                    historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>\n"
+                else:
+                    historical_info = "<p>Data not available</p>"
+
+                # Step 4: build metadata string
+                metadata_info = f"""
+                Indicator Metadata:
+                Name: {name}
+                Code: {indicator_code}
+                Topic: {topic}
+                Category: {category}
+                Unit: {unit}
+                Source: {source}
+                KPI Type: {kpi_type}
+                Parent: {parent}
+                Version: {version}
+                """
+
+                # Step 5: combine everything
+                formatted_context = "\n\n".join([d.page_content for d in docs])
+                full_context = formatted_context + "\n\n" + metadata_info + "\n\n" + historical_info
+
 
             conversation_list = get_chat_history(instance)
 
-            prompt = build_prompt(formatted_context, question)
-            ai_response = run_chain(prompt, llm, conversation_list, formatted_context, question)
+            prompt = build_prompt(full_context, question)
+            ai_response = run_chain(
+                prompt=prompt,
+                llm=llm,
+                conversation_list=conversation_list,
+                context=full_context,
+                question=question
+            )
 
             question_instance.response = ai_response.content
             question_instance.save()
