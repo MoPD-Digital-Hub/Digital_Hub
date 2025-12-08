@@ -4,6 +4,7 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import logging
 import logging.handlers
+from decouple import config
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -43,9 +44,12 @@ INSTALLED_APPS = [
     'Videos',
     'AI',
     'mobile',
-    'Notification',
-    'axes',
+    'Notification'
 ]
+
+
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -56,7 +60,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'axes.middleware.AxesMiddleware',
 ]
 
 
@@ -68,8 +71,8 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=30),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=90), # refresh token expired -> 
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": False,
@@ -105,21 +108,6 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_OBTAIN_SERIALIZER": "rest_framework_simplejwt.serializers.TokenObtainSlidingSerializer",
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
-
-AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesStandaloneBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
-
-AXES_ENABLED = True
-AXES_FAILURE_LIMIT = 7
-AXES_COOLOFF_TIME = timedelta(hours=1)
-AXES_LOG_LOCKOUT = True
-AXES_RESET_ON_SUCCESS = True
-AXES_FAILURES_PER_USERNAME_AND_IP_ADDRESS = True
-AXES_USE_IPWARE = True
-AXES_LOCK_OUT_AT_FAILURE = True
-
 
 ROOT_URLCONF = 'project.urls'
 
@@ -159,12 +147,11 @@ server_database = {
     'USER': os.getenv('DATABASE_USER'),
     'PASSWORD': os.getenv('DATABASE_PASSWORD'),
     'HOST': os.getenv('DATABASE_HOST'),
-    'PORT': '5432',
-    'CONN_MAX_AGE': 300,
+    'PORT': '5432'
 }
 
 DATABASES = {
-    'default': testing_database #if os.getenv('DATABASE_DEV') == 'True' else server_database
+    'default': testing_database if os.getenv('DATABASE_DEV') == 'True' else server_database
 }
 
 
@@ -177,18 +164,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-    {
-        'NAME': 'mobile.validators.StrongPasswordValidator',
     },
 ]
 
@@ -284,3 +265,6 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
 EMAIL_USE_TLS = True 
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL')
 
+
+#Celery
+# CELERY_BROKER_URL = 'redis://127.0.0.1:6379'

@@ -1,7 +1,4 @@
 from django.db import models
-
-
-from django.db import models
 from django.utils import timezone
 from Notification.tasks.push_notification_task import send_to_all
 

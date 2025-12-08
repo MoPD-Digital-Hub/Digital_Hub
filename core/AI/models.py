@@ -2,12 +2,8 @@ from django.db import models
 from userManagement.models import CustomUser as User
 
 class Document(models.Model):
-    name = models.CharField(null=True, blank=True, max_length=100)
     file = models.FileField(upload_to='documents/')
     is_loaded = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.name
 
 class LoadedFile(models.Model):
     number = models.IntegerField(default=0)

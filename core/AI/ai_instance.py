@@ -13,7 +13,7 @@ ChatOllama.model_rebuild()
 llm = ChatOllama(
     model="gpt-oss:latest",
     temperature=0.5,
-    stream=False,
+    stream=True,
 )
 
 # Initialize Embeddings
@@ -26,7 +26,7 @@ embeddings = OllamaEmbeddings(
 persist_directory = "./chroma_db"
 
 vector_store = Chroma(
-    collection_name="time-series",
+    collection_name="foo",
     embedding_function=embeddings,
     persist_directory=persist_directory,
 )
@@ -53,9 +53,10 @@ else:
 retriever = vector_store.as_retriever(
     search_type="mmr",
     search_kwargs={
-        "k": 8,            
-        "fetch_k": 100,    
-        "lambda_mult": 0.3
+        "k": 6,            
+        "fetch_k": 50,    
+        "lambda_mult": 0.2 
+        
     },
 )
 
