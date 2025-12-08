@@ -13,7 +13,7 @@ ChatOllama.model_rebuild()
 llm = ChatOllama(
     model="gpt-oss:latest",
     temperature=0.5,
-    stream=False,
+    stream=True,
 )
 
 # Initialize Embeddings
@@ -59,8 +59,6 @@ retriever = vector_store.as_retriever(
     },
 )
 
-
-
 expanded_retriever = MultiQueryRetriever.from_llm(
     retriever=retriever,
     llm=llm,
@@ -70,10 +68,10 @@ expanded_retriever = MultiQueryRetriever.from_llm(
 retriever = expanded_retriever
 
 
-# compressor = LLMChainExtractor.from_llm(llm)
-# rerank_retriever = ContextualCompressionRetriever(
-#     base_retriever=expanded_retriever,
-#     base_compressor=compressor
-# )
+#compressor = LLMChainExtractor.from_llm(llm)
+#rerank_retriever = ContextualCompressionRetriever(
+#    base_retriever=expanded_retriever,
+#    base_compressor=compressor
+#)
 
-# retriever = rerank_retriever
+#retriever = rerank_retriever
