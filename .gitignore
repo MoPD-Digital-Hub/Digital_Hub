@@ -6,6 +6,7 @@
 *.pot
 *.pyc
 *.sock
+*.ini
 __pycache__/
 local_settings.py
 core/db.sqlite3
