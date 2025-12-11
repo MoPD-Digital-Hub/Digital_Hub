@@ -5,30 +5,38 @@ from AI.models import QuestionHistory, ChatInstance
 from AI.ai_instance import retriever, llm
 import asyncio
 import httpx
+from AI.api.api import _handle_question
 
 @shared_task
-def handle_question_task(prompt, conversation_list, full_context, question, chat_id, question_instance_id):
+def handle_question_task(question, instance_id, chat_id, question_instance_id):
+    instance = ChatInstance.objects.get(id=instance_id)
+    question_instance = QuestionHistory.objects.get(id=question_instance_id)
 
-    async def async_worker():
-        full_response = ""
+    asyncio.run(_handle_question(question, instance, chat_id, question_instance))
 
-        async with httpx.AsyncClient() as client:
-            async for chunk in run_chain_stream(
-                prompt=prompt,
-                llm=llm,
-                conversation_list=conversation_list,
-                context=full_context,
-                question=question
-            ):
-                full_response += chunk
+# @shared_task
+# def handle_question_task(prompt, conversation_list, full_context, question, chat_id, question_instance_id):
 
-                await client.post(
-                    "http://localhost:9000/stream_chunk",
-                    json={"chat_id": chat_id, "chunk": chunk}
-                )
+#     async def async_worker():
+#         full_response = ""
 
-        qi = await sync_to_async(QuestionHistory.objects.get)(id=question_instance_id)
-        qi.response = full_response
-        await sync_to_async(qi.save)()
+#         async with httpx.AsyncClient() as client:
+#             async for chunk in run_chain_stream(
+#                 prompt=prompt,
+#                 llm=llm,
+#                 conversation_list=conversation_list,
+#                 context=full_context,
+#                 question=question
+#             ):
+#                 full_response += chunk
 
-    asyncio.run(async_worker())
+#                 await client.post(
+#                     "http://localhost:9000/stream_chunk",
+#                     json={"chat_id": chat_id, "chunk": chunk}
+#                 )
+
+#         qi = await sync_to_async(QuestionHistory.objects.get)(id=question_instance_id)
+#         qi.response = full_response
+#         await sync_to_async(qi.save)()
+
+#     asyncio.run(async_worker())
