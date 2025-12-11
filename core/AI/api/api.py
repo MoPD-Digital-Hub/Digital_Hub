@@ -11,8 +11,9 @@ import requests
 import re
 from asgiref.sync import async_to_sync, sync_to_async
 from rest_framework.response import Response
-import asyncio
 from AI.tasks.task import handle_question_task
+import threading
+import asyncio
 
 def fetch_time_series_value(indicator_code, year):
     url = "https://time-series.mopd.gov.et/api/mobile/annual_value/"
@@ -245,7 +246,19 @@ def get_answer_socket(request, chat_id):
             instance.save()
     ChatInstance.objects.filter(title=None).delete()
 
-    return async_to_sync(_handle_question)(question, instance, chat_id, question_instance)
+    threading.Thread(
+        target=lambda: asyncio.run(
+            _handle_question(question, instance, chat_id, question_instance)
+        ),
+        daemon=True
+    ).start()
+
+
+    return Response({
+        "result": "PROCESSING",
+        "message": "Answer is being generated in the background!",
+        "chat_id": chat_id
+    }, status=202)
 
 
 async def _handle_question(question, instance, chat_id, question_instance):
