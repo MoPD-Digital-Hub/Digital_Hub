@@ -285,22 +285,31 @@ def run_chain(prompt, llm, conversation_list, context, question):
     return (prompt | llm).invoke(chain_input)
 
 
+# async def run_chain_stream(prompt, llm, conversation_list, context, question):
+#     from langchain_core.messages import HumanMessage
 
+#     messages = conversation_list + [HumanMessage(content=question)]
 
-# async def run_chain_stream(question: str):
-#     llm = ChatOllama(
-#         model="llama3.2:latest",
-#         temperature=0.5,
-#         stream=True,
-#     )
+#     chain_input = {
+#         "context": context,
+#         "messages": messages,
+#     }
 
-#     # Pass a list of messages directly
-#     messages = [HumanMessage(content=question)]
+#     stream = (prompt | llm).stream(chain_input)
 
-#     # llm.stream expects list of BaseMessages, not dict
-#     for chunk in llm.stream(messages):
-#         if hasattr(chunk, "content") and chunk.content:
-#             yield chunk.content
+#     # If stream is async → use it directly
+#     if hasattr(stream, "__aiter__"):
+#         async for chunk in stream:
+#             if hasattr(chunk, "content"):
+#                 yield chunk.content
+#     else:
+#         # Convert sync generator into async generator
+#         import asyncio
+#         for chunk in stream:
+#             if hasattr(chunk, "content"):
+#                 yield chunk.content
+#             await asyncio.sleep(0)
+
 
 async def run_chain_stream(prompt, llm, conversation_list, context, question):
     from langchain_core.messages import HumanMessage
@@ -312,21 +321,9 @@ async def run_chain_stream(prompt, llm, conversation_list, context, question):
         "messages": messages,
     }
 
-    stream = (prompt | llm).stream(chain_input)
-
-    # If stream is async → use it directly
-    if hasattr(stream, "__aiter__"):
-        async for chunk in stream:
-            if hasattr(chunk, "content"):
-                yield chunk.content
-    else:
-        # Convert sync generator into async generator
-        import asyncio
-        for chunk in stream:
-            if hasattr(chunk, "content"):
-                yield chunk.content
-            await asyncio.sleep(0)
-
+    async for chunk in (prompt | llm).astream(chain_input):
+        if hasattr(chunk, "content") and chunk.content and chunk.content.strip():
+            yield chunk.content
 
 def format_docs(docs):
     """

@@ -12,7 +12,7 @@ import re
 from asgiref.sync import async_to_sync, sync_to_async
 from rest_framework.response import Response
 import asyncio
-
+from AI.tasks.task import handle_question_task
 
 def fetch_time_series_value(indicator_code, year):
     url = "https://time-series.mopd.gov.et/api/mobile/annual_value/"
@@ -330,7 +330,7 @@ async def _handle_question(question, instance, chat_id, question_instance):
 
     full_response = ""
 
-    import httpx
+    import httpx 
     async with httpx.AsyncClient() as client:
         async for chunk in run_chain_stream(prompt=prompt, llm=llm, conversation_list=conversation_list, context=full_context, question=question):
             full_response += chunk
