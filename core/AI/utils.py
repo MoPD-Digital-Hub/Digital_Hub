@@ -330,3 +330,4 @@ def format_docs(docs):
     Format documents into a plain text string joined by double line breaks.
     """
     return "\n\n".join(doc.page_content for doc in docs)
+

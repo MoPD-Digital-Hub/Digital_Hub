@@ -246,12 +246,12 @@ def get_answer_socket(request, chat_id):
             instance.save()
     ChatInstance.objects.filter(title=None).delete()
 
-    threading.Thread(
-        target=lambda: asyncio.run(
-            _handle_question(question, instance, chat_id, question_instance)
-        ),
-        daemon=True
-    ).start()
+    handle_question_task.delay(
+        question,
+        instance.id,
+        chat_id,
+        question_instance.id
+    )
 
 
     return Response({
