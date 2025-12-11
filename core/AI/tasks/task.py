@@ -1,7 +1,7 @@
 from celery import shared_task
 from AI.utils import run_chain_stream
 from asgiref.sync import async_to_sync, sync_to_async
-from core.models import QuestionHistory, ChatInstance
+from AI.models import QuestionHistory, ChatInstance
 from AI.ai_instance import retriever, llm
 import asyncio
 import httpx
