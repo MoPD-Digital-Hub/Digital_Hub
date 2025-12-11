@@ -10,7 +10,6 @@ from langchain_core.messages import AIMessage, HumanMessage
 import requests
 import re
 from asgiref.sync import async_to_sync, sync_to_async
-from rest_framework.response import Response
 from AI.tasks.task import handle_question_task
 import threading
 import asyncio
@@ -253,111 +252,9 @@ def get_answer_socket(request, chat_id):
         question_instance.id
     )
 
-
     return Response({
         "result": "PROCESSING",
         "message": "Answer is being generated in the background!",
         "chat_id": chat_id
     }, status=202)
 
-
-async def _handle_question(question, instance, chat_id, question_instance):
-    year_requested = extract_year_from_question(question)
-
-    # 1️⃣ Retrieve indicator info from Chroma
-    docs = retriever.get_relevant_documents(question)
-
-    if not docs:
-        full_context = "No relevant indicator found."
-    else:
-        indicator_doc = docs[0] 
-        metadata = indicator_doc.metadata
-        indicator_code = metadata.get("code", "")
-        unit = metadata.get("Unit", "")
-        name = metadata.get("Indicator", "")
-        topic = metadata.get("Topic", "")
-        category = metadata.get("Category", "")
-        source = metadata.get("Source", "")
-        kpi_type = metadata.get("KPI Type", "")
-        parent = metadata.get("Parent", "")
-        version = metadata.get("Version", "")
-
-        response = fetch_time_series_value(indicator_code, year_requested)
-
-        historical_info = ""
-
-        if "time_series" in response:
-            ts = response["time_series"]
-
-            # --- Annual Data ---
-            annual = ts.get("annual", [])
-            if annual:
-                historical_info += "<h4>Annual Data</h4>\n"
-                for item in annual:
-                    historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
-
-            # --- Quarterly Data ---
-            quarter = ts.get("quarter", [])
-            if quarter:
-                historical_info += "<h4>Quarterly Data</h4>\n"
-                for item in quarter:
-                    historical_info += f"<p>{item['year']} {item['quarter']}: {item['value']} {unit}</p>\n"
-
-            # --- Monthly Data ---
-            month = ts.get("month", [])
-            if month:
-                historical_info += "<h4>Monthly Data</h4>\n"
-                for item in month:
-                    historical_info += f"<p>{item['year']} {item['month']}: {item['value']} {unit}</p>\n"
-
-            if historical_info.strip() == "":
-                historical_info = "<p>No historical data available</p>"
-                
-        elif "value" in response:
-            # single year
-            historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>\n"
-        else:
-            historical_info = "<p>Data not available</p>"
-
-        # Step 4: build metadata string
-        metadata_info = f"""
-        Indicator Metadata:
-        Name: {name}
-        Code: {indicator_code}
-        Topic: {topic}
-        Category: {category}
-        Unit: {unit}
-        Source: {source}
-        KPI Type: {kpi_type}
-        Parent: {parent}
-        Version: {version}
-        """
-
-        # Step 5: combine everything
-        formatted_context = "\n\n".join([d.page_content for d in docs])
-        full_context = formatted_context + "\n\n" + metadata_info + "\n\n" + historical_info
-
-    conversation_list = await sync_to_async(get_chat_history)(instance)
-
-    prompt = build_prompt(full_context, question)
-
-    full_response = ""
-
-    import httpx 
-    async with httpx.AsyncClient() as client:
-        async for chunk in run_chain_stream(prompt=prompt, llm=llm, conversation_list=conversation_list, context=full_context, question=question):
-            full_response += chunk
-            await client.post(
-                "http://localhost:9000/stream_chunk",
-                json={"chat_id": chat_id, "chunk": chunk}
-            )
-
-    
-    question_instance.response = full_response
-    await sync_to_async(question_instance.save)()
-
-    return Response({
-        "result": "SUCCESS",
-        "message": "Answer generated successfully!",
-        "data": full_response
-    }, status=200)
