@@ -13,8 +13,7 @@ from langchain_community.document_loaders import (
 import pandas as pd
 import os
 import json
-from langchain_core.messages import HumanMessage
-from langchain_ollama import ChatOllama
+from uuid import uuid4
 
 ##
 
@@ -177,19 +176,13 @@ from langchain_core.documents import Document
 import json
 
 def split_json(file_path):
-    """
-    Load JSON indicators and create Chroma-compatible Documents
-    without including time series values. Only metadata and description.
-    """
     with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     documents = []
     for i, record in enumerate(data):
-
-        # Build summary text (semantic/natural language description)
         summary_text = f"""
-Indicator: {record.get('name', '')} ({record.get('code', '')})
+Indicator: {record.get('name', '')} 
 code: {record.get('code', '')}
 Description: {record.get('description', '')}
 
@@ -201,8 +194,6 @@ KPI Type: {record.get('kpi_type', '')}
 Parent: {record.get('parent', '')}
 Version: {record.get('version', '')}
 """
-
-        # Flat metadata for Chroma
         metadata = {
             "row_index": i,
             "code": record.get("code", ""),
@@ -216,11 +207,10 @@ Version: {record.get('version', '')}
             "version": record.get("version", ""),
         }
 
+        # Create document with empty page_content
         documents.append(Document(page_content=summary_text, metadata=metadata))
 
     return documents
-
-
 
 def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
     try:
@@ -256,9 +246,12 @@ def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
         else:
             print(f"Unsupported file extension {ext}, skipping.")
             return False
+        
 
-        doc_ids = [f"doc-{to_be_loaded_doc.id}-{i}" for i in range(len(documents))]
-        vector_store.add_documents(documents=documents, ids=doc_ids)
+        
+        uuids = [str(uuid4()) for _ in range(len(documents))]
+
+        vector_store.add_documents(documents=documents, ids=uuids)
 
         to_be_loaded_doc.is_loaded = True
         to_be_loaded_doc.save()
@@ -272,17 +265,70 @@ def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
 
 
 
+SYSTEM_RULES = """
+You are MoPD Chat Bot. You are a professional assistant specializing in Ethiopia’s economic and development data. ; never invent data.
+
+### Greeting Rule
+
+* If the user message is ONLY a greeting (e.g., "Hi", "Hello", "Selam", "Good morning"):
+  - Respond with a short, professional greeting ONLY.
+  - Always introduce the assistant as “MoPD Chat Bot”.
+  - Do NOT include data, explanations, assumptions, follow-up questions, or document references.
+  - Keep the response to ONE sentence.
+
+* Standard Greeting Format (mandatory):
+  <p>Hello, I'm MoPD Chat Bot. How can I assist you?</p>
+
+If the answer is not in the context, reply exactly:
+<p>Can't find relevant information in the provided document.</p>
+
+Always output clean HTML with <h3>, <p>, <ul>, <li>, and tables if numeric data exists.
+
+Rules:
+- Prioritize: Accuracy → Completeness → Clarity → Conciseness.
+- Use Ethiopian Calendar by default; if GC also exists, show both; never convert missing dates.
+- Describe all historical values (annual, quarterly, monthly) found in the context.
+- Explain trends and comparisons; do not summarize by only showing latest data.
+- Ignore unrelated context; focus only on sections relevant to the question.
+- Never use markdown.
+- Default to Ethiopian Calendar (EC).
+- If both EC and GC appear, show both (e.g. <p>2017 EC (2024/2025 GC)</p>).
+- If only GC appears, do not convert or estimate EC equivalents.
+
+Describe Style for Better User Experience:
+- Use descriptive headings and subheadings to guide the user through data.
+- Introduce sections with a short context sentence to explain what the numbers represent.
+- Highlight trends, increases, decreases, or stability in numeric values using clear language.
+- Compare values across periods (annual, quarterly, monthly) to show patterns.
+- When using tables, include column and row headers with units.
+-Avoid clutter: only include data and elements directly from the document context.
+
+Response Structure:
+- Analyze frequencies (annual, quarterly, monthly).
+- Present all values with explanation.
+- Use valid HTML only.
+"""
+
+
+
 def run_chain(prompt, llm, conversation_list, context, question):
     """
     Invoke the llm chain with proper inputs.
     """
-    from langchain_core.messages import HumanMessage
 
-    chain_input = {
-        "context": context,
-        "messages": conversation_list + [HumanMessage(content=question)],
-    }
-    return (prompt | llm).invoke(chain_input)
+    messages = [
+        {"role": "system", "content": SYSTEM_RULES},
+        {"role": "user", "content": f"Context:\n{context}"},
+    ]
+
+    for m in conversation_list:
+        messages.append({"role": m.type, "content": m.content})
+
+    messages.append({"role": "user", "content": question})
+
+
+    return llm.invoke(messages)
+
 
 
 # async def run_chain_stream(prompt, llm, conversation_list, context, question):
@@ -311,19 +357,36 @@ def run_chain(prompt, llm, conversation_list, context, question):
 #             await asyncio.sleep(0)
 
 
-async def run_chain_stream(prompt, llm, conversation_list, context, question):
-    from langchain_core.messages import HumanMessage
+import anyio
 
-    messages = conversation_list + [HumanMessage(content=question)]
+def run_chain_stream(prompt, llm, conversation_list, context, question):
+    """
+    Synchronous wrapper for the async generator `run_chain_stream`.
+    Can be safely called inside Celery.
+    """
+    results = []
 
-    chain_input = {
-        "context": context,
-        "messages": messages,
-    }
+    async def _runner():
+        async for chunk in run_chain_stream(prompt, llm, conversation_list, context, question):
+            results.append(chunk)
 
-    async for chunk in (prompt | llm).astream(chain_input):
-        if hasattr(chunk, "content") and chunk.content and chunk.content.strip():
-            yield chunk.content
+    # Run async generator in the current thread
+    anyio.from_thread.run(_runner)
+    return results
+
+# async def run_chain_stream(prompt, llm, conversation_list, context, question):
+#     from langchain_core.messages import HumanMessage
+
+#     messages = conversation_list + [HumanMessage(content=question)]
+
+#     chain_input = {
+#         "context": context,
+#         "messages": messages,
+#     }
+
+#     async for chunk in (prompt | llm).astream(chain_input):
+#         if hasattr(chunk, "content") and chunk.content and chunk.content.strip():
+#             yield chunk.content
 
 def format_docs(docs):
     """
