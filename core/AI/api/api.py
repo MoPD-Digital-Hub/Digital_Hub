@@ -12,6 +12,7 @@ import re
 from asgiref.sync import async_to_sync, sync_to_async
 from AI.tasks.task import handle_question_task
 import threading
+import json
 import asyncio
 
 def fetch_time_series_value(indicator_code, year):
@@ -42,7 +43,7 @@ def get_chat_history(instance):
     """
     history = QuestionHistory.objects.filter(instance=instance, response__isnull=False).order_by('created_at')
     conversation = []
-    for record in history:
+    for record in history[:3]:
         conversation.append(HumanMessage(content=record.question))
         conversation.append(AIMessage(content=record.response))
     return conversation
@@ -77,58 +78,59 @@ def get_answer(request, chat_id):
             year_requested = extract_year_from_question(question)
 
             # 1️⃣ Retrieve indicator info from Chroma
-            docs = retriever.get_relevant_documents(question)
+            docs = retriever.invoke(question)
+
             if not docs:
                 full_context = "No relevant indicator found."
             else:
                 indicator_doc = docs[0] 
                 metadata = indicator_doc.metadata
                 indicator_code = metadata.get("code", "")
-                unit = metadata.get("Unit", "")
-                name = metadata.get("Indicator", "")
-                topic = metadata.get("Topic", "")
-                category = metadata.get("Category", "")
-                source = metadata.get("Source", "")
-                kpi_type = metadata.get("KPI Type", "")
-                parent = metadata.get("Parent", "")
-                version = metadata.get("Version", "")
+                unit = metadata.get("unit", "")
+                name = metadata.get("name", "")
+                topic = metadata.get("topic", "")
+                category = metadata.get("category", "")
+                source = metadata.get("source", "")
+                kpi_type = metadata.get("kpi_type", "")
+                parent = metadata.get("parent", "")
+                version = metadata.get("version", "")
 
                 response = fetch_time_series_value(indicator_code, year_requested)
 
-                historical_info = ""
+                # historical_info = ""
 
-                if "time_series" in response:
-                    ts = response["time_series"]
+                # if "time_series" in response:
+                #     ts = response["time_series"]
 
-                    # --- Annual Data ---
-                    annual = ts.get("annual", [])
-                    if annual:
-                        historical_info += "<h4>Annual Data</h4>\n"
-                        for item in annual:
-                            historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
+                #     # --- Annual Data ---
+                #     annual = ts.get("annual", [])
+                #     if annual:
+                #         historical_info += "<h4>Annual Data</h4>\n"
+                #         for item in annual:
+                #             historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
 
-                    # --- Quarterly Data ---
-                    quarter = ts.get("quarter", [])
-                    if quarter:
-                        historical_info += "<h4>Quarterly Data</h4>\n"
-                        for item in quarter:
-                            historical_info += f"<p>{item['year']} {item['quarter']}: {item['value']} {unit}</p>\n"
+                #     # --- Quarterly Data ---
+                #     quarter = ts.get("quarter", [])
+                #     if quarter:
+                #         historical_info += "<h4>Quarterly Data</h4>\n"
+                #         for item in quarter:
+                #             historical_info += f"<p>{item['year']} {item['quarter']}: {item['value']} {unit}</p>\n"
 
-                    # --- Monthly Data ---
-                    month = ts.get("month", [])
-                    if month:
-                        historical_info += "<h4>Monthly Data</h4>\n"
-                        for item in month:
-                            historical_info += f"<p>{item['year']} {item['month']}: {item['value']} {unit}</p>\n"
+                #     # --- Monthly Data ---
+                #     month = ts.get("month", [])
+                #     if month:
+                #         historical_info += "<h4>Monthly Data</h4>\n"
+                #         for item in month:
+                #             historical_info += f"<p>{item['year']} {item['month']}: {item['value']} {unit}</p>\n"
 
-                    if historical_info.strip() == "":
-                        historical_info = "<p>No historical data available</p>"
+                #     if historical_info.strip() == "":
+                #         historical_info = "<p>No historical data available</p>"
                         
-                elif "value" in response:
-                    # single year
-                    historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>\n"
-                else:
-                    historical_info = "<p>Data not available</p>"
+                # elif "value" in response:
+                #     # single year
+                #     historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>\n"
+                # else:
+                #     historical_info = "<p>Data not available</p>"
 
                 # Step 4: build metadata string
                 metadata_info = f"""
@@ -145,10 +147,12 @@ def get_answer(request, chat_id):
                 """
 
                 # Step 5: combine everything
-                formatted_context = "\n\n".join([d.page_content for d in docs])
-                full_context = formatted_context + "\n\n" + metadata_info + "\n\n" + historical_info
+                formatted_context = "\n\n".join([d.page_content for d in docs[:2]])
+                full_context = formatted_context + "\n\n" + metadata_info + "\n\n" + json.dumps(response)
 
 
+
+            print(full_context, '----')
             conversation_list = get_chat_history(instance)
 
             prompt = build_prompt(full_context, question)

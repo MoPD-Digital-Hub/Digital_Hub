@@ -1,77 +1,104 @@
 import os
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_ollama import ChatOllama, OllamaEmbeddings
-from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI
+from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, list_collections, MilvusException, db, utility
 from AI.utils import process_document
 from .models import Document as doc
-from langchain.retrievers.multi_query import MultiQueryRetriever
-from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
+from langchain_milvus import BM25BuiltInFunction, Milvus
+from langchain_classic.retrievers.multi_query import MultiQueryRetriever
+from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
+from pymilvus import MilvusClient
+from langchain_core.prompts import PromptTemplate
 
-ChatOllama.model_rebuild()
-# Initialize LLM
-llm = ChatOllama(
-    model="gpt-oss:latest",
-    temperature=0.5,
-    stream=True,
+llm = ChatOpenAI(
+    openai_api_base="http://localhost:8000/v1",
+    openai_api_key="EMPTY",
+    model="Qwen/Qwen2.5-7B-Instruct",
+    streaming=True,
+    temperature = 0.2
 )
 
-# Initialize Embeddings
-embeddings = OllamaEmbeddings(
-    model="nomic-embed-text:latest",
-    base_url="http://127.0.0.1:11434"
+# -----------------------------
+# 2️⃣ Initialize embeddings
+# -----------------------------
+embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-base-en-v1.5",
+    encode_kwargs={"normalize_embeddings": True}
 )
 
-# Set persistence directory
-persist_directory = "./chroma_db"
 
-vector_store = Chroma(
-    collection_name="time-series",
+# -----------------------------
+# 5️⃣ Initialize LangChain Milvus vector store
+# -----------------------------
+
+
+
+client = MilvusClient("http://localhost:19530")
+
+
+# for c in client.list_collections():
+#     client.drop_collection(c)
+
+vector_store = Milvus(
     embedding_function=embeddings,
-    persist_directory=persist_directory,
+    connection_args={"alias": "default"},
+    index_params={"index_type": "FLAT", "metric_type": "L2"},
+    consistency_level="Strong",
+    drop_old=False, 
 )
 
-# Initialize text splitter for text-based documents (PDF, DOCX, TXT)
+
+
+# -----------------------------
+# 6️⃣ Initialize text splitter
+# -----------------------------
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=800,
     chunk_overlap=160
 )
 
-
+# -----------------------------
+# 7️⃣ Load and process new documents
+# -----------------------------
 doc_data = doc.objects.filter(is_loaded=False)
-
-# Load and process documents if vector store is empty or new docs exist
-if not os.path.exists(persist_directory) or doc_data.count() > 0:
-    print("Loading and processing documents...")
-
+if doc_data.count() > 0:
+    print("Processing new documents...")
     for document in doc_data:
-        process_document(document, text_splitter, vector_store)  # pass both
+        process_document(document, text_splitter, vector_store)
 else:
-    print("Using persisted vector store.")
+    print("No new documents to process.")
 
-# Initialize retriever
-retriever = vector_store.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 8,            
-        "fetch_k": 100,    
-        "lambda_mult": 0.3
-    },
-)
+# -----------------------------
+# 8️⃣ Initialize retriever
+# -----------------------------
+# retriever = vector_store.as_retriever(
+#     search_type="mmr",
+#     search_kwargs={
+#         "k": 5,              # Return top 10 final results instead of 8
+#         "fetch_k": 15,        # Fetch more candidates before reranking (higher chance to find relevant docs)
+#         "lambda_mult": 0.3,  # Lower lambda -> favors relevance over diversity
+#         "score_threshold": 0.15, #ocs
+#     },
+#     include_metadata=True,     
+# )
+retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
 
-expanded_retriever = MultiQueryRetriever.from_llm(
-    retriever=retriever,
-    llm=llm,
-    include_original=True
-)
+# custom_prompt = PromptTemplate(
+#     input_variables=["question"],
+#     template="""
+# Generate 3 different variations of this question focusing on:
+# - The indicator names (e.g., SMA, RSI)
+# - Time ranges (e.g., Jan–Mar 2025)
+# - Any stock symbols mentioned
 
-retriever = expanded_retriever
+# Original question: {question}
+# """
+# )
 
-
-#compressor = LLMChainExtractor.from_llm(llm)
-#rerank_retriever = ContextualCompressionRetriever(
-#    base_retriever=expanded_retriever,
-#    base_compressor=compressor
-#)
-
-#retriever = rerank_retriever
+# retriever = MultiQueryRetriever.from_llm(
+#     retriever=retriever,
+#     llm=llm,
+#     include_original=True, 
+#     prompt=custom_prompt,
+# )

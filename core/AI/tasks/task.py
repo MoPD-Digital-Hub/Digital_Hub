@@ -9,6 +9,7 @@ import requests
 from langchain_core.messages import AIMessage, HumanMessage
 from AI.utils import build_prompt, run_chain_stream
 from rest_framework.response import Response
+import anyio
 
 
 def get_chat_history(instance):
@@ -40,7 +41,10 @@ def fetch_time_series_value(indicator_code, year):
         return response.json()
     return None
 
-async def _handle_question(question, instance, chat_id, question_instance):
+async def _handle_question(question, instance_id, chat_id, question_instance_id):
+    instance = await sync_to_async(ChatInstance.objects.get)(id=instance_id)
+    question_instance = await sync_to_async(QuestionHistory.objects.get)(id=question_instance_id)
+
     year_requested = extract_year_from_question(question)
 
     # 1️⃣ Retrieve indicator info from Chroma
@@ -142,12 +146,17 @@ async def _handle_question(question, instance, chat_id, question_instance):
     }, status=200)
 
 
+# @shared_task
+# def handle_question_task(question, instance_id, chat_id, question_instance_id):
+#     instance = ChatInstance.objects.get(id=instance_id)
+#     question_instance = QuestionHistory.objects.get(id=question_instance_id)
+
+#     asyncio.run(_handle_question(question, instance, chat_id, question_instance))
+
+
 @shared_task
 def handle_question_task(question, instance_id, chat_id, question_instance_id):
-    instance = ChatInstance.objects.get(id=instance_id)
-    question_instance = QuestionHistory.objects.get(id=question_instance_id)
-
-    asyncio.run(_handle_question(question, instance, chat_id, question_instance))
+    anyio.run(_handle_question, question, instance_id, chat_id, question_instance_id)
 
 # @shared_task
 # def handle_question_task(prompt, conversation_list, full_context, question, chat_id, question_instance_id):
