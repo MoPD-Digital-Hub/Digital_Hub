@@ -175,15 +175,50 @@ def split_csv(file_path):
 from langchain_core.documents import Document
 import json
 
+
+def flatten_indicators(indicators, parent_name=None):
+    """
+    Recursively flatten indicators into a list of records.
+    Each record is a dict suitable for your split_json function.
+    """
+    flat_list = []
+
+    for indicator in indicators:
+        record = {
+            "code": indicator.get('code', ''),
+            "name": indicator.get('name', ''),
+            "description": indicator.get('description', ''),
+            "topic": indicator.get('topic', ''),
+            "category": indicator.get('category', ''),
+            "unit": indicator.get('unit', ''),
+            "source": indicator.get('source', ''),
+            "kpi_type": indicator.get('kpi_type', ''),
+            "parent": parent_name or indicator.get('parent', ''),
+            "version": indicator.get('version', ''),
+        }
+        flat_list.append(record)
+
+        # Recursively flatten children
+        children = indicator.get('child', [])
+        if children:
+            flat_list.extend(flatten_indicators(children, parent_name=indicator.get('name', '')))
+
+    return flat_list
+
+
 def split_json(file_path):
+    import json
+
     with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
+    all_records = flatten_indicators(data)
+
     documents = []
-    for i, record in enumerate(data):
+    for i, record in enumerate(all_records):
         summary_text = f"""
 Indicator: {record.get('name', '')} 
-code: {record.get('code', '')}
+Code: {record.get('code', '')}
 Description: {record.get('description', '')}
 
 Topic: {record.get('topic', '')}
@@ -191,7 +226,7 @@ Category: {record.get('category', '')}
 Unit: {record.get('unit', '')}
 Source: {record.get('source', '')}
 KPI Type: {record.get('kpi_type', '')}
-Parent: {record.get('parent', '')}
+Parent: { record.get("parent") or ""}
 Version: {record.get('version', '')}
 """
         metadata = {
@@ -203,11 +238,10 @@ Version: {record.get('version', '')}
             "unit": record.get("unit", ""),
             "source": record.get("source", ""),
             "kpi_type": record.get("kpi_type", ""),
-            "parent": record.get("parent", ""),
+            "parent": record.get("parent") or "",
             "version": record.get("version", ""),
         }
 
-        # Create document with empty page_content
         documents.append(Document(page_content=summary_text, metadata=metadata))
 
     return documents
