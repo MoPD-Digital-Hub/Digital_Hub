@@ -14,7 +14,7 @@ from langchain_core.prompts import PromptTemplate
 llm = ChatOpenAI(
     openai_api_base="http://localhost:8000/v1",
     openai_api_key="EMPTY",
-    model="Qwen/Qwen2.5-7B-Instruct",
+    model="openai/gpt-oss-20b",
     streaming=True,
     temperature = 0.2
 )
@@ -72,17 +72,17 @@ else:
 # -----------------------------
 # 8️⃣ Initialize retriever
 # -----------------------------
-# retriever = vector_store.as_retriever(
-#     search_type="mmr",
-#     search_kwargs={
-#         "k": 5,              # Return top 10 final results instead of 8
-#         "fetch_k": 15,        # Fetch more candidates before reranking (higher chance to find relevant docs)
-#         "lambda_mult": 0.3,  # Lower lambda -> favors relevance over diversity
-#         "score_threshold": 0.15, #ocs
-#     },
-#     include_metadata=True,     
-# )
-retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+
+# retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
+
+retriever = vector_store.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 5,            
+        "fetch_k": 15,    
+        "lambda_mult": 0.3
+    },
+)
 
 # custom_prompt = PromptTemplate(
 #     input_variables=["question"],

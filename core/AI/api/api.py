@@ -83,76 +83,84 @@ def get_answer(request, chat_id):
             if not docs:
                 full_context = "No relevant indicator found."
             else:
-                indicator_doc = docs[0] 
-                metadata = indicator_doc.metadata
-                indicator_code = metadata.get("code", "")
-                unit = metadata.get("unit", "")
-                name = metadata.get("name", "")
-                topic = metadata.get("topic", "")
-                category = metadata.get("category", "")
-                source = metadata.get("source", "")
-                kpi_type = metadata.get("kpi_type", "")
-                parent = metadata.get("parent", "")
-                version = metadata.get("version", "")
+                all_indicators_context = []
 
-                response = fetch_time_series_value(indicator_code, year_requested)
+                for indicator_doc in docs:
+                    metadata = indicator_doc.metadata
 
-                # historical_info = ""
+                    indicator_code = metadata.get("code", "")
+                    unit = metadata.get("unit", "")
+                    name = metadata.get("name", "")
+                    topic = metadata.get("topic", "")
+                    category = metadata.get("category", "")
+                    source = metadata.get("source", "")
+                    kpi_type = metadata.get("kpi_type", "")
+                    parent = metadata.get("parent", "")
+                    version = metadata.get("version", "")
 
-                # if "time_series" in response:
-                #     ts = response["time_series"]
+                    response = fetch_time_series_value(indicator_code, year_requested)
+                    historical_info = ""
 
-                #     # --- Annual Data ---
-                #     annual = ts.get("annual", [])
-                #     if annual:
-                #         historical_info += "<h4>Annual Data</h4>\n"
-                #         for item in annual:
-                #             historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
+                    if "time_series" in response:
+                        ts = response["time_series"]
 
-                #     # --- Quarterly Data ---
-                #     quarter = ts.get("quarter", [])
-                #     if quarter:
-                #         historical_info += "<h4>Quarterly Data</h4>\n"
-                #         for item in quarter:
-                #             historical_info += f"<p>{item['year']} {item['quarter']}: {item['value']} {unit}</p>\n"
+                        # --- Annual Data ---
+                        annual = ts.get("annual", [])
+                        if annual:
+                            historical_info += "<h4>Annual Data</h4>\n"
+                            for item in annual:
+                                historical_info += f"<p>{item['year']}: {item['value']} {unit}</p>\n"
 
-                #     # --- Monthly Data ---
-                #     month = ts.get("month", [])
-                #     if month:
-                #         historical_info += "<h4>Monthly Data</h4>\n"
-                #         for item in month:
-                #             historical_info += f"<p>{item['year']} {item['month']}: {item['value']} {unit}</p>\n"
+                        # --- Quarterly Data ---
+                        quarter = ts.get("quarter", [])
+                        if quarter:
+                            historical_info += "<h4>Quarterly Data</h4>\n"
+                            for item in quarter:
+                                historical_info += f"<p>{item['year']} {item['quarter']}: {item['value']} {unit}</p>\n"
 
-                #     if historical_info.strip() == "":
-                #         historical_info = "<p>No historical data available</p>"
-                        
-                # elif "value" in response:
-                #     # single year
-                #     historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>\n"
-                # else:
-                #     historical_info = "<p>Data not available</p>"
+                        # --- Monthly Data ---
+                        month = ts.get("month", [])
+                        if month:
+                            historical_info += "<h4>Monthly Data</h4>\n"
+                            for item in month:
+                                historical_info += f"<p>{item['year']} {item['month']}: {item['value']} {unit}</p>\n"
 
-                # Step 4: build metadata string
-                metadata_info = f"""
-                Indicator Metadata:
-                Name: {name}
-                Code: {indicator_code}
-                Topic: {topic}
-                Category: {category}
-                Unit: {unit}
-                Source: {source}
-                KPI Type: {kpi_type}
-                Parent: {parent}
-                Version: {version}
-                """
+                        if not historical_info.strip():
+                            historical_info = "<p>No historical data available</p>"
 
-                # Step 5: combine everything
-                formatted_context = "\n\n".join([d.page_content for d in docs[:2]])
-                full_context = formatted_context + "\n\n" + metadata_info + "\n\n" + json.dumps(response)
+                    elif "value" in response:
+                        historical_info = f"<p>{year_requested}: {response['value']} {unit}</p>"
+                    else:
+                        historical_info = "<p>Data not available</p>"
+
+                    metadata_info = f"""
+                    <h3>Indicator Metadata</h3>
+                    <p><b>Name:</b> {name}</p>
+                    <p><b>Code:</b> {indicator_code}</p>
+                    <p><b>Topic:</b> {topic}</p>
+                    <p><b>Category:</b> {category}</p>
+                    <p><b>Unit:</b> {unit}</p>
+                    <p><b>Source:</b> {source}</p>
+                    <p><b>KPI Type:</b> {kpi_type}</p>
+                    <p><b>Parent:</b> {parent}</p>
+                    <p><b>Version:</b> {version}</p>
+                    """
+
+                    indicator_context = (
+                        indicator_doc.page_content
+                        + "\n\n"
+                        + metadata_info
+                        + "\n\n"
+                        + historical_info
+                    )
+
+                    all_indicators_context.append(indicator_context)
+
+                # ✅ Combine all indicators into one context
+                full_context = "\n<hr/>\n".join(all_indicators_context)
 
 
-
-            print(full_context, '----')
+            print(full_context)
             conversation_list = get_chat_history(instance)
 
             prompt = build_prompt(full_context, question)
