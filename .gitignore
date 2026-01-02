@@ -10,6 +10,8 @@
 *.ini
 *.config
 *.db
+*.err
+core/logs/
 __pycache__/
 local_settings.py
 core/db.sqlite3
