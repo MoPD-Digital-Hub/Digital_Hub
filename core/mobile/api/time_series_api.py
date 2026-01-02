@@ -279,3 +279,46 @@ def filter_initiative_indicator_by_region(request):
             {"detail": f"Failed to reach Time-Series service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
+
+###update api
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def categories(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/categories/{id}",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def kpis(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/kpis/{id}",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+    

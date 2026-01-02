@@ -25,6 +25,10 @@ urlpatterns = [
     path('overview/', time_series_api.overview, name='time-series-overview'),
     path('filter-initiative-indicator-by-region/', time_series_api.filter_initiative_indicator_by_region, name='filter_initiative_indicator_by_region'),
 
+    ##updated
+    path('categories/<str:id>/', time_series_api.categories, name='time-series-categories'),
+    path('kpis/<str:id>/', time_series_api.kpis, name='time-series-kpis'),
+
     #DPMEs
     path('policy-areas/', dpmes_api.policy_areas, name='dpmes-policy-area'),
     path('policy-area-detail/<str:id>/', dpmes_api.policy_area_detail, name='dpmes-policy-area-detail'),

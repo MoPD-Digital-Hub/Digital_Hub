@@ -1,0 +1,133 @@
+<style>
+    #chat-log {
+        width: 100%;
+        height: 400px;
+        border: 1px solid #ccc;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .message {
+        max-width: 80%;
+        padding: 10px;
+        border-radius: 6px;
+        word-wrap: break-word;
+    }
+
+    .user {
+        background: #e3f2fd;
+        align-self: flex-end;
+    }
+
+    .ai {
+        background: #f5f5f5;
+        align-self: flex-start;
+    }
+</style>
+
+<div id="chat-log"></div>
+
+<input id="chat-message-input" type="text" autocomplete="off">
+<button id="chat-message-submit">Send</button>
+
+<script>
+    const roomName = "{{ room_name }}";
+    const socket = new WebSocket(
+        "wss://" + window.location.host + "/ws/chat/" + roomName + "/"
+    );
+
+    let currentAiMessageElement = null;
+    let aiBuffer = ""; // buffer to safely accumulate HTML
+
+    socket.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const chatLog = document.getElementById("chat-log");
+
+        /* =========================
+           1️⃣ Chat History
+        ========================= */
+        if (data.question && data.response) {
+            appendUserMessage(data.question);
+            appendAiMessage(data.response);
+            scrollBottom();
+            return;
+        }
+
+        /* =========================
+           2️⃣ Streaming HTML chunks
+        ========================= */
+        if (data.is_stream) {
+            if (!currentAiMessageElement) {
+                currentAiMessageElement = createAiBubble();
+                aiBuffer = "";
+            }
+
+            aiBuffer += data.message;
+
+            // Render buffered HTML safely
+            currentAiMessageElement.innerHTML = aiBuffer;
+            scrollBottom();
+            return;
+        }
+
+        /* =========================
+           3️⃣ Final signal
+        ========================= */
+        if (data.is_final) {
+            currentAiMessageElement = null;
+            aiBuffer = "";
+            scrollBottom();
+        }
+    };
+
+    /* =========================
+       Helpers
+    ========================= */
+
+    function createAiBubble() {
+        const div = document.createElement("div");
+        div.className = "message ai";
+        document.getElementById("chat-log").appendChild(div);
+        return div;
+    }
+
+    function appendAiMessage(html) {
+        const div = createAiBubble();
+        div.innerHTML = html;
+    }
+
+    function appendUserMessage(text) {
+        const div = document.createElement("div");
+        div.className = "message user";
+        div.textContent = text; // SAFE for user input
+        document.getElementById("chat-log").appendChild(div);
+    }
+
+    function scrollBottom() {
+        const chatLog = document.getElementById("chat-log");
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    /* =========================
+       Send message
+    ========================= */
+
+    document.getElementById("chat-message-submit").onclick = sendMessage;
+    document.getElementById("chat-message-input").onkeydown = function(e) {
+        if (e.key === "Enter") sendMessage();
+    };
+
+    function sendMessage() {
+        const input = document.getElementById("chat-message-input");
+        const message = input.value.trim();
+        if (!message) return;
+
+        socket.send(JSON.stringify({ message }));
+        appendUserMessage(message);
+        input.value = "";
+        scrollBottom();
+    }
+</script>

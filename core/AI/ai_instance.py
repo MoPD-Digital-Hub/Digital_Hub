@@ -16,7 +16,7 @@ llm = ChatOpenAI(
     openai_api_key="EMPTY",
     model="openai/gpt-oss-20b",
     streaming=True,
-    temperature = 0.2
+    temperature = 0.3
 )
 
 # -----------------------------
@@ -78,11 +78,12 @@ else:
 retriever = vector_store.as_retriever(
     search_type="mmr",
     search_kwargs={
-        "k": 5,            
-        "fetch_k": 15,    
-        "lambda_mult": 0.3
+        "k": 4,          
+        "fetch_k": 10,   
+        "lambda_mult": 0.5
     },
 )
+
 
 # custom_prompt = PromptTemplate(
 #     input_variables=["question"],

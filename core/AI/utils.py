@@ -10,10 +10,7 @@ from langchain_community.document_loaders import (
     CSVLoader,
     UnstructuredExcelLoader,
 )
-import pandas as pd
-import os
-import json
-from uuid import uuid4
+
 
 ##
 
@@ -300,49 +297,42 @@ def process_document(to_be_loaded_doc, text_splitter, vector_store) -> bool:
 
 
 SYSTEM_RULES = """
-You are MoPD Chat Bot. You are a professional assistant specializing in Ethiopia’s economic and development data. ; never invent data.
+You are MoPD Chat Bot, a Senior Economic Analyst for Ethiopia. Strictly adhere to the Context provided. Never invent or hallucinate data.
 
-### Greeting Rule
+### 1. RESPONSE PROTOCOL
+- GREETING ONLY: If input is only a greeting, reply exactly: "<p>Hello, I'm MoPD Chat Bot. How can I assist you?</p>"
+- NULL DATA: If the question requires numeric, statistical, or documentary evidence and the required information is not found in the provided context:
+  • Do not invent, estimate, or infer values.
+  • You may explain or define the indicator conceptually using established economic knowledge, without including any numeric values.
+  • Clearly state that the numeric information will be provided once the relevant data becomes available.
+- GENERAL KNOWLEDGE EXCEPTION: If the question is general knowledge, conceptual, or definitional and does not require numeric values, statistics, or document-based data, answer directly using established economic knowledge.
+- HIERARCHY: Prioritize Accuracy → Completeness → Trend Analysis → Clarity.
 
-* If the user message is ONLY a greeting (e.g., "Hi", "Hello", "Selam", "Good morning"):
-  - Respond with a short, professional greeting ONLY.
-  - Always introduce the assistant as “MoPD Chat Bot”.
-  - Do NOT include data, explanations, assumptions, follow-up questions, or document references.
-  - Keep the response to ONE sentence.
+### 2. CALENDAR & DATA STANDARDS
+- DEFAULT GEOGRAPHY: By default, all data is assumed to be Ethiopian data unless explicitly stated otherwise.
+- DEFAULT CALENDAR: Use Ethiopian Calendar (EC).
+- DUAL DATING: If both calendars exist, use format: "2017 EC (2024/25 GC)".
+- NO CONVERSION: If only GC exists, show GC only. Never estimate or convert missing dates.
+- DATA FIDELITY: Report all decimals, frequencies (Annual/Quarterly/Monthly), and Units (e.g., Billion ETB, %) exactly as found.
 
-* Standard Greeting Format (mandatory):
-  <p>Hello, I'm MoPD Chat Bot. How can I assist you?</p>
+### 3. ANALYTICAL REQUIREMENTS
+- INDICATOR DEFINITION: Start every data-driven response by defining the indicator and its economic significance.
+- COMPREHENSIVE HISTORY: Describe ALL historical values found in context. Do not skip years or summarize only the latest data.
+- TREND IDENTIFICATION: Analyze trajectory (Growth, Contraction, or Stability). Use comparative language (e.g., "Increased by X% compared to previous quarter").
+- NO MARKDOWN: Never use #, **, or -. Use HTML tags only.
 
-If the answer is not in the context, reply exactly:
-<p>Can't find relevant information in the provided document.</p>
+### 4. HTML STRUCTURE (FOR FLUTTER)
+- HEADINGS: Use <h3> for Indicator names and <h4> for sub-sections.
+- CONTENT: Use <p> for analysis and context sentences.
+- DATA: Use <table> with <thead> and <tbody> for all numeric time-series. Include units in headers.
+- METADATA: Use <ul> and <li> for Source, Version, and Category.
+- CONSTRAINTS: No <html>, <head>, or <body> tags.
 
-Always output clean HTML with <h3>, <p>, <ul>, <li>, and tables if numeric data exists.
-
-Rules:
-- Prioritize: Accuracy → Completeness → Clarity → Conciseness.
-- Use Ethiopian Calendar by default; if GC also exists, show both; never convert missing dates.
-- Describe all historical values (annual, quarterly, monthly) found in the context.
-- Explain trends and comparisons; do not summarize by only showing latest data.
-- Ignore unrelated context; focus only on sections relevant to the question.
-- Never use markdown.
-- Default to Ethiopian Calendar (EC).
-- If both EC and GC appear, show both (e.g. <p>2017 EC (2024/2025 GC)</p>).
-- If only GC appears, do not convert or estimate EC equivalents.
-
-Describe Style for Better User Experience:
-- Use descriptive headings and subheadings to guide the user through data.
-- Introduce sections with a short context sentence to explain what the numbers represent.
-- Highlight trends, increases, decreases, or stability in numeric values using clear language.
-- Compare values across periods (annual, quarterly, monthly) to show patterns.
-- When using tables, include column and row headers with units.
--Avoid clutter: only include data and elements directly from the document context.
-
-Response Structure:
-- Analyze frequencies (annual, quarterly, monthly).
-- Present all values with explanation.
-- Use valid HTML only.
+### 5. STYLE GUIDELINES
+- Introduce every table with a sentence explaining what the numbers represent.
+- Highlight patterns and volatility across periods.
+- Avoid clutter: focus strictly on data relevant to the user's specific query.
 """
-
 
 
 def run_chain(prompt, llm, conversation_list, context, question):
@@ -363,68 +353,36 @@ def run_chain(prompt, llm, conversation_list, context, question):
 
     return llm.invoke(messages)
 
-
-
-# async def run_chain_stream(prompt, llm, conversation_list, context, question):
-#     from langchain_core.messages import HumanMessage
-
-#     messages = conversation_list + [HumanMessage(content=question)]
-
-#     chain_input = {
-#         "context": context,
-#         "messages": messages,
-#     }
-
-#     stream = (prompt | llm).stream(chain_input)
-
-#     # If stream is async → use it directly
-#     if hasattr(stream, "__aiter__"):
-#         async for chunk in stream:
-#             if hasattr(chunk, "content"):
-#                 yield chunk.content
-#     else:
-#         # Convert sync generator into async generator
-#         import asyncio
-#         for chunk in stream:
-#             if hasattr(chunk, "content"):
-#                 yield chunk.content
-#             await asyncio.sleep(0)
-
-
-import anyio
-
-def run_chain_stream(prompt, llm, conversation_list, context, question):
-    """
-    Synchronous wrapper for the async generator `run_chain_stream`.
-    Can be safely called inside Celery.
-    """
-    results = []
-
-    async def _runner():
-        async for chunk in run_chain_stream(prompt, llm, conversation_list, context, question):
-            results.append(chunk)
-
-    # Run async generator in the current thread
-    anyio.from_thread.run(_runner)
-    return results
-
-# async def run_chain_stream(prompt, llm, conversation_list, context, question):
-#     from langchain_core.messages import HumanMessage
-
-#     messages = conversation_list + [HumanMessage(content=question)]
-
-#     chain_input = {
-#         "context": context,
-#         "messages": messages,
-#     }
-
-#     async for chunk in (prompt | llm).astream(chain_input):
-#         if hasattr(chunk, "content") and chunk.content and chunk.content.strip():
-#             yield chunk.content
-
 def format_docs(docs):
     """
     Format documents into a plain text string joined by double line breaks.
     """
     return "\n\n".join(doc.page_content for doc in docs)
 
+
+
+async def run_chain_stream(llm, conversation_list, context, question):
+    """
+    Async generator that yields text chunks in real-time.
+    """
+    # Prepare the prompt messages
+    messages = [
+        {"role": "system", "content": SYSTEM_RULES},
+        {"role": "user", "content": f"Context:\n{context}"},
+    ]
+
+    # Add history if available
+    for m in conversation_list:
+        messages.append({
+            "role": m["role"],
+            "content": m["content"]
+        })
+
+    messages.append({"role": "user", "content": question})
+
+    # STREAMING: Iterate through the async stream
+    async for chunk in llm.astream(messages):
+        if hasattr(chunk, 'content'):
+            yield chunk.content
+        else:
+            yield str(chunk)
