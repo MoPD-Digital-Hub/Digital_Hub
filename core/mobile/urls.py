@@ -24,6 +24,7 @@ urlpatterns = [
     path('project-detail/<str:id>/', time_series_api.project_detail, name='time-series-project-detail'),
     path('overview/', time_series_api.overview, name='time-series-overview'),
     path('filter-initiative-indicator-by-region/', time_series_api.filter_initiative_indicator_by_region, name='filter_initiative_indicator_by_region'),
+    path('high-frequency/', time_series_api.high_frequency, name='time-series-high-frequency'),
 
     ##updated
     path('categories/<str:id>/', time_series_api.categories, name='time-series-categories'),
@@ -41,7 +42,7 @@ urlpatterns = [
     path('affiliated-ministries/', dpmes_api.affiliated_ministries, name='dpmes-affiliated-ministries'),
     path('dpmes-indicator-detail/<str:id>/', dpmes_api.indicator_detail, name='dpmes-indicator-detail'),
     path('dpmes-year-lists/', dpmes_api.year_lists, name='dpmes-year_lists'),
-    path('dpmes-general-search/', dpmes_api.general_search, name='dpmes-general-search'),
+    path('dpmes-general-search', dpmes_api.general_search, name='dpmes-general-search'),
     path('overview-ministries/', dpmes_api.overview_ministries, name='overview-ministries'),
     path('overview-policy-area/', dpmes_api.overview_policy_area, name='overview-policy-area'),
     path('default-time/', dpmes_api.time_frame, name='default-time'),

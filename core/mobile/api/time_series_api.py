@@ -322,3 +322,23 @@ def kpis(request, id):
             status=status.HTTP_502_BAD_GATEWAY
         )
     
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def high_frequency(request):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/high-frequency/",
+            params=params,
+            timeout=10
+        )
+
+        return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )

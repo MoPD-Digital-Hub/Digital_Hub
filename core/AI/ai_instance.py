@@ -1,27 +1,31 @@
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, list_collections, MilvusException, db, utility
 from AI.utils import process_document
 from .models import Document as doc
-from langchain_milvus import BM25BuiltInFunction, Milvus
+from langchain_milvus import Milvus
 from langchain_classic.retrievers.multi_query import MultiQueryRetriever
-from langchain_openai import OpenAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
 from pymilvus import MilvusClient
-from langchain_core.prompts import PromptTemplate
+from asgiref.sync import sync_to_async
+from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, utility
+
+
+COLLECTION_NAME = "admas_data"
+
+
 
 llm = ChatOpenAI(
     openai_api_base="http://localhost:8000/v1",
     openai_api_key="EMPTY",
     model="openai/gpt-oss-20b",
-    streaming=True,
-    temperature = 0.3
+    streaming=False,
+    temperature = 0.2,
+    request_timeout=60
 )
 
-# -----------------------------
+
 # 2️⃣ Initialize embeddings
-# -----------------------------
 embeddings = HuggingFaceEmbeddings(
     model_name="BAAI/bge-base-en-v1.5",
     encode_kwargs={"normalize_embeddings": True}
@@ -32,22 +36,60 @@ embeddings = HuggingFaceEmbeddings(
 # 5️⃣ Initialize LangChain Milvus vector store
 # -----------------------------
 
-
-
 client = MilvusClient("http://localhost:19530")
 
 
 # for c in client.list_collections():
 #     client.drop_collection(c)
 
-vector_store = Milvus(
-    embedding_function=embeddings,
-    connection_args={"alias": "default"},
-    index_params={"index_type": "FLAT", "metric_type": "L2"},
-    consistency_level="Strong",
-    drop_old=False, 
-)
+# Updated Schema
+fields = [
+    FieldSchema(name="pk", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
+    FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=8192),
+    FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=768),
+    FieldSchema(name="metadata", dtype=DataType.JSON),
+]
 
+schema = CollectionSchema(fields, description="Admas docs", enable_dynamic_field=True)
+
+# Check if collection exists, create if not
+if not client.has_collection(collection_name=COLLECTION_NAME):
+    client.create_collection(collection_name=COLLECTION_NAME, schema=schema)
+
+
+
+def get_vector_store():
+    """
+    Helper to initialize the Milvus connection.
+    Calling this ensures the connection is ready when needed.
+    """
+    return Milvus(
+        embedding_function=embeddings,
+        connection_args={"uri": "http://localhost:19530"},
+        collection_name=COLLECTION_NAME,
+        text_field="text",       
+        vector_field="vector",   
+        primary_field="pk",    
+        metadata_field="metadata",  
+        auto_id=False,            
+        drop_old=False,
+    )
+
+def get_retriever():
+    vs = get_vector_store()
+    return vs.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 4, "fetch_k": 10, "lambda_mult": 0.5},
+    )
+
+async def process_new_documents(text_splitter, _unused_vs):
+    vs = get_vector_store()
+    doc_data = await sync_to_async(lambda: list(doc.objects.filter(is_loaded=False)))()
+    
+    if len(doc_data) > 0:
+        for document in doc_data:
+            # Pass the freshly initialized store
+            await process_document(document, vs)
 
 
 # -----------------------------
@@ -61,28 +103,20 @@ text_splitter = RecursiveCharacterTextSplitter(
 # -----------------------------
 # 7️⃣ Load and process new documents
 # -----------------------------
-doc_data = doc.objects.filter(is_loaded=False)
-if doc_data.count() > 0:
-    print("Processing new documents...")
-    for document in doc_data:
-        process_document(document, text_splitter, vector_store)
-else:
-    print("No new documents to process.")
 
-# -----------------------------
-# 8️⃣ Initialize retriever
-# -----------------------------
+async def process_new_documents(text_splitter, vector_store):
+    doc_data = await sync_to_async(lambda: list(doc.objects.filter(is_loaded=False)))()
+    
+    if len(doc_data) > 0:
+        print("Processing new documents...")
+        for document in doc_data:
+            #await process_document(document, text_splitter, vector_store)
+            await process_document(document, vector_store)
+    else:
+        print("No new documents to process.")
 
-# retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 6})
 
-retriever = vector_store.as_retriever(
-    search_type="mmr",
-    search_kwargs={
-        "k": 4,          
-        "fetch_k": 10,   
-        "lambda_mult": 0.5
-    },
-)
+
 
 
 # custom_prompt = PromptTemplate(

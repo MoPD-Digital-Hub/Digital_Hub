@@ -11,6 +11,7 @@
 *.config
 *.db
 *.err
+*.ini
 core/logs/
 __pycache__/
 local_settings.py
@@ -183,3 +184,8 @@ cython_debug/
 #.idea/
 
 # End of https://www.toptal.com/developers/gitignore/api/django
+
+
+.huggingface/
+.config/
+core/conf/

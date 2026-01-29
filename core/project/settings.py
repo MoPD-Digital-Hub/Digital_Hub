@@ -2,8 +2,8 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
-import logging
-import logging.handlers
+# import logging
+# import logging.handlers
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -17,6 +17,8 @@ load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-n-h_z%7ad5nqro^ehv$ak)*d-hbom6y)p+xnn6#prqu^i__*_)'
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -48,6 +50,7 @@ INSTALLED_APPS = [
     'mobile',
     'Notification',
     'axes',
+    'drf_user_activity_tracker',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'axes.middleware.AxesMiddleware',
+    'drf_user_activity_tracker.middleware.activity_tracker_middleware.ActivityTrackerMiddleware',
 ]
 
 
@@ -146,6 +150,12 @@ WSGI_APPLICATION = 'project.wsgi.application'
 
 AUTH_USER_MODEL = 'userManagement.CustomUser'
 
+DRF_ACTIVITY_TRACKER_DATABASE = True
+DRF_ACTIVITY_TRACKER_SIGNAL = True
+DRF_ACTIVITY_TRACKER_EXCLUDE_KEYS = ['password', 'token', 'access', 'refresh']
+DRF_ACTIVITY_TRACKER_QUEUE_MAX_SIZE = 50
+DRF_ACTIVITY_TRACKER_INTERVAL = 30
+
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -228,63 +238,63 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 #Logging 
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
 
-    'formatters': {
-        'uwsgi_style': {
-            'format': '[{asctime}] {levelname} {name}: {message}',
-            'style': '{',
-        },
-    },
+#     'formatters': {
+#         'uwsgi_style': {
+#             'format': '[{asctime}] {levelname} {name}: {message}',
+#             'style': '{',
+#         },
+#     },
 
-    'handlers': {
-        'daphne_file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': '/mnt/data/Digital_Hub/core/daphne.log',
-            'formatter': 'uwsgi_style',
-        },
-    },
+#     'handlers': {
+#         'daphne_file': {
+#             'level': 'DEBUG',
+#             'class': 'logging.FileHandler',
+#             'filename': '/mnt/data/Digital_Hub/core/daphne.log',
+#             'formatter': 'uwsgi_style',
+#         },
+#     },
 
-    'loggers': {
-        # Django core
-        'django': {
-            'handlers': ['daphne_file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+#     'loggers': {
+#         # Django core
+#         'django': {
+#             'handlers': ['daphne_file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
 
-        # Django requests
-        'django.request': {
-            'handlers': ['daphne_file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
+#         # Django requests
+#         'django.request': {
+#             'handlers': ['daphne_file'],
+#             'level': 'DEBUG',
+#             'propagate': False,
+#         },
 
-        # Channels
-        'channels': {
-            'handlers': ['daphne_file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+#         # Channels
+#         'channels': {
+#             'handlers': ['daphne_file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
 
-        # Daphne server
-        'daphne': {
-            'handlers': ['daphne_file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+#         # Daphne server
+#         'daphne': {
+#             'handlers': ['daphne_file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
 
-        # Your project apps
-        'project': {   # 🔴 replace with your real project name
-            'handlers': ['daphne_file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-}
+#         # Your project apps
+#         'project': {   # 🔴 replace with your real project name
+#             'handlers': ['daphne_file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }
 
 
 # Email settings

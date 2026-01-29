@@ -14,6 +14,8 @@ class VideoSerializer(serializers.ModelSerializer):
         if request.user.is_authenticated:
             return obj.video_likes.filter(user=request.user).exists()
         return False
+    
+    
 class VideoCommentSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
