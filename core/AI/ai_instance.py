@@ -18,8 +18,8 @@ llm = ChatOpenAI(
     openai_api_key="EMPTY",
     model="openai/gpt-oss-20b",
     streaming=False,
-    temperature = 0.2,
-    request_timeout=60
+    temperature = 0,
+    request_timeout=30
 )
 
 

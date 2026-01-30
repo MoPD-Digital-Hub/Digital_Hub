@@ -18,6 +18,9 @@ local_settings.py
 core/db.sqlite3
 core/db.sqlite3-journal
 core/media/
+*.config
+milvus-gpu-setup/volumes/
+core/conf/
 
 **/migrations/
 **/migrations/*.py

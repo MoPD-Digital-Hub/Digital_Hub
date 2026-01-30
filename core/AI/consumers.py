@@ -56,6 +56,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Save question
         await self.save_question(self.instance_id, question_text)
 
+        year_requested = self.extract_year_from_question(question_text)
+
+        # docs = retriever.invoke(question_text)
+
+        # if docs:
+        #     full_context = await self.create_context(docs, year_requested)
+        # else:
+        #     full_context = "No relevant indicator found."
 
         intent = classify_intent(llm, question_text)
         docs = retriever.invoke(question_text)
@@ -63,7 +71,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print(intent, ">>>>>")
 
         if intent == INTENTS["TIME_SERIES"]:
-            year_requested = self.extract_year_from_question(question_text)
             full_context = await self.create_context(docs, year_requested)
         elif intent == INTENTS["MINISTRY_SCORE"]:
             period_requested = extract_year_quarter(llm, question_text)
@@ -474,8 +481,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 })
 
         return messages
-
-
 
 
 
