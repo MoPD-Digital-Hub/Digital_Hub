@@ -13,8 +13,6 @@ from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, utilit
 
 COLLECTION_NAME = "admas_data"
 
-
-
 llm = ChatOpenAI(
     openai_api_base="http://localhost:8000/v1",
     openai_api_key="EMPTY",
@@ -35,7 +33,6 @@ embeddings = HuggingFaceEmbeddings(
 # -----------------------------
 # 5️⃣ Initialize LangChain Milvus vector store
 # -----------------------------
-
 client = MilvusClient("http://localhost:19530")
 
 
@@ -88,7 +85,6 @@ async def process_new_documents(text_splitter, _unused_vs):
     
     if len(doc_data) > 0:
         for document in doc_data:
-            # Pass the freshly initialized store
             await process_document(document, vs)
 
 
@@ -103,14 +99,12 @@ text_splitter = RecursiveCharacterTextSplitter(
 # -----------------------------
 # 7️⃣ Load and process new documents
 # -----------------------------
-
 async def process_new_documents(text_splitter, vector_store):
     doc_data = await sync_to_async(lambda: list(doc.objects.filter(is_loaded=False)))()
     
     if len(doc_data) > 0:
         print("Processing new documents...")
         for document in doc_data:
-            #await process_document(document, text_splitter, vector_store)
             await process_document(document, vector_store)
     else:
         print("No new documents to process.")

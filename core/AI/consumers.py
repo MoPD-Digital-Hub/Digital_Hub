@@ -4,7 +4,7 @@ import re
 import requests
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from AI.intent_classifier import classify_intent
+from AI.classifier import classify_intent,extract_year_quarter, extract_performance_type
 from AI.intents import INTENTS
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -56,22 +56,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Save question
         await self.save_question(self.instance_id, question_text)
 
-        year_requested = self.extract_year_from_question(question_text)
-
-        # docs = retriever.invoke(question_text)
-
-        # if docs:
-        #     full_context = await self.create_context(docs, year_requested)
-        # else:
-        #     full_context = "No relevant indicator found."
 
         intent = classify_intent(llm, question_text)
         docs = retriever.invoke(question_text)
 
+        print(intent, ">>>>>")
+
         if intent == INTENTS["TIME_SERIES"]:
+            year_requested = self.extract_year_from_question(question_text)
             full_context = await self.create_context(docs, year_requested)
         elif intent == INTENTS["MINISTRY_SCORE"]:
-            full_context = await self.create_ministry_context(docs)
+            period_requested = extract_year_quarter(llm, question_text)
+            full_context = await self.create_ministry_context(docs, period_requested)
+        elif intent == INTENTS["MINISTRY_PERFORMANCE"]:
+            period_requested = extract_year_quarter(llm, question_text)
+            performance_requested = extract_performance_type(llm, question_text)
+            full_context = await self.create_ministry_performance_context(docs, period_requested,performance_requested)
         else:
             full_context = "Please clarify your question related to DPMES indicators."
 
@@ -212,8 +212,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         return "\n<hr/>\n".join(contexts)
     
-
-    async def create_ministry_context(self, docs):
+    async def create_ministry_context(self, docs, period_requested):
         contexts = []
 
         for doc in docs:
@@ -225,10 +224,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
             m_source = meta.get("source", "Ministry of Planning and Development")
             
     
-            response = await self.fetch_ministry_score(m_id)
+            response = await self.fetch_ministry_score(m_id, year=period_requested['year'], quarter=period_requested['quarter'])
             
 
-            performance_info = self.format_ministry_score(self,response)
+            performance_info = self.format_ministry_score(response)
+
+        
+            metadata_info = f"""
+    <h3>Ministry Metadata</h3>
+    <p><b>Ministry Name:</b> {m_name}</p>
+    <p><b>Code:</b> {m_code}</p>
+    <p><b>Data Source:</b> {m_source}</p>
+    <p><b>Entity ID:</b> {m_id}</p>
+    """
+
+            contexts.append(
+                f"{doc.page_content}\n\n{metadata_info}\n\n{performance_info}"
+            )
+
+        return "\n<hr/>\n".join(contexts)
+    
+    async def create_ministry_performance_context(self, docs, period_requested,performance_requested):
+        contexts = []
+
+        for doc in docs:
+            meta = doc.metadata or {}
+
+            m_id = meta.get("responsible_ministry_id", "")
+            m_name = meta.get("responsible_ministry_eng", "Unknown Ministry")
+            m_code = meta.get("responsible_ministry_code", "N/A")
+            m_source = meta.get("source", "Ministry of Planning and Development")
+            
+    
+            response = await self.fetch_ministry_performance(m_id, year=period_requested['year'], quarter=period_requested['quarter'], performance_requested = performance_requested)
+            
+
+            performance_info = self.format_ministry_performance(response)
 
         
             metadata_info = f"""
@@ -246,9 +277,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return "\n<hr/>\n".join(contexts)
 
             
-
-
-
     # ==========================
     # Utilities
     # ==========================
@@ -263,9 +291,31 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return {}
 
     @database_sync_to_async
-    def fetch_ministry_score(self,ministry_id):
+    def fetch_ministry_score(self,ministry_id, year, quarter):
         url = f"https://dpmes.mopd.gov.et/api/ai/ministry-score/{ministry_id}"
         params = {}
+        if year and year.lower() != "null":
+            params["year"] = year
+        if quarter and quarter.lower() != "null":
+            params["quarter"] = quarter
+
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        return {}
+    
+    @database_sync_to_async
+    def fetch_ministry_performance(self,ministry_id, year, quarter, performance_requested):
+        url = f"https://dpmes.mopd.gov.et/api/ai/ministry-kpi-performance/{ministry_id}"
+        params = {}
+        if year and year.lower() != "null":
+            params["year"] = year
+        if quarter and quarter.lower() != "null":
+            params["quarter"] = quarter
+        if performance_requested:
+            params["performance_type"] = performance_requested
+
+        print(url, params, performance_requested ,"+++")
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             return response.json()
@@ -305,34 +355,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return output or "<p>No historical data available</p>"
     
     @staticmethod
-    def format_ministry_score(self, data):
+    def format_ministry_score(data):
         if not data:
             return "<p>No ministry performance data found.</p>"
-
-        # 1. Basic Ministry Info
+        
         ministry_name = data.get("responsible_ministry_eng", "Unknown Ministry")
         code = data.get("code", "N/A")
         total_indicators = data.get("number_of_indicators", 0)
         
-        # 2. Overall Score
         score_card = data.get("ministry_score_card", {})
         overall_score = score_card.get("score", "N/A")
+        year = score_card.get("year", "N/A")
+        quarter = score_card.get("quarter", "Annual")
+        score_color = score_card.get("score_color", "#000000")
         
         header_html = f"""
     <h3>Ministry Performance Overview: {ministry_name} ({code})</h3>
-    <p><b>Overall Ministry Score:</b> {overall_score}</p>
+    <p><b>Reporting Period:</b> {year} {f'- {quarter}' if quarter != 'Annual' else ''}</p>
+    <p><b>Overall Ministry Score:</b> <span style="color: {score_color}; font-weight: bold;">{overall_score}</span></p>
+    <p><b>Performance Status Color:</b> {score_color}</p>
     <p><b>Total Indicators Tracked:</b> {total_indicators}</p>
+    <hr/>
     """
 
-        # 3. Policy Areas Table
         policy_areas = data.get("policy_areas", [])
         table_rows = ""
         for area in policy_areas:
             name = area.get("policy_area_eng", "N/A")
             score = area.get("score", "N/A")
-            # Note: We include the score color in the context so the AI can mention 
-            # performance levels (e.g., "Green" status) if needed.
-            table_rows += f"<tr><td>{name}</td><td>{score}</td></tr>"
+            p_color = area.get("score_color", "")
+            
+            table_rows += f"<tr><td>{name}</td><td>{score} {f'({p_color})' if p_color else ''}</td></tr>"
 
         policy_html = f"""
     <h4>Breakdown by Policy Area</h4>
@@ -346,6 +399,58 @@ class ChatConsumer(AsyncWebsocketConsumer):
     </table>
     """
         return header_html + policy_html
+    
+    @staticmethod
+    def format_ministry_performance(data):
+        if not data or not data.get("kpis"):
+            return "<p>No specific indicator performance data found for the selected criteria.</p>"
+        
+        ministry_name = data.get("responsible_ministry_eng", "Unknown Ministry")
+        code = data.get("code", "N/A")
+        kpis = data.get("kpis", [])
+        
+        first_kpi = kpis[0]
+        year = first_kpi.get("year", "N/A")
+        quarter = first_kpi.get("quarter", "Annual")
+
+        header_html = f"""
+    <h3>Indicator Performance List: {ministry_name} ({code})</h3>
+    <p><b>Reporting Period:</b> {year} {f'- {quarter}' if quarter != 'Annual' else ''}</p>
+    <p><b>Total Indicators in this Category:</b> {len(kpis)}</p>
+    <hr/>
+    """
+
+        table_rows = ""
+        for item in kpis:
+            name = item.get("indicator_name", "Unknown Indicator")
+            score = item.get("score", "N/A")
+            color = item.get("scorecard", "#000000")
+            
+            table_rows += f"""
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">{name}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: center;">
+                    <span style="color: {color}; font-weight: bold;">{score}%</span>
+                </td>
+            </tr>"""
+
+        table_html = f"""
+    <h4>Detailed Indicator Breakdown</h4>
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="text-align: left; padding: 8px;">Indicator Name</th>
+                <th style="text-align: center; padding: 8px;">Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {table_rows}
+        </tbody>
+    </table>
+    """
+        return header_html + table_html
+        
+    
     
     def format_history_for_llm(self, history, max_turns=3):
         """

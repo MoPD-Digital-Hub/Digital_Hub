@@ -3,7 +3,7 @@ from uuid import uuid4
 import os
 import json
 from asgiref.sync import sync_to_async
-from .rules import SYSTEM_RULES, MINISTRY_SCORE_SYSTEM_RULES
+from .rules import SYSTEM_RULES, MINISTRY_SCORE_SYSTEM_RULES, MINISTRY_PERFORMANCE_SYSTEM_RULES
 
 def split_json(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -98,6 +98,8 @@ async def run_chain_stream(llm, conversation_list, context, question, intent=Non
         selected_system_rule = MINISTRY_SCORE_SYSTEM_RULES
     elif intent == "TIME_SERIES":
         selected_system_rule = SYSTEM_RULES 
+    elif intent == "MINISTRY_PERFORMANCE":
+        selected_system_rule = MINISTRY_PERFORMANCE_SYSTEM_RULES
     else:
         selected_system_rule = SYSTEM_RULES 
 
