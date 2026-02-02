@@ -33,20 +33,20 @@ def get_llm_instance():
     return None
 
 def get_remote_embeddings():
-    """Returns the cached Embeddings instance or creates a new one."""
     global _embeddings_cache
     if _embeddings_cache is not None:
         return _embeddings_cache
 
-    EMBED_URL = os.getenv("EMBEDDING_API_BASE", "http://your-ai-server-ip:8080/v1")
+    EMBED_URL = os.getenv("EMBEDDING_API_BASE", "http://196.189.61.160:4001/v1")
 
     try:
         _embeddings_cache = OpenAIEmbeddings(
             model="BAAI/bge-base-en-v1.5", 
-            openai_api_key="empty",  
-            openai_api_base=EMBED_URL,
-            request_timeout=10, 
-            max_retries=2
+            api_key="empty",  
+            base_url=EMBED_URL,
+            timeout=60, 
+            tiktoken_enabled=False, 
+            check_embedding_ctx_length=False
         )
         return _embeddings_cache
     except Exception as e:

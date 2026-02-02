@@ -1,7 +1,7 @@
 from django.urls import path, include
 from AI.api.api import chat, get_chat_list, delete_chat_instance
 from .views import room
-
+    
 urlpatterns = [
     path("chat-new/<str:room_name>/", room),
     path('', chat),

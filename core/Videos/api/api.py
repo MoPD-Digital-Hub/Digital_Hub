@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from Videos.models import Video , VideoComment , VideoLike , VideoCommentLike
 from .serializer import VideoSerializer , VideoCommentSerializer , VideoLikeSerializer
 from rest_framework.permissions import AllowAny
-
+from AI.vectorstore import get_vector_store, get_retriever
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -13,7 +13,7 @@ from rest_framework.permissions import AllowAny
 def video_api(request):
     """
     Fetch all videos.
-    """
+    """    
     if request.method == 'GET':
         videos = Video.objects.all()
         serializer = VideoSerializer(videos, many=True, context={'request': request})
