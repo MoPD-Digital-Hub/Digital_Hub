@@ -2,7 +2,10 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from threading import Thread
 from .models import Document
-from AI.ai_instance import process_new_documents, text_splitter, get_vector_store
+from .tasks import process_new_documents
+from .utils import text_splitter
+from .vectorstore import get_vector_store
+
 import asyncio
 
 def run_async_task():

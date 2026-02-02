@@ -3,7 +3,14 @@ from uuid import uuid4
 import os
 import json
 from asgiref.sync import sync_to_async
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from .rules import SYSTEM_RULES, MINISTRY_SCORE_SYSTEM_RULES, MINISTRY_PERFORMANCE_SYSTEM_RULES
+
+# Initialize once here
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=800,
+    chunk_overlap=160
+)
 
 def split_json(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
@@ -62,7 +69,6 @@ async def process_document(to_be_loaded_doc, vector_store) -> bool:
         print(f"Error processing document {file_path}: {e}")
         return False
 
-
 def run_chain(prompt, llm, conversation_list, context, question):
     """
     Invoke the llm chain with proper inputs.
@@ -86,8 +92,6 @@ def format_docs(docs):
     Format documents into a plain text string joined by double line breaks.
     """
     return "\n\n".join(doc.page_content for doc in docs)
-
-
 
 async def run_chain_stream(llm, conversation_list, context, question, intent=None):
     """

@@ -43,8 +43,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         from AI.utils import run_chain_stream
-        from AI.ai_instance import get_retriever, llm
+        from .vectorstore import get_retriever
+        from .providers import get_llm_instance
 
+        llm = get_llm_instance()
         retriever = get_retriever()
 
         data = json.loads(text_data)
@@ -58,17 +60,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         year_requested = self.extract_year_from_question(question_text)
 
-        # docs = retriever.invoke(question_text)
 
-        # if docs:
-        #     full_context = await self.create_context(docs, year_requested)
-        # else:
-        #     full_context = "No relevant indicator found."
 
         intent = classify_intent(llm, question_text)
         docs = retriever.invoke(question_text)
 
-        print(intent, ">>>>>")
 
         if intent == INTENTS["TIME_SERIES"]:
             full_context = await self.create_context(docs, year_requested)
@@ -321,8 +317,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             params["quarter"] = quarter
         if performance_requested:
             params["performance_type"] = performance_requested
-
-        print(url, params, performance_requested ,"+++")
+            
         response = requests.get(url, params=params, timeout=10)
         if response.status_code == 200:
             return response.json()
