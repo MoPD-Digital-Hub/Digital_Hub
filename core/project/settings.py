@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+from decouple import config
 # import logging
 # import logging.handlers
 
@@ -63,7 +64,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'axes.middleware.AxesMiddleware',
-    'drf_user_activity_tracker.middleware.activity_tracker_middleware.ActivityTrackerMiddleware',
+    'project.middleware.activity_tracker_middleware.ActivityTrackerMiddleware',
 ]
 
 
@@ -114,9 +115,29 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
+    'userManagement.auth_backends.CustomOIDCAuthenticationBackend',
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+# Keycloak Configuration
+OIDC_RP_CLIENT_ID = config('OIDC_RP_CLIENT_ID', default='')
+OIDC_RP_CLIENT_SECRET = config('OIDC_RP_CLIENT_SECRET', default='')
+OIDC_OP_AUTHORIZATION_ENDPOINT = config('OIDC_OP_AUTHORIZATION_ENDPOINT', default='')
+OIDC_OP_TOKEN_ENDPOINT = config('OIDC_OP_TOKEN_ENDPOINT', default='')
+OIDC_OP_USER_ENDPOINT = config('OIDC_OP_USER_ENDPOINT', default='')
+OIDC_OP_JWKS_ENDPOINT = config('OIDC_OP_JWKS_ENDPOINT', default='')
+OIDC_OP_LOGOUT_ENDPOINT = config('OIDC_OP_LOGOUT_ENDPOINT', default='')
+OIDC_POST_LOGOUT_REDIRECT_URI = config('OIDC_POST_LOGOUT_REDIRECT_URI', default='')
+OIDC_RP_SIGN_ALGO = config('OIDC_RP_SIGN_ALGO', default='RS256')
+OIDC_STORE_ID_TOKEN = config('OIDC_STORE_ID_TOKEN', default=True, cast=bool)
+OIDC_CALLBACK_CLASS = config(
+    'OIDC_CALLBACK_CLASS',
+    default='userManagement.oidc_views.CustomOIDCAuthenticationCallbackView'
+)
+
+# Optional: Automatically create a Django user if they don't exist
+OIDC_CREATE_USER = config('OIDC_CREATE_USER', default=False, cast=bool)
 
 AXES_ENABLED = True
 AXES_FAILURE_LIMIT = 7

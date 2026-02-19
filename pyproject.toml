@@ -37,6 +37,7 @@ dependencies = [
     "channels-redis (>=4.3.0,<5.0.0)",
     "drf-user-activity-tracker (>=1.0.1,<2.0.0)",
     "aiofiles (>=25.1.0,<26.0.0)",
+    "mozilla-django-oidc (>=5.0.2,<6.0.0)",
 ]
 
 

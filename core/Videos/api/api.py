@@ -9,7 +9,6 @@ from AI.vectorstore import get_vector_store, get_retriever
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@permission_classes([IsAuthenticated])
 def video_api(request):
     """
     Fetch all videos.
