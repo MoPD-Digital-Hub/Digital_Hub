@@ -70,6 +70,7 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
   
@@ -135,6 +136,7 @@ OIDC_CALLBACK_CLASS = config(
     'OIDC_CALLBACK_CLASS',
     default='userManagement.oidc_views.CustomOIDCAuthenticationCallbackView'
 )
+OIDC_DRF_AUTH_BACKEND = "userManagement.auth_backends.CustomOIDCAuthenticationBackend"
 
 # Optional: Automatically create a Django user if they don't exist
 OIDC_CREATE_USER = config('OIDC_CREATE_USER', default=False, cast=bool)
