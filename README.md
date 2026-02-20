@@ -77,6 +77,36 @@ poetry run python manage.py runserver
 
 Visit `http://localhost:8000/` in your browser.
 
+## Production Deployment
+
+1. Copy environment template and fill real values:
+   ```bash
+   cp .env.example .env
+   ```
+2. Set production env values in `.env`:
+   - `DEBUG=False`
+   - `SECRET_KEY=<long-random-secret>`
+   - `ALLOWED_HOSTS=<comma-separated-hosts>`
+   - `USE_SQLITE=False` with Postgres credentials
+   - `CSRF_TRUSTED_ORIGINS` and `CORS_ALLOWED_ORIGINS`
+3. Run deployment checks:
+   ```bash
+   python core/manage.py check --deploy
+   ```
+4. Run migrations and collect static:
+   ```bash
+   python core/manage.py migrate
+   python core/manage.py collectstatic --noinput
+   ```
+5. Start ASGI app with Daphne (example):
+   ```bash
+   daphne -b 0.0.0.0 -p 8000 project.asgi:application
+   ```
+6. Run Celery worker separately:
+   ```bash
+   celery -A project worker -l info
+   ```
+
 
 
 # Server Installation (Linux)
@@ -130,4 +160,3 @@ Visit `http://localhost:8000/` in your browser.
 
 - **Kaleab Hegie**  
   📧 [benjiyg400@gmail.com](mailto:benjiyg400@gmail.com)
-
