@@ -70,7 +70,7 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'mozilla_django_oidc.contrib.drf.OIDCAuthentication',
+        'userManagement.drf_authentication.OptionalOIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
   
