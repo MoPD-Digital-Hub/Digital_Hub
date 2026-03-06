@@ -1,0 +1,20 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/data-indicator-detail.css' %}?v=20260306q">
+{% endblock %}
+
+{% block content %}
+<section class="data-indicator-detail" data-indicator-detail data-indicator-id="{{ indicator_id }}">
+  <div data-indicator-detail-hero></div>
+  <div data-indicator-detail-body></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script type="module" src="{% static 'assets/js/pages/data-indicator-detail.js' %}?v=20260306q"></script>
+{% endblock %}

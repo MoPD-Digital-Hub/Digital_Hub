@@ -82,3 +82,13 @@ def data_topic_detail_page(request, topic_id):
         "topic_id": topic_id,
     }
     return render(request, "data-hub/pages/data-topic-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def data_indicator_detail_page(request, indicator_id):
+    context = {
+        "page_title": "Indicator Detail",
+        "subtitle": "Inspect indicator metadata, trends, tables, and historical values.",
+        "indicator_id": indicator_id,
+    }
+    return render(request, "data-hub/pages/data-indicator-detail.html", context)

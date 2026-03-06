@@ -67,9 +67,9 @@ function renderKpiCard(kpi, level = 0) {
             <span>${escapeHtml(kpi.code || "No code")}</span>
           </div>
         </div>
-        <span class="data-topic-kpi-open">
+        <a class="data-topic-kpi-open" href="/dashboard/data/indicator/${escapeHtml(kpi.id)}/" aria-label="Open indicator detail">
           <i class="ti ti-chevron-right"></i>
-        </span>
+        </a>
       </div>
       ${renderKpiValuePanel(kpi)}
       ${renderSubIndicatorSection(kpi, level)}
