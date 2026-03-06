@@ -1,0 +1,22 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260306a">
+{% endblock %}
+
+{% block content %}
+<section class="data-topic-page" data-topic-browser data-endpoint="/api/mobile/topic-list/" data-media-base-url="https://time-series.mopd.gov.et/">
+  <div class="data-topic-hero">
+    <h1>{{ page_title }}</h1>
+    <p>{{ subtitle }}</p>
+  </div>
+  <div class="data-topic-grid" data-topic-browser-grid></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/data-page.js' %}?v=20260306a"></script>
+{% endblock %}

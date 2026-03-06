@@ -8,10 +8,9 @@ app = Celery('project')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
-
-
+# Keep default routing unless explicit Celery tasks are added.
 app.conf.task_routes = {
-    'AI.tasks.handle_question_task': {'queue': 'async_worker'}
+    "AI.tasks.generate_answer_task": {"queue": "ai_queue"},
 }
 
 

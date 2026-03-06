@@ -1,0 +1,471 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20260306c">
+<style>
+  .ai-chat-shell {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+  }
+  .ai-panel {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 16px;
+    background: var(--bs-card-bg);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+  }
+  .ai-panel-body {
+    padding: 14px;
+  }
+  .ai-search {
+    border-radius: 12px;
+  }
+  .ai-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 12px;
+  }
+  .ai-instance-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dbe6ef;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+  .ai-instance-tools .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-width: 1px;
+  }
+  .ai-instance-tools .btn-outline-primary {
+    border-color: #c9d8e6;
+    color: #0f172a;
+    background: #ffffff;
+  }
+  .ai-instance-tools .btn-outline-primary:hover,
+  .ai-instance-tools .btn-outline-primary:focus {
+    border-color: #0f766e;
+    background: #ecfdf5;
+    color: #0f766e;
+  }
+  .ai-instance-tools .btn-outline-secondary {
+    border-color: #d4dee8;
+    color: #334155;
+    background: #ffffff;
+  }
+  .ai-instance-tools .btn-outline-secondary:hover,
+  .ai-instance-tools .btn-outline-secondary:focus {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    color: #0f172a;
+  }
+  .ai-instance-tools .btn-outline-danger {
+    border-color: #f3c5cc;
+    color: #b42318;
+    background: #fff7f7;
+  }
+  .ai-instance-tools .btn-outline-danger:hover,
+  .ai-instance-tools .btn-outline-danger:focus {
+    border-color: #e11d48;
+    background: #fff1f2;
+    color: #be123c;
+  }
+  .ai-instance-tools .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .ai-tag {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+  }
+  .ai-tag.active {
+    border-color: #0f766e;
+    background: rgba(15, 118, 110, 0.12);
+    color: #0f766e;
+    font-weight: 600;
+  }
+  .ai-instance-list {
+    display: grid;
+    gap: 10px;
+    max-height: 560px;
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .ai-instance {
+    border: 1px solid #d9e5ef;
+    border-radius: 14px;
+    padding: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .ai-instance.active {
+    border-color: #0f766e;
+    background: linear-gradient(180deg, #effcf7 0%, #e6f8f1 100%);
+    box-shadow: 0 10px 18px rgba(15, 118, 110, 0.12);
+    transform: translateY(-1px);
+  }
+  .ai-instance h6 {
+    margin: 0 0 4px;
+    color: var(--pc-heading-color, var(--bs-heading-color));
+    font-size: 13px;
+  }
+  .ai-instance p {
+    margin: 0;
+    color: var(--bs-secondary-color);
+    font-size: 12px;
+  }
+  .ai-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 620px;
+    height: min(720px, calc(100vh - 190px));
+    overflow: hidden;
+  }
+  .ai-main-head {
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .ai-main-head h5 {
+    margin: 0;
+    color: var(--pc-heading-color, var(--bs-heading-color));
+  }
+  .ai-main-head p {
+    margin: 2px 0 0;
+    color: var(--bs-secondary-color);
+    font-size: 13px;
+  }
+  .ai-chat-output {
+    flex: 1;
+    min-height: 0;
+    padding: 18px 16px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: transparent;
+  }
+  .msg {
+    max-width: 78%;
+    border-radius: 14px;
+    padding: 10px 12px;
+    line-height: 1.45;
+    border: 1px solid var(--bs-border-color);
+  }
+  .msg.user {
+    margin-left: auto;
+    background: linear-gradient(135deg, #0f766e, #115e59);
+    border: 0;
+    color: #fff;
+  }
+  .msg.ai {
+    margin-right: auto;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--bs-body-color);
+  }
+  .msg.ai .ai-msg-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f766e;
+  }
+  .msg.ai .ai-msg-content {
+    font-size: 14px;
+  }
+  .msg.ai .ai-msg-content p {
+    margin: 0 0 8px;
+  }
+  .msg.ai .ai-msg-content p:last-child {
+    margin-bottom: 0;
+  }
+  .msg.ai .ai-msg-content ul {
+    margin: 0 0 0 18px;
+    padding: 0;
+  }
+  .msg.ai .ai-msg-content li {
+    margin-bottom: 4px;
+  }
+  .msg.ai .ai-msg-content li:last-child {
+    margin-bottom: 0;
+  }
+  .ai-composer {
+    border-top: 1px solid var(--bs-border-color);
+    padding: 12px;
+    background: var(--bs-card-bg);
+  }
+  .ai-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .ai-input {
+    min-height: 48px;
+    border-radius: 12px;
+  }
+  .ai-icon-btn {
+    height: 48px;
+    width: 48px;
+    border-radius: 12px;
+  }
+  .ai-send-btn {
+    min-height: 48px;
+    border-radius: 12px;
+    padding-inline: 18px;
+    font-weight: 700;
+  }
+  .ai-quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .ai-quick-tag {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    background: transparent;
+  }
+  .ai-quick-tag:hover {
+    border-color: #7ab4de;
+    color: var(--bs-body-color);
+  }
+  .ai-mic-on {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+  }
+  .ai-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--bs-secondary-color);
+    font-size: 13px;
+  }
+  .ai-loading .spinner-border {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-width: 0.12em;
+  }
+  @media (max-width: 1199.98px) {
+    .ai-chat-shell {
+      grid-template-columns: 1fr;
+    }
+    .ai-main {
+      min-height: 620px;
+      height: auto;
+    }
+    .ai-instance-list {
+      max-height: 300px;
+    }
+  }
+  body[data-pc-theme="dark"] .ai-panel {
+    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.35);
+  }
+  body[data-pc-theme="dark"] .ai-tag.active {
+    border-color: #2dd4bf;
+    color: #99f6e4;
+    background: rgba(45, 212, 191, 0.16);
+  }
+  body[data-pc-theme="dark"] .ai-instance.active {
+    border-color: #2dd4bf;
+    background: linear-gradient(180deg, rgba(20, 184, 166, 0.14), rgba(13, 148, 136, 0.14));
+    box-shadow: 0 12px 22px rgba(20, 184, 166, 0.12);
+  }
+  body[data-pc-theme="dark"] .msg.ai .ai-msg-head {
+    color: #5eead4;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools {
+    border-color: #334155;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary {
+    border-color: #334155;
+    color: #e2e8f0;
+    background: #0f172a;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary:focus {
+    border-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.14);
+    color: #99f6e4;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary {
+    border-color: #334155;
+    color: #cbd5e1;
+    background: #111827;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary:focus {
+    border-color: #64748b;
+    background: rgba(148, 163, 184, 0.12);
+    color: #f8fafc;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger {
+    border-color: rgba(244, 114, 182, 0.28);
+    color: #fda4af;
+    background: rgba(127, 29, 29, 0.18);
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger:focus {
+    border-color: #fb7185;
+    background: rgba(190, 24, 93, 0.18);
+    color: #fecdd3;
+  }
+  body[data-pc-theme="light"] .ai-panel {
+    border-color: #d8e6f3;
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.07);
+  }
+  body[data-pc-theme="light"] .ai-main-head {
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+  }
+  body[data-pc-theme="light"] .ai-instance:hover {
+    border-color: #94a3b8;
+    background: #f8fbff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  }
+  body[data-pc-theme="light"] .msg.ai {
+    border-color: #cfe0ef;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none;
+  }
+  body[data-pc-theme="light"] .ai-tag {
+    border-color: #c8dcef;
+    background: #f4f9ff;
+    color: #334155;
+  }
+  body[data-pc-theme="light"] .ai-tag:hover {
+    border-color: #7ab4de;
+    background: #eaf5ff;
+    color: #0f172a;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-12">
+    <h4 class="mb-1">{{ page_title }}</h4>
+    <p class="text-muted mb-0">{{ subtitle }}</p>
+  </div>
+</div>
+<input type="hidden" id="csrfTokenValue" value="{{ csrf_token }}">
+
+<div class="ai-chat-shell">
+  <aside class="ai-panel">
+    <div class="ai-panel-body">
+      <label class="form-label fw-semibold mb-2">Chat Instances</label>
+      <div class="ai-instance-tools">
+        <button id="newInstanceBtn" class="btn btn-outline-primary" type="button"><i class="ti ti-plus"></i><span>New</span></button>
+        <button id="renameInstanceBtn" class="btn btn-outline-secondary" type="button"><i class="ti ti-edit"></i><span>Rename</span></button>
+        <button id="deleteInstanceBtn" class="btn btn-outline-danger" type="button"><i class="ti ti-trash"></i><span>Delete</span></button>
+      </div>
+      <input id="chatSearch" type="text" class="form-control ai-search" placeholder="Search chats...">
+
+      <div class="ai-tags">
+        <button class="ai-tag active" type="button" data-tag="all">All</button>
+        <button class="ai-tag" type="button" data-tag="policy">Policy</button>
+        <button class="ai-tag" type="button" data-tag="ministry">Ministry</button>
+        <button class="ai-tag" type="button" data-tag="indicator">Indicator</button>
+      </div>
+
+      <div class="ai-instance-list" id="instanceList">
+        {% for instance in chat_instances %}
+        <div
+          class="ai-instance {% if instance.id == active_instance.id %}active{% endif %}"
+          data-room="{{ instance.id }}"
+          data-title="{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}"
+          data-tags="policy ministry indicator"
+        >
+          <h6>{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}</h6>
+          <p>Instance #{{ instance.id }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </aside>
+
+  <section class="ai-panel ai-main">
+    <div class="ai-main-head">
+      <div>
+        <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}Chat {{ active_instance.id }}{% endif %}</h5>
+        <p>Admas AI assistant for policy and indicator analytics.</p>
+      </div>
+      <span class="badge text-bg-primary">AI</span>
+    </div>
+
+    <div class="ai-chat-output" id="chatOutput" data-room="{{ active_instance.id }}">
+      {% if history %}
+        {% for item in history %}
+          <div class="msg user">{{ item.question }}</div>
+          {% if item.response %}
+          <div class="msg ai">
+            <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+            <div class="ai-msg-content">{{ item.response|safe }}</div>
+          </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+      <div class="msg ai">
+        <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+        <div class="ai-msg-content">
+          <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ai-composer">
+      <div class="ai-quick-tags">
+        <button type="button" class="ai-quick-tag" data-prompt="Ministry Score">Ministry Score</button>
+        <button type="button" class="ai-quick-tag" data-prompt="Coffee Export">Coffee Export</button>
+        <button type="button" class="ai-quick-tag" data-prompt="Gold Export">Gold Export</button>
+        <button type="button" class="ai-quick-tag" data-prompt="Inflation Rate">Inflation Rate</button>
+        <button type="button" class="ai-quick-tag" data-prompt="GDP Growth">GDP Growth</button>
+      </div>
+      <div class="ai-input-row">
+        <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
+        <button id="micBtn" class="btn btn-outline-secondary ai-icon-btn" type="button" title="Voice input">
+          <i class="ti ti-microphone"></i>
+        </button>
+        <button id="sendBtn" class="btn btn-primary ai-send-btn" type="button">Send</button>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
+<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260306e"></script>
+{% endblock %}

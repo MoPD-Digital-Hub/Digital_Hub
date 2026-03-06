@@ -1,0 +1,61 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}Dashboard | Data Hub{% endblock %}
+
+{% block style %}
+<style>
+  .dh-kpi-card {
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    background: #fff;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .dh-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(31, 41, 55, 0.08);
+  }
+  .dh-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  .dh-soft-green { background: #e8f8ef; color: #1f9d57; }
+  .dh-soft-blue { background: #eaf2ff; color: #0d6efd; }
+  .dh-soft-amber { background: #fff4e6; color: #f08c00; }
+  .dh-soft-red { background: #ffecef; color: #e03131; }
+
+  .dh-panel {
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    background: #fff;
+  }
+  .dh-chart-placeholder {
+    min-height: 300px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+    border: 1px dashed #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .dh-list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: .5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+{% endblock %}

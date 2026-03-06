@@ -1,8 +1,11 @@
 import os
+import warnings
+import logging
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import Csv, config
+from AI.platform.config import validate_ai_config
 # import logging
 # import logging.handlers
 
@@ -13,6 +16,25 @@ LOG_DIR = os.path.join(BASE_DIR.parent, 'logs')
 
 
 load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
+
+# Python 3.14 emits this warning from langchain_core internals; suppress in app logs.
+warnings.filterwarnings(
+    "ignore",
+    message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.",
+    category=UserWarning,
+)
+
+# Django 4.2.x + Python 3.14 compatibility:
+# BaseContext.__copy__ in Django 4.2 uses copy(super()), which fails on 3.14.
+from django.template.context import BaseContext  # noqa: E402
+
+def _patched_base_context_copy(self):
+    duplicate = self.__class__.__new__(self.__class__)
+    duplicate.__dict__ = self.__dict__.copy()
+    duplicate.dicts = self.dicts[:]
+    return duplicate
+
+BaseContext.__copy__ = _patched_base_context_copy
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -24,6 +46,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 APPEND_SLASH=False
+
+validate_ai_config(DEBUG)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
@@ -62,6 +86,7 @@ INSTALLED_APPS = [
     'AI',
     'mobile',
     'Notification',
+    'dashboard',
     'axes',
     'drf_user_activity_tracker',
 ]
@@ -69,6 +94,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'project.middleware.request_id_middleware.RequestIDMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -82,6 +108,7 @@ MIDDLEWARE = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         'userManagement.drf_authentication.OptionalOIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
@@ -165,6 +192,9 @@ AXES_LOCK_OUT_AT_FAILURE = True
 
 ROOT_URLCONF = 'project.urls'
 
+# Keep dev startup logs clean. CKEditor 4 warning is known and tracked.
+SILENCED_SYSTEM_CHECKS = ['ckeditor.W001']
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -184,6 +214,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'project.wsgi.application'
 
 AUTH_USER_MODEL = 'userManagement.CustomUser'
+LOGIN_URL = '/dashboard/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 
 DRF_ACTIVITY_TRACKER_DATABASE = True
 DRF_ACTIVITY_TRACKER_SIGNAL = True
@@ -287,7 +319,36 @@ SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True
 SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='same-origin')
 X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='DENY')
 
-#Logging 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "json": {
+            "()": "project.logging_utils.JsonFormatter",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "AI": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
+AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
+AI_MAX_RETRIEVAL_DOCS = config("AI_MAX_RETRIEVAL_DOCS", default=4, cast=int)
 
 # LOGGING = {
 #     'version': 1,
@@ -362,12 +423,22 @@ ASGI_APPLICATION = "project.asgi.application"
 
 REDIS_HOST = config('REDIS_HOST', default='127.0.0.1')
 REDIS_PORT = config('REDIS_PORT', default=6379, cast=int)
+USE_REDIS_CHANNELS = config('USE_REDIS_CHANNELS', default=not DEBUG, cast=bool)
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=f"redis://{REDIS_HOST}:{REDIS_PORT}/1")
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [(REDIS_HOST, REDIS_PORT)],
+if USE_REDIS_CHANNELS:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [(REDIS_HOST, REDIS_PORT)],
+            },
         },
-    },
-}
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }

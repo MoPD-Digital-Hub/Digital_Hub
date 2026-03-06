@@ -3,8 +3,8 @@ from django.dispatch import receiver
 from threading import Thread
 from .models import Document
 from .tasks import process_new_documents
-from .utils import text_splitter
-from .vectorstore import get_vector_store
+from AI.shared import text_splitter
+from AI.infrastructure import get_vector_store
 
 import asyncio
 

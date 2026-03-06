@@ -1,6 +1,7 @@
 from langchain_core.prompts import PromptTemplate
-from AI.intents import INTENTS
+from AI.domain import INTENTS
 import json
+import re
 
 PROMPT = PromptTemplate(
     input_variables=["question"],
@@ -35,10 +36,53 @@ Return ONLY the intent name.
 """
 )
 
+DEFAULT_QUARTER = "12month"
+VALID_QUARTERS = {"3month", "6month", "9month", "12month"}
+VALID_PERFORMANCE_KEYS = {"on_track", "in_progress", "weak_performance", "no_data"}
+
+
+def _extract_json_block(text: str) -> str:
+    text = (text or "").strip()
+    text = text.replace("```json", "").replace("```", "").strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+    return text
+
+
+def _normalize_intent(raw_text: str) -> str:
+    text = (raw_text or "").upper()
+
+    # Direct exact match first.
+    if text.strip() in INTENTS:
+        return text.strip()
+
+    # Then match intent token from verbose outputs.
+    for key in INTENTS:
+        if re.search(rf"\b{re.escape(key)}\b", text):
+            return key
+
+    return INTENTS["UNKNOWN"]
+
+
+def _normalize_quarter(value):
+    quarter = (value or DEFAULT_QUARTER)
+    quarter = str(quarter).strip().lower()
+    if quarter in VALID_QUARTERS:
+        return quarter
+    return DEFAULT_QUARTER
+
+
 def classify_intent(llm, question: str) -> str:
-    result = llm.invoke(PROMPT.format(question=question))
-    intent = result.content.strip().upper()
-    return intent if intent in INTENTS else INTENTS["UNKNOWN"]
+    if llm is None:
+        return INTENTS["UNKNOWN"]
+
+    try:
+        result = llm.invoke(PROMPT.format(question=question))
+        return _normalize_intent(getattr(result, "content", ""))
+    except Exception:
+        return INTENTS["UNKNOWN"]
 
 DPMES_EXTRACTION_YEAR_QUARTER_PROMPT = PromptTemplate(
     input_variables=["question"],
@@ -67,17 +111,24 @@ def extract_year_quarter(llm, question: str) -> dict:
     Parses the question to extract normalized year and quarter.
     Returns a dictionary, e.g., {"year": "2017", "quarter": "9month"}
     """
-    result = llm.invoke(DPMES_EXTRACTION_YEAR_QUARTER_PROMPT.format(question=question))
-    clean_content = result.content.strip().replace("```json", "").replace("```", "")
-    
+    if llm is None:
+        return {"year": None, "quarter": DEFAULT_QUARTER}
+
     try:
+        result = llm.invoke(DPMES_EXTRACTION_YEAR_QUARTER_PROMPT.format(question=question))
+        clean_content = _extract_json_block(getattr(result, "content", ""))
         data = json.loads(clean_content)
+        year = data.get("year")
+        if year is not None:
+            year = str(year).strip()
+            if not re.fullmatch(r"(19|20)\d{2}", year):
+                year = None
         return {
-            "year": str(data.get("year")) if data.get("year") else None,
-            "quarter": data.get("quarter", "12month")
+            "year": year,
+            "quarter": _normalize_quarter(data.get("quarter"))
         }
-    except (json.JSONDecodeError, ValueError):
-        return {"year": None, "quarter": "12month"}
+    except (json.JSONDecodeError, ValueError, AttributeError, TypeError):
+        return {"year": None, "quarter": DEFAULT_QUARTER}
 
 DPMES_PERFORMANCE_STATUS_EXTRACTOR = PromptTemplate(
     input_variables=["question"],
@@ -100,13 +151,17 @@ Return (on_track/in_progress/weak_performance/no_data/null):"""
 )
 
 def extract_performance_type(llm, question: str):
-    result = llm.invoke(DPMES_PERFORMANCE_STATUS_EXTRACTOR.format(question=question))
-    content = result.content.strip().lower()
-    
-    valid_keys = ['on_track', 'in_progress', 'weak_performance', 'no_data']
+    if llm is None:
+        return None
 
-    for key in valid_keys:
-        if key in content:
+    try:
+        result = llm.invoke(DPMES_PERFORMANCE_STATUS_EXTRACTOR.format(question=question))
+        content = result.content.strip().lower()
+    except Exception:
+        return None
+    
+    for key in VALID_PERFORMANCE_KEYS:
+        if re.search(rf"\b{re.escape(key)}\b", content):
             return key
             
     return None 
