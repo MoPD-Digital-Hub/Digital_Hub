@@ -525,12 +525,46 @@
 }
 
 .goal-kpi-drawer {
-  --bs-offcanvas-width: min(620px, 88vw);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(620px, 88vw);
+  z-index: 1060;
+  background: #eef5f3;
+  border-left: 1px solid #d7e7e2;
+  box-shadow: -18px 0 36px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+}
+
+.goal-kpi-drawer.is-open {
+  transform: translateX(0);
+}
+
+.goal-kpi-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+html.goal-kpi-lock,
+body.goal-kpi-lock {
+  overflow: hidden !important;
 }
 
 .goal-kpi-drawer__header {
   padding: 14px 16px;
   border-bottom: 1px solid #dce7ee;
+  background: #eef5f3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .goal-kpi-drawer__titlewrap {
@@ -554,6 +588,27 @@
 .goal-kpi-drawer__body {
   padding: 14px 16px;
   background: #eef5f3;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.goal-kpi-drawer__title {
+  margin: 0;
+  color: #17494a;
+  font-size: 18px;
+}
+
+.goal-kpi-drawer__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid #cfe1db;
+  background: #ffffff;
+  color: #17494a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
 }
 
 .goal-kpi-section {
@@ -877,6 +932,26 @@ body[data-pc-theme="dark"] .goal-kpi-table {
 
 body[data-pc-theme="dark"] .goal-kpi-drawer__body {
   background: #0f172a;
+}
+
+body[data-pc-theme="dark"] .goal-kpi-drawer {
+  background: #0f172a;
+  border-left-color: #314252;
+  box-shadow: -18px 0 36px rgba(2, 6, 23, 0.44);
+}
+
+body[data-pc-theme="dark"] .goal-kpi-drawer__header {
+  background: #0f172a;
+}
+
+body[data-pc-theme="dark"] .goal-kpi-drawer__title {
+  color: #f8fafc;
+}
+
+body[data-pc-theme="dark"] .goal-kpi-drawer__close {
+  background: #13212d;
+  border-color: #314252;
+  color: #f8fafc;
 }
 
 body[data-pc-theme="dark"] .goal-kpi-section__head,

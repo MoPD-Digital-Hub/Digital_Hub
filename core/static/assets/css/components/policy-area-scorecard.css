@@ -179,20 +179,20 @@
 
 .policy-area-card-grid {
   min-height: 0;
-  border-radius: 24px;
+  border-radius: 16px;
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--policy-area-accent) 12%, #ffffff),
     color-mix(in srgb, var(--policy-area-accent) 5%, #ffffff)
   );
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
   border: 1px solid color-mix(in srgb, var(--policy-area-accent) 26%, #ffffff);
 }
 
 .policy-area-card-grid .policy-area-card-shell {
   min-height: 0;
-  padding: 14px 16px 16px;
-  gap: 12px;
+  padding: 10px 10px 10px;
+  gap: 8px;
   align-content: start;
 }
 
@@ -202,7 +202,7 @@
 }
 
 .policy-area-card-media {
-  aspect-ratio: 2.45 / 1;
+  aspect-ratio: 2.9 / 1;
   overflow: hidden;
   border-bottom: 1px solid color-mix(in srgb, var(--policy-area-accent) 22%, #ffffff);
 }
@@ -223,46 +223,46 @@
   background: color-mix(in srgb, var(--policy-area-accent) 10%, #ffffff);
   font-weight: 800;
   letter-spacing: 0;
-  width: 46px;
-  height: 46px;
+  width: 32px;
+  height: 32px;
   min-height: 0;
   padding: 0;
-  font-size: 11px;
+  font-size: 9px;
   color: #294445;
   border-color: color-mix(in srgb, var(--policy-area-accent) 34%, #ffffff);
-  border-radius: 16px;
+  border-radius: 10px;
 }
 
 .policy-area-card-grid .policy-area-rank img {
-  width: 24px;
-  height: 24px;
+  width: 15px;
+  height: 15px;
   object-fit: contain;
 }
 
 .policy-area-card-grid .policy-area-score {
-  min-height: 34px;
-  padding: 0 16px;
-  font-size: 14px;
+  min-height: 26px;
+  padding: 0 10px;
+  font-size: 11px;
   border-color: transparent;
   background: var(--policy-area-accent);
   font-weight: 800;
 }
 
 .policy-area-card-grid h3 {
-  font-size: 16px;
-  line-height: 1.25;
+  font-size: 12px;
+  line-height: 1.2;
   -webkit-line-clamp: 2;
   color: #294445;
-  min-height: 40px;
+  min-height: 28px;
   text-transform: uppercase;
 }
 
 .policy-area-card-grid .policy-area-card-body {
-  gap: 12px;
+  gap: 8px;
 }
 
 .policy-area-card-grid .policy-area-card-meta {
-  font-size: 13px;
+  font-size: 11px;
   letter-spacing: 0;
   color: #5f6368;
   font-weight: 500;
@@ -279,7 +279,7 @@
 }
 
 .policy-area-progress {
-  height: 10px;
+  height: 6px;
   border-radius: 999px;
   background: #e0e7e9;
   overflow: hidden;
@@ -298,12 +298,12 @@
   justify-content: space-between;
   gap: 8px;
   color: #5f6368;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .policy-area-card-footer strong {
   color: var(--policy-area-accent);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -311,6 +311,84 @@
   background: linear-gradient(90deg, #eff4ec 20%, #f7faf6 50%, #eff4ec 80%);
   background-size: 200% 100%;
   animation: policyAreaPulse 1.4s linear infinite;
+}
+
+.policy-area-card-skeleton .policy-area-card-shell,
+.policy-area-card-skeleton .policy-area-card-top,
+.policy-area-card-skeleton .policy-area-card-body {
+  position: relative;
+  z-index: 1;
+}
+
+.policy-area-card-media-skeleton,
+.policy-area-skeleton-chip,
+.policy-area-skeleton-pill,
+.policy-area-skeleton-title,
+.policy-area-skeleton-meta,
+.policy-area-progress-bar--skeleton {
+  display: block;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+}
+
+.policy-area-card-grid.policy-area-card-skeleton {
+  overflow: hidden;
+}
+
+.policy-area-card-grid.policy-area-card-skeleton .policy-area-card-overlay {
+  display: none;
+}
+
+.policy-area-card-media-skeleton {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.policy-area-skeleton-chip {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.policy-area-skeleton-pill {
+  width: 74px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  border: 0;
+}
+
+.policy-area-skeleton-title {
+  height: 16px;
+  width: 100%;
+}
+
+.policy-area-skeleton-title--short {
+  width: 68%;
+}
+
+.policy-area-skeleton-meta {
+  height: 12px;
+  width: 112px;
+  border-radius: 999px;
+}
+
+.policy-area-skeleton-meta--inline {
+  width: 88px;
+}
+
+.policy-area-skeleton-meta--value {
+  width: 54px;
+}
+
+.policy-area-progress-bar--skeleton {
+  width: 44%;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .policy-area-empty {
@@ -375,6 +453,20 @@ body[data-pc-theme="dark"] .policy-area-card-grid h3 {
 
 body[data-pc-theme="dark"] .policy-area-card-grid .policy-area-card-meta {
   color: #cbd5e1;
+}
+
+body[data-pc-theme="dark"] .policy-area-card-skeleton {
+  background: linear-gradient(90deg, #13212d 20%, #1b2a38 50%, #13212d 80%);
+  background-size: 200% 100%;
+}
+
+body[data-pc-theme="dark"] .policy-area-card-media-skeleton,
+body[data-pc-theme="dark"] .policy-area-skeleton-chip,
+body[data-pc-theme="dark"] .policy-area-skeleton-pill,
+body[data-pc-theme="dark"] .policy-area-skeleton-title,
+body[data-pc-theme="dark"] .policy-area-skeleton-meta,
+body[data-pc-theme="dark"] .policy-area-progress-bar--skeleton {
+  background: rgba(226, 232, 240, 0.12);
 }
 
 body[data-pc-theme="dark"] .policy-area-progress {

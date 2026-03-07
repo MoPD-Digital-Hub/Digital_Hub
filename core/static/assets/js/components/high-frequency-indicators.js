@@ -158,6 +158,7 @@ async function mountHighFrequencyIndicators(element, options = {}) {
     ...DEFAULT_OPTIONS,
     ...options,
     endpoint: element.dataset.endpoint || options.endpoint || DEFAULT_OPTIONS.endpoint,
+    limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
   };
 
   const grid = element.querySelector("[data-hf-grid]");

@@ -46,7 +46,7 @@ function createCard(item, mediaBaseUrl) {
     <article class="project-card">
       ${
         image
-          ? `<img class="project-card-media" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy">`
+          ? `<img class="project-card-media" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 767px) 230px, 240px">`
           : `<div class="project-card-fallback" aria-hidden="true"></div>`
       }
       <div class="project-card-overlay"></div>
@@ -183,6 +183,11 @@ async function mountProjectStrip(element, options = {}) {
     ...options,
     endpoint: element.dataset.endpoint || options.endpoint || DEFAULT_OPTIONS.endpoint,
     mediaBaseUrl: element.dataset.mediaBaseUrl || options.mediaBaseUrl || DEFAULT_OPTIONS.mediaBaseUrl,
+    autoScroll:
+      element.dataset.autoScroll === "false"
+        ? false
+        : (options.autoScroll ?? DEFAULT_OPTIONS.autoScroll),
+    limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
   };
 
   const viewport = element.querySelector("[data-project-viewport]");

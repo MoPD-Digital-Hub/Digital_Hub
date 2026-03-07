@@ -4,13 +4,13 @@
 {% block title %}Home | Data Hub{% endblock %}
 
 {% block style %}
-<link rel="stylesheet" href="{% static 'assets/css/components/topic-scroller.css' %}?v=20260306c">
-<link rel="stylesheet" href="{% static 'assets/css/components/ministry-scorecard.css' %}?v=20260306f">
-<link rel="stylesheet" href="{% static 'assets/css/components/summary-panels.css' %}?v=20260306d">
-<link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260306c">
-<link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260306c">
-<link rel="stylesheet" href="{% static 'assets/css/components/initiative-spotlight.css' %}?v=20260306f">
-<link rel="stylesheet" href="{% static 'assets/css/components/policy-area-scorecard.css' %}?v=20260307a">
+<link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260307a">
+<link rel="stylesheet" href="{% static 'assets/css/components/topic-scroller.css' %}?v=20260307j">
+<link rel="stylesheet" href="{% static 'assets/css/components/ministry-scorecard.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/summary-panels.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/initiative-spotlight.css' %}?v=20260307g">
 <style>
   .home-topic-section {
     display: grid;
@@ -26,7 +26,7 @@
 
 {% block content %}
 <div class="home-dashboard-sections">
-  <section class="home-topic-section" data-topic-scroller data-endpoint="/api/mobile/topic-list/">
+  <section class="home-topic-section" data-topic-scroller data-endpoint="/api/mobile/topic-list/" data-limit="8" data-auto-scroll="false">
     <div class="topic-strip-head">
       <div>
         <h2 class="topic-strip-title">Key Development Statistics</h2>
@@ -47,7 +47,7 @@
     </div>
   </section>
 
-  <section class="ministry-strip" data-ministry-scorecard data-endpoint="/api/mobile/ministries/?year=2017&amp;quarter=3month">
+  <section class="ministry-strip" data-ministry-scorecard data-endpoint="/api/mobile/ministries/?year=2017&amp;quarter=3month" data-limit="8" data-auto-scroll="false">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Ministry Scorecard</h2>
@@ -65,26 +65,6 @@
 
     <div class="ministry-strip-viewport">
       <div class="ministry-strip-track"></div>
-    </div>
-  </section>
-
-  <section class="policy-area-strip" data-policy-area-scorecard data-endpoint="/api/mobile/policy-areas/?year=2018&amp;quarter=3month">
-    <div class="policy-area-strip-head">
-      <div>
-        <h2 class="policy-area-strip-title">Policy Area Scorecard</h2>
-        <p class="policy-area-strip-subtitle">Open policy area scorecards to review overall performance and move into the detailed dashboard.</p>
-      </div>
-      <div class="policy-area-strip-nav">
-        <button type="button" class="policy-area-strip-nav-btn" data-policy-area-prev aria-label="Previous policy areas">
-          <i class="ti ti-arrow-left"></i>
-        </button>
-        <button type="button" class="policy-area-strip-nav-btn" data-policy-area-next aria-label="Next policy areas">
-          <i class="ti ti-arrow-right"></i>
-        </button>
-      </div>
-    </div>
-    <div class="policy-area-strip-viewport" data-policy-area-viewport>
-      <div class="policy-area-strip-track" data-policy-area-track></div>
     </div>
   </section>
 
@@ -124,7 +104,7 @@
     </div>
   </section>
 
-  <section class="hf-section" data-high-frequency data-endpoint="/api/mobile/trending/">
+  <section class="hf-section" data-high-frequency data-endpoint="/api/mobile/trending/" data-limit="6">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">High Frequency Indicators</h2>
@@ -134,7 +114,7 @@
     <div class="hf-grid" data-hf-grid></div>
   </section>
 
-  <section class="project-strip" data-project-strip data-endpoint="/api/mobile/project-list/" data-media-base-url="https://time-series.mopd.gov.et/">
+  <section class="project-strip" data-project-strip data-endpoint="/api/mobile/project-list/" data-media-base-url="https://time-series.mopd.gov.et/" data-limit="6" data-auto-scroll="false">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Projects</h2>
@@ -154,7 +134,7 @@
     </div>
   </section>
 
-  <section class="initiative-section" data-initiative-spotlight data-endpoint="/api/mobile/initiatives/" data-media-base-url="https://time-series.mopd.gov.et/">
+  <section class="initiative-section" data-initiative-spotlight data-endpoint="/api/mobile/initiatives/" data-media-base-url="https://time-series.mopd.gov.et/" data-limit="8" data-image-cards="4" data-initial-visible-stacked="3">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Initiatives</h2>
@@ -173,5 +153,5 @@
 {% endblock %}
 
 {% block script %}
-<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260307a"></script>
+<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260307e"></script>
 {% endblock %}

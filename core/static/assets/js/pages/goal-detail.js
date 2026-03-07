@@ -688,13 +688,51 @@ async function loadGoalDetail() {
   const currentPeriod = root.querySelector("[data-goal-current-period]");
   const query = new URLSearchParams(window.location.search);
   const drawerEl = document.querySelector("[data-goal-kpi-drawer]");
+  const drawerBackdrop = document.querySelector("[data-goal-kpi-backdrop]");
   const drawerTitle = drawerEl?.querySelector("[data-goal-kpi-title]");
   const drawerContent = drawerEl?.querySelector("[data-goal-kpi-content]");
-  const drawer = drawerEl && window.bootstrap ? window.bootstrap.Offcanvas.getOrCreateInstance(drawerEl) : null;
+  const drawerClose = drawerEl?.querySelector("[data-goal-kpi-close]");
   let selectedBucket = "";
   let currentDetail = null;
   let currentDrawerChart = null;
   let currentDrawerSeries = "yearly";
+
+  if (drawerBackdrop && drawerBackdrop.parentElement !== document.body) {
+    document.body.appendChild(drawerBackdrop);
+  }
+  if (drawerEl && drawerEl.parentElement !== document.body) {
+    document.body.appendChild(drawerEl);
+  }
+
+  function closeKpiDrawer() {
+    if (!drawerEl) {
+      return;
+    }
+    drawerEl.classList.remove("is-open");
+    drawerEl.setAttribute("aria-hidden", "true");
+    if (drawerBackdrop) {
+      drawerBackdrop.hidden = true;
+    }
+    document.documentElement.classList.remove("goal-kpi-lock");
+    document.body.classList.remove("goal-kpi-lock");
+    if (currentDrawerChart) {
+      currentDrawerChart.destroy();
+      currentDrawerChart = null;
+    }
+  }
+
+  function openKpiDrawerShell() {
+    if (!drawerEl) {
+      return;
+    }
+    drawerEl.classList.add("is-open");
+    drawerEl.setAttribute("aria-hidden", "false");
+    if (drawerBackdrop) {
+      drawerBackdrop.hidden = false;
+    }
+    document.documentElement.classList.add("goal-kpi-lock");
+    document.body.classList.add("goal-kpi-lock");
+  }
 
   const filter = await createDpmesPeriodFilter(root, {
     initialState: {
@@ -765,7 +803,7 @@ async function loadGoalDetail() {
 
     drawerTitle.textContent = "Indicator Detail";
     renderKpiDrawerLoading(drawerContent);
-    drawer?.show();
+    openKpiDrawerShell();
 
     try {
       const payload = await fetchJson(`/api/mobile/dpmes-indicator-detail/${indicatorId}/`);
@@ -805,10 +843,11 @@ async function loadGoalDetail() {
     });
   }
 
-  drawerEl?.addEventListener("hidden.bs.offcanvas", () => {
-    if (currentDrawerChart) {
-      currentDrawerChart.destroy();
-      currentDrawerChart = null;
+  drawerClose?.addEventListener("click", closeKpiDrawer);
+  drawerBackdrop?.addEventListener("click", closeKpiDrawer);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && drawerEl?.classList.contains("is-open")) {
+      closeKpiDrawer();
     }
   });
 

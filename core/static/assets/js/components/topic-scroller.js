@@ -1,3 +1,5 @@
+import { createTopicCard, escapeHtml } from "./data-topic-browser.js?v=20260307a";
+
 const TOPIC_MEDIA_BASE_URL = "https://time-series.mopd.gov.et/";
 
 const DEFAULTS = {
@@ -6,6 +8,7 @@ const DEFAULTS = {
   autoScroll: true,
   autoScrollStep: 360,
   autoScrollInterval: 2200,
+  limit: 8,
   filterItem(item) {
     return Boolean(item);
   },
@@ -16,77 +19,27 @@ const DEFAULTS = {
   }
 };
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function buildMediaUrl(path, baseUrl) {
-  const raw = String(path || "").trim();
-  if (!raw) {
-    return "";
-  }
-  if (/^https?:\/\//i.test(raw)) {
-    return raw;
-  }
-  return new URL(raw.replace(/^\//, ""), baseUrl || TOPIC_MEDIA_BASE_URL).toString();
-}
-
-function countLabel(count, label) {
-  const value = Number(count || 0);
-  return value + " " + label;
-}
-
 function createCard(item, options) {
-  const title = item.title_ENG || item.title_AMH || "Untitled Topic";
-  const bg = buildMediaUrl(item.background_image || item.image, options.mediaBaseUrl);
-  const icon = buildMediaUrl(item.image_icons || item.image, options.mediaBaseUrl);
-  const fallbackTone = Number(item.rank || 0) % 3;
-  const toneClass = fallbackTone === 1 ? "tone-amber" : fallbackTone === 2 ? "tone-sky" : "tone-teal";
-
-  return (
-    '<article class="topic-card ' + toneClass + '" data-topic-id="' + escapeHtml(item.id) + '">' +
-    (
-      bg
-        ? '<img class="topic-card-media" src="' + escapeHtml(bg) + '" alt="' + escapeHtml(title) + '">'
-        : '<div class="topic-card-media topic-card-media-fallback"></div>'
-    ) +
-    '<div class="topic-card-body">' +
-    '<div class="topic-card-top">' +
-    '<span class="topic-card-icon">' +
-    (icon ? '<img src="' + escapeHtml(icon) + '" alt="' + escapeHtml(title) + '">' : '<i class="ti ti-chart-bar"></i>') +
-    "</span>" +
-    '<span class="topic-card-pill"><i class="ti ti-hash"></i><span>' + escapeHtml(item.rank || "-") + "</span></span>" +
-    "</div>" +
-    '<div class="topic-card-kicker">Key Development Statistics</div>' +
-    '<h3 class="topic-card-title">' + escapeHtml(title) + "</h3>" +
-    '<div class="topic-card-meta">' +
-    '<span class="topic-card-badge"><i class="ti ti-category"></i><span>' + escapeHtml(countLabel(item.count_category, "categories")) + "</span></span>" +
-    '<span class="topic-card-badge"><i class="ti ti-chart-dots-2"></i><span>' + escapeHtml(countLabel(item.count_kpis, "indicators")) + "</span></span>" +
-    "</div>" +
-    "</div>" +
-    "</article>"
+  return createTopicCard(item, options.mediaBaseUrl).replace(
+    'class="data-topic-card"',
+    'class="data-topic-card topic-strip-card"'
   );
 }
 
 function renderLoading(track) {
   track.innerHTML = [
-    '<div class="topic-card-skeleton"></div>',
-    '<div class="topic-card-skeleton"></div>',
-    '<div class="topic-card-skeleton"></div>'
+    '<div class="data-topic-card data-topic-card-skeleton topic-strip-card"></div>',
+    '<div class="data-topic-card data-topic-card-skeleton topic-strip-card"></div>',
+    '<div class="data-topic-card data-topic-card-skeleton topic-strip-card"></div>'
   ].join("");
 }
 
 function renderError(track, message) {
-  track.innerHTML = '<div class="topic-card-error">' + escapeHtml(message) + "</div>";
+  track.innerHTML = '<div class="data-topic-state topic-strip-state">' + escapeHtml(message) + "</div>";
 }
 
 function renderEmpty(track) {
-  track.innerHTML = '<div class="topic-card-empty">No topics available right now.</div>';
+  track.innerHTML = '<div class="data-topic-state topic-strip-state">No topics available right now.</div>';
 }
 
 function updateNavState(viewport, prevBtn, nextBtn) {
@@ -148,6 +101,9 @@ function resolveOptions(mount, overrides) {
   if (mount.dataset.autoScroll === "false" && !(overrides && "autoScroll" in overrides)) {
     options.autoScroll = false;
   }
+  if (mount.dataset.limit && !(overrides && "limit" in overrides)) {
+    options.limit = Number(mount.dataset.limit || DEFAULTS.limit);
+  }
   return options;
 }
 
@@ -198,7 +154,7 @@ async function mountTopicScroller(mount, overrides) {
       payload.data.filter(function (item) {
         return options.filterItem(item);
       })
-    );
+    ).slice(0, options.limit);
 
     if (!topics.length) {
       renderEmpty(track);

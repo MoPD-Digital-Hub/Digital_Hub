@@ -9,12 +9,44 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function renderSkeletons(track) {
-  track.innerHTML = Array.from({ length: 4 })
+function renderSkeletons(track, options = {}) {
+  const skeletonCount = options.variant === "grid" ? 12 : 4;
+  const cardClass = options.variant === "grid" ? " policy-area-card-grid" : "";
+  track.innerHTML = Array.from({ length: skeletonCount })
     .map(
       () => `
-        <article class="policy-area-card policy-area-card-skeleton">
-          <div class="policy-area-card-shell"></div>
+        <article class="policy-area-card policy-area-card-skeleton${cardClass}">
+          ${
+            options.variant === "grid"
+              ? `<div class="policy-area-card-media">
+                  <div class="policy-area-card-media-skeleton"></div>
+                </div>`
+              : ""
+          }
+          <div class="policy-area-card-shell">
+            <div class="policy-area-card-top">
+              <span class="policy-area-rank policy-area-skeleton-chip"></span>
+              <span class="policy-area-score policy-area-skeleton-pill"></span>
+            </div>
+            <div class="policy-area-card-body">
+              <div class="policy-area-skeleton-title"></div>
+              <div class="policy-area-skeleton-title policy-area-skeleton-title--short"></div>
+              ${
+                options.variant === "grid"
+                  ? `
+                    <div class="policy-area-skeleton-meta"></div>
+                    <div class="policy-area-progress">
+                      <span class="policy-area-progress-bar policy-area-progress-bar--skeleton"></span>
+                    </div>
+                    <div class="policy-area-card-footer">
+                      <span class="policy-area-skeleton-meta policy-area-skeleton-meta--inline"></span>
+                      <span class="policy-area-skeleton-meta policy-area-skeleton-meta--value"></span>
+                    </div>
+                  `
+                  : ""
+              }
+            </div>
+          </div>
         </article>
       `
     )
@@ -96,7 +128,7 @@ function renderCards(track, items, options = {}, filterState) {
               ? `<div class="policy-area-card-media">
                   ${
                     image
-                      ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">`
+                      ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 767px) 100vw, 180px">`
                       : `<div class="policy-area-card-media-fallback"></div>`
                   }
                 </div>`
@@ -108,7 +140,7 @@ function renderCards(track, items, options = {}, filterState) {
               <span class="policy-area-rank" aria-hidden="true">
                 ${
                   icon
-                    ? `<img src="${escapeHtml(icon)}" alt="" loading="lazy">`
+                    ? `<img src="${escapeHtml(icon)}" alt="" loading="lazy" decoding="async" fetchpriority="low" sizes="15px">`
                     : `<i class="ti ti-chart-pie-2"></i>`
                 }
               </span>
@@ -162,7 +194,7 @@ async function loadData(root, state) {
     return;
   }
 
-  renderSkeletons(track);
+  renderSkeletons(track, state.options);
 
   try {
     const response = await fetch(state.endpoint, {
@@ -210,11 +242,15 @@ async function init(root) {
   };
 
   const initialParams = new URLSearchParams(window.location.search);
-  const initialState = {
-    year: initialParams.get("year") || root.dataset.defaultYear || "2018",
-    quarter: initialParams.get("quarter") || root.dataset.defaultQuarter || "3month",
-    dateType: initialParams.get("quarter") ? "quarterly" : "yearly",
-  };
+  const hasYearParam = initialParams.has("year");
+  const hasQuarterParam = initialParams.has("quarter");
+  const initialState = hasYearParam
+    ? {
+        year: initialParams.get("year") || "",
+        quarter: hasQuarterParam ? initialParams.get("quarter") || "3month" : undefined,
+        dateType: hasQuarterParam ? "quarterly" : "yearly",
+      }
+    : undefined;
 
   const filter = await createDpmesPeriodFilter(scope, {
     dateTypeButtonsSelector: "[data-policy-area-date-type-btn]",
