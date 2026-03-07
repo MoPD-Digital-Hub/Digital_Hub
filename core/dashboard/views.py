@@ -92,3 +92,32 @@ def data_indicator_detail_page(request, indicator_id):
         "indicator_id": indicator_id,
     }
     return render(request, "data-hub/pages/data-indicator-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def policy_area_detail_page(request, policy_area_id):
+    context = {
+        "page_title": "Policy Area Detail",
+        "subtitle": "Review policy area scorecards, metadata, and related program structures.",
+        "policy_area_id": policy_area_id,
+    }
+    return render(request, "data-hub/pages/policy-area-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def goal_detail_page(request, goal_id):
+    context = {
+        "page_title": "Goal Detail",
+        "subtitle": "Review goal-level scorecards, ownership, and supporting structures.",
+        "goal_id": goal_id,
+    }
+    return render(request, "data-hub/pages/goal-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def policy_area_list_page(request):
+    context = {
+        "page_title": "Policy Areas",
+        "subtitle": "Browse policy area scorecards and open detailed views.",
+    }
+    return render(request, "data-hub/pages/policy-area-list.html", context)

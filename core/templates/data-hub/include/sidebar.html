@@ -3,6 +3,7 @@
 {% url 'dashboard_home' as dashboard_home_url %}
 {% url 'dashboard_admas_ai' as admas_ai_url %}
 {% url 'data_categories' as data_categories_url %}
+{% url 'policy_area_list' as policy_area_list_url %}
 {% url 'private_climate_projects' as private_climate_projects_url %}
 
 <style>
@@ -155,15 +156,15 @@
                     </a>
                 </li>
 
-                <li class="pc-item pc-hasmenu">
-                    <a href="#!" class="pc-link">
+                <li class="pc-item pc-hasmenu {% if request.path == policy_area_list_url or '/dashboard/statistics/policy-areas/' in request.path %}active{% endif %}">
+                    <a href="#!" class="pc-link {% if request.path == policy_area_list_url or '/dashboard/statistics/policy-areas/' in request.path %}active{% endif %}">
                         <span class="pc-micon"><i class="ti ti-chart-bar"></i></span>
                         <span class="pc-mtext">{% trans "Statistics" %}</span>
                         <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
                     </a>
                     <ul class="pc-submenu">
                         <li class="pc-item">
-                            <a class="pc-link" href="#">{% trans "Policy Area" %}</a>
+                            <a class="pc-link {% if request.path == policy_area_list_url or '/dashboard/statistics/policy-areas/' in request.path %}active{% endif %}" href="{{ policy_area_list_url|default:'#' }}">{% trans "Policy Area" %}</a>
                         </li>
                         <li class="pc-item">
                             <a class="pc-link" href="#">{% trans "Public Bodies" %}</a>

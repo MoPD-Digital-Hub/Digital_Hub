@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260306c">
 <link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260306c">
 <link rel="stylesheet" href="{% static 'assets/css/components/initiative-spotlight.css' %}?v=20260306f">
+<link rel="stylesheet" href="{% static 'assets/css/components/policy-area-scorecard.css' %}?v=20260307a">
 <style>
   .home-topic-section {
     display: grid;
@@ -64,6 +65,26 @@
 
     <div class="ministry-strip-viewport">
       <div class="ministry-strip-track"></div>
+    </div>
+  </section>
+
+  <section class="policy-area-strip" data-policy-area-scorecard data-endpoint="/api/mobile/policy-areas/?year=2018&amp;quarter=3month">
+    <div class="policy-area-strip-head">
+      <div>
+        <h2 class="policy-area-strip-title">Policy Area Scorecard</h2>
+        <p class="policy-area-strip-subtitle">Open policy area scorecards to review overall performance and move into the detailed dashboard.</p>
+      </div>
+      <div class="policy-area-strip-nav">
+        <button type="button" class="policy-area-strip-nav-btn" data-policy-area-prev aria-label="Previous policy areas">
+          <i class="ti ti-arrow-left"></i>
+        </button>
+        <button type="button" class="policy-area-strip-nav-btn" data-policy-area-next aria-label="Next policy areas">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+    <div class="policy-area-strip-viewport" data-policy-area-viewport>
+      <div class="policy-area-strip-track" data-policy-area-track></div>
     </div>
   </section>
 
@@ -152,5 +173,5 @@
 {% endblock %}
 
 {% block script %}
-<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260306s"></script>
+<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260307a"></script>
 {% endblock %}
