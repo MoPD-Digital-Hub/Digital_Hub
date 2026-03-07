@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260306c">
 <link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260306c">
 <link rel="stylesheet" href="{% static 'assets/css/components/initiative-spotlight.css' %}?v=20260306f">
+<link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260306a">
 <style>
   .home-topic-section {
     display: grid;
@@ -25,7 +26,7 @@
 
 {% block content %}
 <div class="home-dashboard-sections">
-  <section class="home-topic-section" data-topic-scroller data-endpoint="/api/mobile/topic-list/">
+  <section class="home-topic-section" data-topic-scroller data-endpoint="/api/mobile/topic-list/" data-gesture-label="Topic strip">
     <div class="topic-strip-head">
       <div>
         <h2 class="topic-strip-title">Key Development Statistics</h2>
@@ -46,7 +47,7 @@
     </div>
   </section>
 
-  <section class="ministry-strip" data-ministry-scorecard data-endpoint="/api/mobile/ministries/?year=2017&amp;quarter=3month">
+  <section class="ministry-strip" data-ministry-scorecard data-endpoint="/api/mobile/ministries/?year=2017&amp;quarter=3month" data-gesture-label="Ministry scorecard">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Ministry Scorecard</h2>
@@ -67,7 +68,7 @@
     </div>
   </section>
 
-  <section class="summary-panels" data-summary-panels data-fayda-endpoint="https://time-series.mopd.gov.et/api/fayda/">
+  <section class="summary-panels" data-summary-panels data-fayda-endpoint="https://time-series.mopd.gov.et/api/fayda/" data-gesture-label="Program summaries" data-gesture-zoomable="true">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Program Summaries</h2>
@@ -103,7 +104,7 @@
     </div>
   </section>
 
-  <section class="hf-section" data-high-frequency data-endpoint="/api/mobile/trending/">
+  <section class="hf-section" data-high-frequency data-endpoint="/api/mobile/trending/" data-gesture-label="High frequency indicators" data-gesture-zoomable="true">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">High Frequency Indicators</h2>
@@ -113,7 +114,7 @@
     <div class="hf-grid" data-hf-grid></div>
   </section>
 
-  <section class="project-strip" data-project-strip data-endpoint="/api/mobile/project-list/" data-media-base-url="https://time-series.mopd.gov.et/">
+  <section class="project-strip" data-project-strip data-endpoint="/api/mobile/project-list/" data-media-base-url="https://time-series.mopd.gov.et/" data-gesture-label="Projects strip" data-gesture-zoomable="true">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Projects</h2>
@@ -133,7 +134,7 @@
     </div>
   </section>
 
-  <section class="initiative-section" data-initiative-spotlight data-endpoint="/api/mobile/initiatives/" data-media-base-url="https://time-series.mopd.gov.et/">
+  <section class="initiative-section" data-initiative-spotlight data-endpoint="/api/mobile/initiatives/" data-media-base-url="https://time-series.mopd.gov.et/" data-gesture-label="Initiatives" data-gesture-zoomable="true">
     <div class="ministry-strip-head">
       <div>
         <h2 class="ministry-strip-title">Initiatives</h2>
@@ -152,5 +153,5 @@
 {% endblock %}
 
 {% block script %}
-<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260306s"></script>
+<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260307a"></script>
 {% endblock %}
