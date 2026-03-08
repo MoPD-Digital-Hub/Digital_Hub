@@ -1,0 +1,133 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/ministry-scorecard.css' %}?v=20260308a">
+<link rel="stylesheet" href="{% static 'assets/css/components/filter-toolbar.css' %}?v=20260307a">
+<style>
+  .public-body-list-page {
+    display: grid;
+    gap: 14px;
+  }
+
+  .public-body-list-hero {
+    display: grid;
+    gap: 8px;
+  }
+
+  .public-body-list-hero h1 {
+    margin: 0;
+  }
+
+  .public-body-list-hero p {
+    margin: 0;
+    color: var(--bs-secondary-color);
+    max-width: 70ch;
+  }
+
+  .public-body-list-page .ministry-strip-head,
+  .public-body-list-page .ministry-strip-nav,
+  .public-body-list-page .ministry-strip-viewport {
+    overflow: visible;
+  }
+
+  .public-body-list-page .ministry-strip-head {
+    display: none;
+  }
+
+  .public-body-list-page .ministry-strip-track {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-auto-columns: unset;
+    gap: 12px;
+    align-items: start;
+  }
+
+  @media (max-width: 1599.98px) {
+    .public-body-list-page .ministry-strip-track {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1399.98px) {
+    .public-body-list-page .ministry-strip-track {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1199.98px) {
+    .public-body-list-page .ministry-strip-track {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .public-body-list-page .ministry-strip-track {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .public-body-list-page .ministry-strip-track {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="public-body-list-page">
+  <div class="public-body-list-hero">
+    <h1>{{ page_title }}</h1>
+    <p>{{ subtitle }}</p>
+  </div>
+
+  <div class="dh-filterbar">
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label">Select Date Type</label>
+      <div class="dh-segmented" role="group" aria-label="Select date type">
+        <button type="button" class="dh-segmented__btn" data-public-body-date-type-btn data-value="yearly" aria-pressed="false">Yearly</button>
+        <button type="button" class="dh-segmented__btn active" data-public-body-date-type-btn data-value="quarterly" aria-pressed="true">Quarterly</button>
+      </div>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label" for="publicBodyPeriod">Select Period</label>
+      <select id="publicBodyPeriod" class="dh-filterbar__select" data-public-body-period></select>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label" for="publicBodySearch">Search Public Body</label>
+      <input id="publicBodySearch" class="dh-filterbar__search" type="search" placeholder="Search by title or code" data-public-body-search>
+    </div>
+  </div>
+
+  <section
+    class="ministry-strip"
+    data-public-body-scorecard
+    data-show-all="true"
+    data-variant="grid"
+    data-endpoint="/api/mobile/ministries/?year=2017&amp;quarter=3month"
+    data-endpoint-base="/api/mobile/ministries/"
+    data-default-time-endpoint="/api/mobile/default-time/"
+    data-years-endpoint="/api/mobile/dpmes-year-lists/"
+    data-default-year="2017"
+    data-default-quarter="3month"
+    data-start-year="2010"
+  >
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">All Public Bodies</h2>
+        <p class="ministry-strip-subtitle">Review scorecards for ministries and public bodies across reporting periods.</p>
+      </div>
+    </div>
+    <div class="ministry-strip-viewport">
+      <div class="ministry-strip-track" data-public-body-track></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/public-body-list.js' %}?v=20260308a"></script>
+{% endblock %}

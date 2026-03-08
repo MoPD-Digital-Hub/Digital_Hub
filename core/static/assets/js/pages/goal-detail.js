@@ -83,6 +83,30 @@ function normalizeDetail(payload) {
   return payload?.data && typeof payload.data === "object" ? payload.data : {};
 }
 
+function normalizeKra(kra) {
+  if (!kra || typeof kra !== "object") {
+    return {};
+  }
+  return {
+    ...kra,
+    kra_score_card: kra.kra_score_card || kra.ministry_key_result_area_score_card || {},
+  };
+}
+
+function normalizeGoalDetail(detail, context) {
+  if (!detail || typeof detail !== "object") {
+    return {};
+  }
+
+  const isMinistryGoal = context?.ministryId != null && context?.ministryId !== "";
+  return {
+    ...detail,
+    goal_score_card: detail.goal_score_card || detail.ministry_strategic_goal_score_card || {},
+    kra_goal: (Array.isArray(detail.kra_goal) ? detail.kra_goal : []).map(normalizeKra),
+    __goalContext: isMinistryGoal ? "ministry" : "policy-area",
+  };
+}
+
 function normalizeIndicatorDetail(payload) {
   return payload?.data && typeof payload.data === "object" ? payload.data : {};
 }
@@ -387,9 +411,9 @@ function renderKraCard(kra, state, index) {
           </div>
         </div>
         <div class="goal-kra-card__meta">
-          <span>${escapeHtml(kra.activity_is_shared ? "Shared activity" : "Single activity")}</span>
-          <span>${escapeHtml(indicators.length)} indicators</span>
-        </div>
+            <span>${escapeHtml(kra.activity_is_shared ? "Shared activity" : "Single activity")}</span>
+            <span>${escapeHtml(indicators.length)} indicators</span>
+          </div>
       </summary>
       <div class="goal-kra-card__content">
         <div class="goal-indicators-grid">
@@ -687,6 +711,9 @@ async function loadGoalDetail() {
   const body = root.querySelector("[data-goal-body]");
   const currentPeriod = root.querySelector("[data-goal-current-period]");
   const query = new URLSearchParams(window.location.search);
+  const ministryId = query.get("ministry_id") || "";
+  const orgId = query.get("org_id") || "";
+  const solo = query.get("solo") || "";
   const drawerEl = document.querySelector("[data-goal-kpi-drawer]");
   const drawerBackdrop = document.querySelector("[data-goal-kpi-backdrop]");
   const drawerTitle = drawerEl?.querySelector("[data-goal-kpi-title]");
@@ -741,7 +768,17 @@ async function loadGoalDetail() {
       dateType: query.get("quarter") ? "quarterly" : "yearly",
     },
     onChange: async (_state, _reason, api) => {
-      const nextQuery = api.getQueryString();
+      const nextParams = new URLSearchParams(api.getQueryString());
+      if (ministryId) {
+        nextParams.set("ministry_id", ministryId);
+      }
+      if (orgId) {
+        nextParams.set("org_id", orgId);
+      }
+      if (solo) {
+        nextParams.set("solo", solo);
+      }
+      const nextQuery = nextParams.toString();
       window.history.replaceState({}, "", `${window.location.pathname}?${nextQuery}`);
       currentPeriod.textContent = renderCurrentPeriod(api.getState());
       await renderDetail(api.getState());
@@ -756,8 +793,22 @@ async function loadGoalDetail() {
         params.set("quarter", state.quarter);
       }
 
-      const payload = await fetchJson(`/api/mobile/goal-detail/${goalId}/?${params.toString()}`);
-      const detail = normalizeDetail(payload);
+      let endpoint;
+      if (ministryId) {
+        params.set("ministry_id", ministryId);
+        if (orgId) {
+          params.set("org_id", orgId);
+        }
+        if (solo) {
+          params.set("solo", solo);
+        }
+        endpoint = `/api/mobile/ministry-goal-detail/${goalId}/?${params.toString()}`;
+      } else {
+        endpoint = `/api/mobile/goal-detail/${goalId}/?${params.toString()}`;
+      }
+
+      const payload = await fetchJson(endpoint);
+      const detail = normalizeGoalDetail(normalizeDetail(payload), { ministryId });
       currentDetail = detail;
 
       hero.innerHTML = renderHero(detail, state);

@@ -121,3 +121,22 @@ def policy_area_list_page(request):
         "subtitle": "Browse policy area scorecards and open detailed views.",
     }
     return render(request, "data-hub/pages/policy-area-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def public_body_list_page(request):
+    context = {
+        "page_title": "Public Bodies",
+        "subtitle": "Browse public body scorecards and compare ministry performance by reporting period.",
+    }
+    return render(request, "data-hub/pages/public-body-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def public_body_detail_page(request, ministry_id):
+    context = {
+        "page_title": "Public Body Detail",
+        "subtitle": "Review public body scorecards across policy areas and strategic goals.",
+        "ministry_id": ministry_id,
+    }
+    return render(request, "data-hub/pages/public-body-detail.html", context)

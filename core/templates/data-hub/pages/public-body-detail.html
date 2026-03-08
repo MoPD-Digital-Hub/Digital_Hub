@@ -5,12 +5,13 @@
 
 {% block style %}
 <link rel="stylesheet" href="{% static 'assets/css/components/goal-detail.css' %}?v=20260307x">
+<link rel="stylesheet" href="{% static 'assets/css/components/public-body-detail.css' %}?v=20260308c">
 <link rel="stylesheet" href="{% static 'assets/css/components/filter-toolbar.css' %}?v=20260307a">
 {% endblock %}
 
 {% block content %}
-<section class="goal-detail" data-goal-detail data-goal-id="{{ goal_id }}">
-  <div class="dh-filterbar" data-goal-filter>
+<section class="public-body-detail" data-public-body-detail data-ministry-id="{{ ministry_id }}">
+  <div class="dh-filterbar" data-public-body-detail-filter>
     <div class="dh-filterbar__group">
       <label class="dh-filterbar__label">Select Date Type</label>
       <div class="dh-segmented" role="group" aria-label="Select date type">
@@ -19,24 +20,32 @@
       </div>
     </div>
     <div class="dh-filterbar__group">
-      <label class="dh-filterbar__label" for="goalDetailPeriod">Select Period</label>
-      <select id="goalDetailPeriod" class="dh-filterbar__select" data-dpmes-period></select>
+      <label class="dh-filterbar__label" for="publicBodyDetailPeriod">Select Period</label>
+      <select id="publicBodyDetailPeriod" class="dh-filterbar__select" data-dpmes-period></select>
     </div>
     <div class="dh-filterbar__group">
       <label class="dh-filterbar__label">Selection</label>
-      <div class="goal-current" data-goal-current-period></div>
+      <div class="public-body-detail-current" data-public-body-current-period></div>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label" for="publicBodyAffiliatedOrg">Affiliated Organization</label>
+      <div class="public-body-affiliated-select-wrap">
+        <select id="publicBodyAffiliatedOrg" class="dh-filterbar__select public-body-affiliated-select" data-public-body-affiliated-select>
+        <option value="">Loading organizations...</option>
+        </select>
+      </div>
     </div>
   </div>
-  <div data-goal-hero></div>
-  <div data-goal-body></div>
+  <div data-public-body-hero></div>
+  <div data-public-body-body></div>
 </section>
 
 <div class="goal-kpi-drawer-backdrop" hidden data-goal-kpi-backdrop></div>
-<aside class="goal-kpi-drawer" tabindex="-1" id="goalKpiDrawer" aria-labelledby="goalKpiDrawerLabel" aria-hidden="true" data-goal-kpi-drawer>
+<aside class="goal-kpi-drawer" tabindex="-1" id="publicBodyKpiDrawer" aria-labelledby="publicBodyKpiDrawerLabel" aria-hidden="true" data-goal-kpi-drawer>
   <div class="goal-kpi-drawer__header">
     <div class="goal-kpi-drawer__titlewrap">
       <span class="goal-kpi-drawer__icon"><i class="ti ti-chart-histogram"></i></span>
-      <h5 class="goal-kpi-drawer__title" id="goalKpiDrawerLabel" data-goal-kpi-title>Indicator Detail</h5>
+      <h5 class="goal-kpi-drawer__title" id="publicBodyKpiDrawerLabel" data-goal-kpi-title>Indicator Detail</h5>
     </div>
     <button type="button" class="goal-kpi-drawer__close" aria-label="Close" data-goal-kpi-close>
       <i class="ti ti-x"></i>
@@ -54,5 +63,5 @@
 
 {% block script %}
 <script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
-<script type="module" src="{% static 'assets/js/pages/goal-detail.js' %}?v=20260308a"></script>
+<script type="module" src="{% static 'assets/js/pages/public-body-detail.js' %}?v=20260308d"></script>
 {% endblock %}
