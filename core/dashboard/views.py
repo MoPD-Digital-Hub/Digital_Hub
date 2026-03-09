@@ -140,3 +140,22 @@ def public_body_detail_page(request, ministry_id):
         "ministry_id": ministry_id,
     }
     return render(request, "data-hub/pages/public-body-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sector_project_list_page(request):
+    context = {
+        "page_title": "Sector Projects",
+        "subtitle": "Browse sector-level projects, implementation domains, and supporting project narratives.",
+    }
+    return render(request, "data-hub/pages/sector-project-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sector_project_detail_page(request, project_id):
+    context = {
+        "page_title": "Project Detail",
+        "subtitle": "Review sector project context, sub-project delivery, and implementation details.",
+        "project_id": project_id,
+    }
+    return render(request, "data-hub/pages/sector-project-detail.html", context)

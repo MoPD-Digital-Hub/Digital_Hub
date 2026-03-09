@@ -11,6 +11,8 @@ from .views import (
     policy_area_list_page,
     public_body_detail_page,
     public_body_list_page,
+    sector_project_detail_page,
+    sector_project_list_page,
     sample_dashboard,
 )
 
@@ -27,4 +29,6 @@ urlpatterns = [
     path("statistics/public-bodies/<int:ministry_id>/", public_body_detail_page, name="public_body_detail"),
     path("statistics/policy-areas/<int:policy_area_id>/", policy_area_detail_page, name="policy_area_detail"),
     path("statistics/goals/<int:goal_id>/", goal_detail_page, name="goal_detail"),
+    path("projects/sector/", sector_project_list_page, name="sector_project_list"),
+    path("projects/sector/<int:project_id>/", sector_project_detail_page, name="sector_project_detail"),
 ]
