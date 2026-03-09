@@ -1,6 +1,7 @@
 {% load static %}
 {% url 'edit_profile' as edit_profile_url %}
 {% url 'logout' as logout_url %}
+{% url 'change_password' as change_password_url %}
 
 <header class="pc-header">
     <div class="header-wrapper">
@@ -86,6 +87,14 @@
                                             <use xlink:href="#custom-setting-outline"></use>
                                         </svg>
                                         <span>Edit Profile</span>
+                                    </span>
+                                </a>
+                                <a href="{{ change_password_url|default:'#' }}" class="dropdown-item">
+                                    <span>
+                                        <svg class="pc-icon text-muted me-2">
+                                            <use xlink:href="#custom-lock-outline"></use>
+                                        </svg>
+                                        <span>Change Password</span>
                                     </span>
                                 </a>
                                 

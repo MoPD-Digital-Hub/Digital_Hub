@@ -4,10 +4,12 @@ const DEFAULT_OPTIONS = {
   mesobData: {
     title: "Mesob",
     subtitle: "Public Service Delivery Snapshot",
-    primaryValue: "136,156",
-    primaryLabel: "Services Delivered",
-    secondaryValue: "24",
-    secondaryLabel: "Active Modules",
+    primaryValue: "187",
+    primaryLabel: "Services Provided at Mesob",
+    secondaryValue: "23",
+    secondaryLabel: "Service Delivering Institutes at Mesob",
+    tertiaryValue: "136,156",
+    tertiaryLabel: "Customers Served",
   },
 };
 
@@ -77,6 +79,7 @@ function renderMesobMetrics(data = {}) {
   const metrics = [
     { label: data.primaryLabel || "Primary Metric", value: data.primaryValue },
     { label: data.secondaryLabel || "Secondary Metric", value: data.secondaryValue },
+    { label: data.tertiaryLabel || "Tertiary Metric", value: data.tertiaryValue },
   ];
 
   return renderMetricSlides(metrics);

@@ -2,10 +2,13 @@ from django.urls import path
 
 from .views import (
     admas_ai_page,
+    change_password_page,
+    dashboard_logout,
     dashboard_login,
     data_categories_page,
     data_indicator_detail_page,
     data_topic_detail_page,
+    edit_profile_page,
     goal_detail_page,
     high_frequency_dashboard_page,
     policy_area_detail_page,
@@ -21,6 +24,9 @@ from .views import (
 
 urlpatterns = [
     path("login/", dashboard_login, name="dashboard_login"),
+    path("logout/", dashboard_logout, name="logout"),
+    path("account/profile/", edit_profile_page, name="edit_profile"),
+    path("account/password/", change_password_page, name="change_password"),
     path("", sample_dashboard, name="dashboard_home"),
     path("sample/", sample_dashboard, name="dashboard_sample"),
     path("admas-ai/", admas_ai_page, name="dashboard_admas_ai"),
