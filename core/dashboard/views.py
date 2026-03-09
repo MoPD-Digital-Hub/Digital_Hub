@@ -1,9 +1,11 @@
 from django.contrib import messages
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from AI.models import ChatInstance, QuestionHistory
+
+from .forms import DashboardPasswordChangeForm, DashboardProfileForm
 
 
 def dashboard_login(request):
@@ -34,10 +36,55 @@ def dashboard_login(request):
 
 
 @login_required(login_url="/dashboard/login/")
+def dashboard_logout(request):
+    logout(request)
+    return redirect("dashboard_login")
+
+
+@login_required(login_url="/dashboard/login/")
 def sample_dashboard(request):
     context = {
     }
     return render(request, "dashboard/sample.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def edit_profile_page(request):
+    if request.method == "POST":
+        form = DashboardProfileForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect("edit_profile")
+    else:
+        form = DashboardProfileForm(instance=request.user)
+
+    context = {
+        "page_title": "Edit Profile",
+        "subtitle": "Update your personal and account information.",
+        "form": form,
+    }
+    return render(request, "data-hub/pages/account-profile.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def change_password_page(request):
+    if request.method == "POST":
+        form = DashboardPasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Password changed successfully.")
+            return redirect("change_password")
+    else:
+        form = DashboardPasswordChangeForm(request.user)
+
+    context = {
+        "page_title": "Change Password",
+        "subtitle": "Manage your dashboard password securely.",
+        "form": form,
+    }
+    return render(request, "data-hub/pages/account-password.html", context)
 
 
 @login_required(login_url="/dashboard/login/")
@@ -140,3 +187,50 @@ def public_body_detail_page(request, ministry_id):
         "ministry_id": ministry_id,
     }
     return render(request, "data-hub/pages/public-body-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def high_frequency_dashboard_page(request):
+    context = {
+        "page_title": "High Frequency Dashboard",
+        "subtitle": "Review configured high-frequency indicator widgets in a dashboard layout.",
+    }
+    return render(request, "data-hub/pages/high-frequency-dashboard.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sector_project_list_page(request):
+    context = {
+        "page_title": "Sector Projects",
+        "subtitle": "Browse sector-level projects, implementation domains, and supporting project narratives.",
+    }
+    return render(request, "data-hub/pages/sector-project-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sector_project_detail_page(request, project_id):
+    context = {
+        "page_title": "Project Detail",
+        "subtitle": "Review sector project context, sub-project delivery, and implementation details.",
+        "project_id": project_id,
+    }
+    return render(request, "data-hub/pages/sector-project-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def initiative_list_page(request):
+    context = {
+        "page_title": "National Initiatives",
+        "subtitle": "Review national initiatives, strategic narratives, and implementation focus areas in one place.",
+    }
+    return render(request, "data-hub/pages/initiative-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def initiative_detail_page(request, initiative_id):
+    context = {
+        "page_title": "Initiative Detail",
+        "subtitle": "Review initiative context, implementation narrative, and summary metadata.",
+        "initiative_id": initiative_id,
+    }
+    return render(request, "data-hub/pages/initiative-detail.html", context)

@@ -5,7 +5,8 @@
 {% url 'data_categories' as data_categories_url %}
 {% url 'policy_area_list' as policy_area_list_url %}
 {% url 'public_body_list' as public_body_list_url %}
-{% url 'private_climate_projects' as private_climate_projects_url %}
+{% url 'sector_project_list' as sector_project_list_url %}
+{% url 'initiative_list' as initiative_list_url %}
 
 <style>
     .dh-sidebar .pc-user-card {
@@ -173,18 +174,18 @@
                     </ul>
                 </li>
 
-                <li class="pc-item pc-hasmenu {% if request.path == private_climate_projects_url %}active{% endif %}">
-                    <a href="#!" class="pc-link {% if request.path == private_climate_projects_url %}active{% endif %}">
+                <li class="pc-item pc-hasmenu {% if request.path == sector_project_list_url or request.path == initiative_list_url or '/dashboard/projects/' in request.path %}active{% endif %}">
+                    <a href="#!" class="pc-link {% if request.path == sector_project_list_url or request.path == initiative_list_url or '/dashboard/projects/' in request.path %}active{% endif %}">
                         <span class="pc-micon"><i class="ti ti-briefcase"></i></span>
                         <span class="pc-mtext">{% trans "Project" %}</span>
                         <span class="pc-arrow"><i data-feather="chevron-right"></i></span>
                     </a>
                     <ul class="pc-submenu">
                         <li class="pc-item">
-                            <a class="pc-link" href="{{ private_climate_projects_url|default:'#' }}">{% trans "Sector Project" %}</a>
+                            <a class="pc-link {% if request.path == sector_project_list_url %}active{% endif %}" href="{{ sector_project_list_url|default:'#' }}">{% trans "Sector Project" %}</a>
                         </li>
                         <li class="pc-item">
-                            <a class="pc-link" href="#">{% trans "National Initiatives" %}</a>
+                            <a class="pc-link {% if request.path == initiative_list_url %}active{% endif %}" href="{{ initiative_list_url|default:'#' }}">{% trans "National Initiatives" %}</a>
                         </li>
                     </ul>
                 </li>

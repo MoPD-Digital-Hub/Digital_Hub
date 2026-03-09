@@ -2,9 +2,12 @@ const DEFAULT_OPTIONS = {
   endpoint: "/api/mobile/project-list/",
   mediaBaseUrl: "https://time-series.mopd.gov.et/",
   limit: 10,
+  showAll: false,
+  projectKind: "project",
   autoScroll: true,
   autoScrollStep: 320,
   autoScrollInterval: 2600,
+  detailBase: "",
 };
 
 function escapeHtml(value) {
@@ -37,13 +40,24 @@ function truncate(value, maxLength = 86) {
   return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 }
 
-function createCard(item, mediaBaseUrl) {
+function buildDetailHref(item, detailBase) {
+  if (!detailBase || !item?.id) {
+    return "";
+  }
+
+  return `${String(detailBase).replace(/\/?$/, "/")}${item.id}/`;
+}
+
+function createCard(item, mediaBaseUrl, detailBase) {
   const title = item.title_ENG || item.title_AMH || "Project";
   const description = truncate(item.description || "Project insights and implementation highlights.");
   const image = buildMediaUrl(item.image, mediaBaseUrl);
+  const href = buildDetailHref(item, detailBase);
+  const tagName = href ? "a" : "article";
+  const hrefAttr = href ? ` href="${escapeHtml(href)}"` : "";
 
   return `
-    <article class="project-card">
+    <${tagName} class="project-card"${hrefAttr}>
       ${
         image
           ? `<img class="project-card-media" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 767px) 230px, 240px">`
@@ -61,7 +75,7 @@ function createCard(item, mediaBaseUrl) {
           <p>${escapeHtml(description)}</p>
         </div>
       </div>
-    </article>
+    </${tagName}>
   `;
 }
 
@@ -188,6 +202,12 @@ async function mountProjectStrip(element, options = {}) {
         ? false
         : (options.autoScroll ?? DEFAULT_OPTIONS.autoScroll),
     limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
+    showAll:
+      element.dataset.showAll === "true"
+        ? true
+        : (options.showAll ?? DEFAULT_OPTIONS.showAll),
+    projectKind: element.dataset.projectKind || options.projectKind || DEFAULT_OPTIONS.projectKind,
+    detailBase: element.dataset.detailBase || options.detailBase || DEFAULT_OPTIONS.detailBase,
   };
 
   const viewport = element.querySelector("[data-project-viewport]");
@@ -213,7 +233,17 @@ async function mountProjectStrip(element, options = {}) {
     }
 
     const payload = await response.json();
-    const items = (Array.isArray(payload?.data) ? payload.data : []).slice(0, settings.limit);
+    const rawItems = Array.isArray(payload?.data) ? payload.data : [];
+    const filteredItems = rawItems.filter((item) => {
+      if (settings.projectKind === "initiative") {
+        return item?.is_initiative === true;
+      }
+      if (settings.projectKind === "all") {
+        return true;
+      }
+      return item?.is_initiative !== true;
+    });
+    const items = settings.showAll ? filteredItems : filteredItems.slice(0, settings.limit);
 
     if (!items.length) {
       renderEmpty(track);
@@ -221,7 +251,7 @@ async function mountProjectStrip(element, options = {}) {
       return null;
     }
 
-    track.innerHTML = items.map((item) => createCard(item, settings.mediaBaseUrl)).join("");
+    track.innerHTML = items.map((item) => createCard(item, settings.mediaBaseUrl, settings.detailBase)).join("");
     updateNavState(viewport, previousButton, nextButton);
 
     const autoScroller = createAutoScroller(viewport, settings);

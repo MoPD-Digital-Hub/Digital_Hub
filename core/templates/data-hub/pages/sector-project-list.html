@@ -1,0 +1,105 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260309a">
+<style>
+  .sector-project-page {
+    display: grid;
+    gap: 14px;
+  }
+
+  .sector-project-hero {
+    display: grid;
+    gap: 8px;
+  }
+
+  .sector-project-hero h1 {
+    margin: 0;
+  }
+
+  .sector-project-hero p {
+    margin: 0;
+    color: var(--bs-secondary-color);
+    max-width: 72ch;
+  }
+
+  .sector-project-page .project-strip-viewport {
+    overflow: visible;
+  }
+
+  .sector-project-page .project-strip-track {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-columns: unset;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .sector-project-page .project-strip-nav {
+    display: none;
+  }
+
+  @media (max-width: 1399.98px) {
+    .sector-project-page .project-strip-track {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .sector-project-page .project-strip-track {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .sector-project-page .project-strip-track {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sector-project-page">
+  <div class="sector-project-hero">
+    <h1>{{ page_title }}</h1>
+    <p>{{ subtitle }}</p>
+  </div>
+
+  <section
+    class="project-strip"
+    data-project-strip
+    data-show-all="true"
+    data-project-kind="project"
+    data-endpoint="/api/mobile/project-list/"
+    data-media-base-url="https://time-series.mopd.gov.et/"
+    data-detail-base="/dashboard/projects/sector/"
+    data-auto-scroll="false"
+  >
+    <div class="project-strip-head">
+      <div>
+        <h2 class="project-strip-title">All Sector Projects</h2>
+        <p class="project-strip-subtitle">Review sector project domains and open the relevant project space for deeper implementation details.</p>
+      </div>
+      <div class="project-strip-nav">
+        <button type="button" class="project-strip-nav-btn" data-project-prev aria-label="Previous projects">
+          <i class="ti ti-arrow-left"></i>
+        </button>
+        <button type="button" class="project-strip-nav-btn" data-project-next aria-label="Next projects">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+    <div class="project-strip-viewport" data-project-viewport>
+      <div class="project-strip-track" data-project-track></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/sector-project-list.js' %}?v=20260309a"></script>
+{% endblock %}

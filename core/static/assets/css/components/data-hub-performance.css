@@ -47,6 +47,22 @@ body,
   backdrop-filter: none !important;
 }
 
+.pc-header {
+  background: rgb(var(--bs-body-bg-rgb)) !important;
+  background-color: rgb(var(--bs-body-bg-rgb)) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.12) !important;
+  isolation: isolate;
+}
+
+.pc-header .header-wrapper {
+  background: rgb(var(--bs-body-bg-rgb)) !important;
+  background-color: rgb(var(--bs-body-bg-rgb)) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
 .pc-sidebar,
 .pc-header,
 .pc-sidebar .pc-link,

@@ -353,17 +353,33 @@ function renderChildren(children) {
   return `
     <div class="data-indicator-children">
       ${children
-        .map(
-          (child) => `
+        .map((child) => {
+          const availableSeries = getAvailableSeries(child);
+          const defaultSeries = getDefaultSeries(child, availableSeries);
+          const latestPoint = defaultSeries?.points?.at(-1) || null;
+          const latestUnit =
+            defaultSeries?.unit ||
+            child?.measurement_units ||
+            child?.measurement_units_quarter ||
+            child?.measurement_units_month ||
+            "";
+          const latestFrequency = defaultSeries?.label || child?.latest_data || child?.frequency || "No frequency";
+
+          return `
             <article class="data-indicator-child">
               <a href="/dashboard/data/indicator/${escapeHtml(child.id)}/">${escapeHtml(child.title_ENG || child.title_AMH || "Indicator")}</a>
+              <div class="data-indicator-child-value">
+                <strong>${escapeHtml(formatMetricValue(latestPoint?.performance))}</strong>
+                ${latestUnit ? `<small>${escapeHtml(latestUnit)}</small>` : ""}
+              </div>
               <div class="data-indicator-child-meta">
                 <span>${escapeHtml(child.code || "No code")}</span>
-                <span>${escapeHtml(child.frequency || "No frequency")}</span>
+                <span>${escapeHtml(String(latestFrequency).toUpperCase())}</span>
+                ${latestPoint ? `<span>${escapeHtml(getSeriesLabel(latestPoint, defaultSeries?.key || child?.latest_data || "annual"))}</span>` : ""}
               </div>
             </article>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
   `;

@@ -103,6 +103,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'axes.middleware.AxesMiddleware',
     'project.middleware.activity_tracker_middleware.ActivityTrackerMiddleware',
+    'project.middleware.not_found_redirect_middleware.NotFoundRedirectMiddleware',
 ]
 
 
