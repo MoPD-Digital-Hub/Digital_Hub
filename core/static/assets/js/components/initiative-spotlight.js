@@ -55,7 +55,7 @@ function createImageCard(item, mediaBaseUrl) {
     <article class="initiative-card">
       ${
         backgroundImage
-          ? `<img class="initiative-card-media" src="${escapeHtml(backgroundImage)}" alt="${escapeHtml(title)}" loading="lazy">`
+          ? `<img class="initiative-card-media" src="${escapeHtml(backgroundImage)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 767px) 100vw, 320px">`
           : `<div class="initiative-card-fallback" aria-hidden="true"></div>`
       }
       <div class="initiative-card-overlay"></div>
@@ -64,7 +64,7 @@ function createImageCard(item, mediaBaseUrl) {
           <span class="initiative-card-icon">
             ${
               iconImage
-                ? `<img src="${escapeHtml(iconImage)}" alt="${escapeHtml(title)} icon" loading="lazy">`
+                ? `<img src="${escapeHtml(iconImage)}" alt="${escapeHtml(title)} icon" loading="lazy" decoding="async" fetchpriority="low" sizes="18px">`
                 : `<i class="ti ti-bulb"></i>`
             }
           </span>
@@ -93,7 +93,7 @@ function createStackItem(item, mediaBaseUrl, hidden = false) {
       <div class="initiative-list-thumb">
         ${
           backgroundImage
-            ? `<img src="${escapeHtml(backgroundImage)}" alt="${escapeHtml(title)}" loading="lazy">`
+            ? `<img src="${escapeHtml(backgroundImage)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="72px">`
             : `<span class="initiative-list-thumb-fallback"></span>`
         }
       </div>
@@ -150,6 +150,11 @@ async function mountInitiativeSpotlight(element, options = {}) {
     ...options,
     endpoint: element.dataset.endpoint || options.endpoint || DEFAULT_OPTIONS.endpoint,
     mediaBaseUrl: element.dataset.mediaBaseUrl || options.mediaBaseUrl || DEFAULT_OPTIONS.mediaBaseUrl,
+    limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
+    imageCards: Number(element.dataset.imageCards || options.imageCards || DEFAULT_OPTIONS.imageCards),
+    initialVisibleStacked: Number(
+      element.dataset.initialVisibleStacked || options.initialVisibleStacked || DEFAULT_OPTIONS.initialVisibleStacked
+    ),
   };
 
   const layout = element.querySelector("[data-initiative-layout]");

@@ -1,0 +1,37 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/policy-area-detail.css' %}?v=20260307e">
+<link rel="stylesheet" href="{% static 'assets/css/components/filter-toolbar.css' %}?v=20260307a">
+{% endblock %}
+
+{% block content %}
+<section class="policy-area-detail" data-policy-area-detail data-policy-area-id="{{ policy_area_id }}">
+  <div class="dh-filterbar" data-policy-area-filter>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label">Select Date Type</label>
+      <div class="dh-segmented" role="group" aria-label="Select date type">
+        <button type="button" class="dh-segmented__btn" data-dpmes-date-type-btn data-value="yearly" aria-pressed="false">Yearly</button>
+        <button type="button" class="dh-segmented__btn active" data-dpmes-date-type-btn data-value="quarterly" aria-pressed="true">Quarterly</button>
+      </div>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label" for="policyAreaDetailPeriod">Select Period</label>
+      <select id="policyAreaDetailPeriod" class="dh-filterbar__select" data-dpmes-period></select>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label">Selection</label>
+      <div class="policy-area-detail-current" data-policy-area-current-period></div>
+    </div>
+  </div>
+  <div data-policy-area-hero></div>
+  <div data-policy-area-body></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/policy-area-detail.js' %}?v=20260307e"></script>
+{% endblock %}

@@ -3,6 +3,7 @@ const DEFAULT_OPTIONS = {
   autoScroll: true,
   autoScrollStep: 320,
   autoScrollInterval: 2600,
+  limit: 10,
   filterItem(item) {
     return Boolean(item && item.show_mobile_dashboard && item.ministry_is_visable);
   },
@@ -72,7 +73,7 @@ function createCard(item) {
           <div class="ministry-card-logo">
             ${
               logo
-                ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(code)} logo" loading="lazy">`
+                ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(code)} logo" loading="lazy" decoding="async" fetchpriority="low" sizes="40px">`
                 : `<span>${escapeHtml(code.slice(0, 2))}</span>`
             }
           </div>
@@ -200,6 +201,11 @@ async function mountMinistryScorecard(element, options = {}) {
 
   const settings = resolveOptions({
     endpoint: element.dataset.endpoint || DEFAULT_OPTIONS.endpoint,
+    autoScroll:
+      element.dataset.autoScroll === "false"
+        ? false
+        : options.autoScroll,
+    limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
     ...options,
   });
 
@@ -228,7 +234,7 @@ async function mountMinistryScorecard(element, options = {}) {
     const payload = await response.json();
     const rows = Array.isArray(payload?.data) ? payload.data : [];
     const filtered = rows.filter((item) => settings.filterItem(item));
-    const sorted = settings.sortItems(filtered);
+    const sorted = settings.sortItems(filtered).slice(0, settings.limit);
 
     if (!sorted.length) {
       renderEmpty(track);

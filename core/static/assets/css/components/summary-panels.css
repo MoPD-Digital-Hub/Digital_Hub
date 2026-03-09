@@ -6,15 +6,15 @@
 .summary-panels-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 14px;
 }
 
 .summary-panel {
   position: relative;
   overflow: hidden;
-  min-height: 250px;
-  border-radius: 30px;
-  padding: 22px;
+  min-height: 216px;
+  border-radius: 24px;
+  padding: 16px;
   color: #f8fafc;
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12);
 }
@@ -60,14 +60,14 @@
 .summary-panel-brand {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
 .summary-panel-logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -76,20 +76,20 @@
 }
 
 .summary-panel-logo i {
-  font-size: 20px;
+  font-size: 16px;
 }
 
 .summary-panel-brand h3 {
   margin: 0;
   color: #ffffff;
-  font-size: 28px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .summary-panel-brand p {
   margin: 5px 0 0;
   color: rgba(226, 232, 240, 0.86);
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .summary-panel-body {
@@ -97,7 +97,7 @@
   z-index: 1;
   display: grid;
   align-items: end;
-  margin-top: 28px;
+  margin-top: 18px;
 }
 
 .summary-slider {
@@ -108,16 +108,16 @@
 
 .summary-slider-track {
   position: relative;
-  width: min(100%, 360px);
-  min-height: 126px;
+  width: min(100%, 300px);
+  min-height: 102px;
 }
 
 .summary-slide {
   position: absolute;
   inset: 0 10%;
-  min-height: 126px;
-  border-radius: 24px;
-  padding: 18px 18px 16px;
+  min-height: 102px;
+  border-radius: 18px;
+  padding: 14px 14px 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07));
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -128,7 +128,7 @@
   align-content: center;
   justify-items: center;
   text-align: center;
-  gap: 12px;
+  gap: 8px;
   opacity: 0;
   transform: translateY(8px) scale(0.985);
   transition: opacity 220ms ease, transform 220ms ease;
@@ -144,12 +144,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 12px;
+  min-height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
   color: rgba(226, 232, 240, 0.8);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -157,7 +157,7 @@
 
 .summary-slide strong {
   color: #ffffff;
-  font-size: clamp(24px, 2.4vw, 36px);
+  font-size: clamp(20px, 2vw, 30px);
   line-height: 1;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -167,9 +167,9 @@
 .summary-slide strong::after {
   content: "";
   display: block;
-  width: 56px;
-  height: 3px;
-  margin: 12px auto 0;
+  width: 42px;
+  height: 2px;
+  margin: 8px auto 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.64);
 }
@@ -212,9 +212,9 @@
 }
 
 .summary-panel-state {
-  min-height: 124px;
-  border-radius: 24px;
-  padding: 18px;
+  min-height: 100px;
+  border-radius: 18px;
+  padding: 14px;
   display: grid;
   place-items: center;
   text-align: center;

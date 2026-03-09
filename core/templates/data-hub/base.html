@@ -36,22 +36,18 @@
     <!-- [Feather Icons] https://feathericons.com -->
     <link rel="stylesheet" href="{% static 'assets/fonts/feather.css' %}">
 
-    <!-- [Font Awesome Icons] https://fontawesome.com/icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-    <!-- [Material Icons] https://fonts.google.com/icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/material-icons@1.13.14/iconfont/material-icons.min.css">
-
     <!-- [Template CSS Files] -->
     <link rel="stylesheet" href="{% static 'assets/css/style.css' %}" id="main-style-link">
     <script src="{% static 'assets/js/tech-stack.js' %}"></script>
     
     <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/components/data-hub-typography.css' %}?v=20260306a">
-    <!-- Choices.js for enhanced select boxes -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{% static 'assets/css/components/data-hub-performance.css' %}?v=20260307b">
+    <style>
+      .pc-content > * {
+        min-width: 0;
+      }
+    </style>
 
     {% block style %}
                 

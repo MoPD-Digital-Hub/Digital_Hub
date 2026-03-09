@@ -1,9 +1,9 @@
-const DEFAULT_OPTIONS = {
+export const DEFAULT_OPTIONS = {
   endpoint: "/api/mobile/topic-list/",
   mediaBaseUrl: "https://time-series.mopd.gov.et/",
 };
 
-function escapeHtml(value) {
+export function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -12,7 +12,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function buildMediaUrl(path, baseUrl) {
+export function buildMediaUrl(path, baseUrl) {
   if (!path) {
     return "";
   }
@@ -23,7 +23,7 @@ function buildMediaUrl(path, baseUrl) {
   }
 }
 
-function truncate(value, maxLength = 140) {
+export function truncate(value, maxLength = 140) {
   const text = String(value ?? "").trim();
   if (!text) {
     return "";
@@ -31,7 +31,7 @@ function truncate(value, maxLength = 140) {
   return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 }
 
-function createTopicCard(topic, mediaBaseUrl) {
+export function createTopicCard(topic, mediaBaseUrl) {
   const title = topic.title_ENG || topic.title_AMH || "Topic";
   const description = truncate(topic.description || "Explore indicators, categories, and topic-specific data assets.");
   const image = buildMediaUrl(topic.background_image || topic.image, mediaBaseUrl);
@@ -42,7 +42,7 @@ function createTopicCard(topic, mediaBaseUrl) {
     <a class="data-topic-card" href="${escapeHtml(href)}">
       ${
         image
-          ? `<img class="data-topic-card-media" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy">`
+          ? `<img class="data-topic-card-media" src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async" fetchpriority="low" sizes="(max-width: 767px) 100vw, 25vw">`
           : `<div class="data-topic-card-fallback" aria-hidden="true"></div>`
       }
       <div class="data-topic-card-overlay"></div>
@@ -55,7 +55,7 @@ function createTopicCard(topic, mediaBaseUrl) {
           <span class="data-topic-card-icon">
             ${
               icon
-                ? `<img src="${escapeHtml(icon)}" alt="${escapeHtml(title)} icon" loading="lazy">`
+                ? `<img src="${escapeHtml(icon)}" alt="${escapeHtml(title)} icon" loading="lazy" decoding="async" fetchpriority="low" sizes="20px">`
                 : `<i class="ti ti-database"></i>`
             }
           </span>
