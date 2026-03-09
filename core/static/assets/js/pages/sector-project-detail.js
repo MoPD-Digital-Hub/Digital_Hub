@@ -114,7 +114,48 @@ function collectGalleryImages(projects, mediaBaseUrl) {
   return images.slice(0, 8);
 }
 
-function createHero(project, mediaBaseUrl, stats) {
+function createProjectNavigator(projects, currentProjectId, detailBase) {
+  if (!Array.isArray(projects) || !projects.length) {
+    return "";
+  }
+
+  const base = detailBase || "/dashboard/projects/sector/";
+  const filtered = projects.filter((item) => item?.is_initiative !== true);
+  const currentIndex = filtered.findIndex((item) => Number(item?.id) === Number(currentProjectId));
+  const previous = currentIndex > 0 ? filtered[currentIndex - 1] : null;
+  const next = currentIndex >= 0 && currentIndex < filtered.length - 1 ? filtered[currentIndex + 1] : null;
+  return `
+    <div class="sector-project-hero__navigator">
+      <div class="sector-project-hero__navigator-head">
+        <span>Project Navigation</span>
+        <div class="sector-project-hero__navigator-controls">
+          ${
+            previous
+              ? `<a class="sector-project-hero__nav-btn" href="${escapeHtml(`${String(base).replace(/\/?$/, "/")}${previous.id}/`)}" aria-label="Previous project"><i class="ti ti-arrow-left"></i></a>`
+              : `<span class="sector-project-hero__nav-btn is-disabled" aria-hidden="true"><i class="ti ti-arrow-left"></i></span>`
+          }
+          ${
+            next
+              ? `<a class="sector-project-hero__nav-btn" href="${escapeHtml(`${String(base).replace(/\/?$/, "/")}${next.id}/`)}" aria-label="Next project"><i class="ti ti-arrow-right"></i></a>`
+              : `<span class="sector-project-hero__nav-btn is-disabled" aria-hidden="true"><i class="ti ti-arrow-right"></i></span>`
+          }
+        </div>
+      </div>
+      <div class="sector-project-hero__navigator-list">
+        ${filtered
+          .map((item) => {
+            const title = item?.title_ENG || item?.title_AMH || `Project ${item?.id ?? ""}`;
+            const active = Number(item?.id) === Number(currentProjectId);
+            const target = `${String(base).replace(/\/?$/, "/")}${item.id}/`;
+            return `<a class="sector-project-hero__nav-pill${active ? " is-active" : ""}" href="${escapeHtml(target)}">${escapeHtml(title)}</a>`;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function createHero(project, mediaBaseUrl, stats, navigation = {}) {
   const title = project?.title_ENG || project?.title_AMH || "Sector Project";
   const description = project?.description || "Project details are not available.";
   const image = buildMediaUrl(project?.image, mediaBaseUrl);
@@ -130,11 +171,7 @@ function createHero(project, mediaBaseUrl, stats) {
       <div class="sector-project-hero__overlay"></div>
       <div class="sector-project-hero__content">
         <div class="sector-project-hero__top">
-          <div class="sector-project-hero__breadcrumbs">
-            <a href="/dashboard/projects/sector/">Sector Projects</a>
-            <i class="ti ti-chevron-right"></i>
-            <span>${escapeHtml(title)}</span>
-          </div>
+          ${createProjectNavigator(navigation.projects, navigation.currentProjectId, navigation.detailBase)}
           <span class="sector-project-hero__chip">
             <i class="ti ti-layout-grid"></i>
             ${stats.subProjectCount} sub-project${stats.subProjectCount === 1 ? "" : "s"}
@@ -535,7 +572,7 @@ function initSubProjectSection(container) {
   renderPage(1);
 }
 
-function renderDetail(container, project, mediaBaseUrl) {
+function renderDetail(container, project, mediaBaseUrl, navigation) {
   const projects = Array.isArray(project?.sub_projects?.projects) ? project.sub_projects.projects : [];
   const galleryImages = collectGalleryImages(projects, mediaBaseUrl);
   const stats = {
@@ -546,7 +583,7 @@ function renderDetail(container, project, mediaBaseUrl) {
   };
 
   container.innerHTML = [
-    createHero(project, mediaBaseUrl, stats),
+    createHero(project, mediaBaseUrl, stats, navigation),
     createStats(stats),
     createSubProjects(projects, mediaBaseUrl),
     createGallery(galleryImages),
@@ -564,6 +601,9 @@ async function initProjectDetail() {
 
   const state = container.querySelector("[data-project-detail-state]");
   const endpoint = container.dataset.endpoint;
+  const listEndpoint = container.dataset.listEndpoint;
+  const detailBase = container.dataset.detailBase || "/dashboard/projects/sector/";
+  const currentProjectId = Number(container.dataset.projectId || 0);
   const mediaBaseUrl = container.dataset.mediaBaseUrl || "https://time-series.mopd.gov.et/";
 
   if (!endpoint || !state) {
@@ -571,24 +611,36 @@ async function initProjectDetail() {
   }
 
   try {
-    const response = await fetch(endpoint, {
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
-    });
+    const [detailResponse, listResponse] = await Promise.all([
+      fetch(endpoint, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      }),
+      fetch(listEndpoint, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      }),
+    ]);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (!detailResponse.ok) {
+      throw new Error(`HTTP ${detailResponse.status}`);
     }
 
-    const payload = await response.json();
-    const project = payload?.data;
+    const detailPayload = await detailResponse.json();
+    const listPayload = listResponse.ok ? await listResponse.json() : { data: [] };
+    const project = detailPayload?.data;
+    const navigation = {
+      projects: Array.isArray(listPayload?.data) ? listPayload.data : [],
+      currentProjectId,
+      detailBase,
+    };
 
     if (!project) {
       state.textContent = "Project detail is not available right now.";
       return;
     }
 
-    renderDetail(container, project, mediaBaseUrl);
+    renderDetail(container, project, mediaBaseUrl, navigation);
   } catch (_error) {
     state.textContent = "Unable to load the selected project right now.";
   }

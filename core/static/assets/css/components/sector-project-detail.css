@@ -66,17 +66,80 @@
   gap: 12px;
 }
 
-.sector-project-hero__breadcrumbs {
-  display: inline-flex;
-  align-items: center;
+.sector-project-hero__navigator {
+  display: grid;
   gap: 8px;
-  font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.82);
+  min-width: min(420px, 100%);
 }
 
-.sector-project-hero__breadcrumbs a {
-  color: inherit;
+.sector-project-hero__navigator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sector-project-hero__navigator span {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.sector-project-hero__navigator-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sector-project-hero__nav-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.sector-project-hero__nav-btn.is-disabled {
+  opacity: 0.4;
+}
+
+.sector-project-hero__navigator-list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.sector-project-hero__navigator-list::-webkit-scrollbar {
+  display: none;
+}
+
+.sector-project-hero__nav-pill {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.sector-project-hero__nav-pill.is-active {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: rgba(15, 118, 110, 0.92);
 }
 
 .sector-project-hero__chip {
@@ -118,6 +181,7 @@
   margin: 0;
   font-size: clamp(1.8rem, 2.4vw, 2.75rem);
   line-height: 1.02;
+  color: #ffffff;
 }
 
 .sector-project-hero__description {
@@ -847,6 +911,10 @@ body[data-pc-theme="dark"] .sub-project-chip {
   .sector-project-hero__content {
     min-height: 300px;
     padding: 20px;
+  }
+
+  .sector-project-hero__navigator {
+    min-width: 100%;
   }
 
   .sector-project-stats,
