@@ -52,7 +52,7 @@ export class GestureFeedbackOverlay {
           <ul>
             <li>Scroll pose: index + middle up, ring + pinky folded, then move hand up/down/left/right</li>
             <li>Navigation pose: index finger up (other fingers folded), swipe left for back, right for next</li>
-            <li>Click pose: pinch thumb + index while middle/ring/pinky stay folded</li>
+            <li>Click pose: keep index up, fold ring + pinky, then pinch thumb + middle</li>
             <li>Zoom pose: both hands open (all fingers up), move hands apart/together</li>
             <li>Keep your hand centered, with stable lighting and clear background</li>
           </ul>

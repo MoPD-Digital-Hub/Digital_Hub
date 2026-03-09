@@ -126,9 +126,10 @@ export class GestureRecognizer {
   }
 
   _isClickPose(landmarks) {
-    // Specific click pose: thumb-index pinch while middle/ring/pinky are folded.
+    // Click pose: index up for aiming, ring/pinky folded for stability.
+    // The click trigger itself is thumb-middle pinch (handled in _clickAction).
     return (
-      this._fingerFolded(landmarks, MIDDLE_TIP, MIDDLE_PIP) &&
+      this._fingerExtended(landmarks, INDEX_TIP, INDEX_PIP) &&
       this._fingerFolded(landmarks, RING_TIP, RING_PIP) &&
       this._fingerFolded(landmarks, PINKY_TIP, PINKY_PIP)
     );
@@ -222,9 +223,15 @@ export class GestureRecognizer {
     }
 
     const landmarks = primaryHand.landmarks;
-    const pinchDistance = distance(landmarks[THUMB_TIP], landmarks[INDEX_TIP]);
+    const isClickPose = this._isClickPose(landmarks);
+    const pinchDistance = distance(landmarks[THUMB_TIP], landmarks[MIDDLE_TIP]);
     const relaxedClickDistance = this.config.clickPinchDistance * 1.25;
     const releaseDistance = this.config.clickPinchReleaseDistance * 1.1;
+
+    if (!isClickPose) {
+      this.pinched = false;
+      return null;
+    }
 
     if (!this.pinched && pinchDistance < relaxedClickDistance) {
       this.pinched = true;

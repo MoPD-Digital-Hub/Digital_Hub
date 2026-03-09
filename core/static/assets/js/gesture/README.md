@@ -4,7 +4,7 @@
 - Real-time hand tracking from webcam (`hand-tracker.js`) using MediaPipe Hands Tasks.
 - Gesture recognition (`gesture-recognizer.js`) for:
   - `Scroll up/down/left/right` with a strict pose: index + middle fingers up, ring + pinky folded, then directional swipe.
-  - `Click` with a strict pose: thumb-index pinch while middle/ring/pinky remain folded.
+  - `Click` with a strict pose: index up, ring + pinky folded, then thumb-middle pinch.
   - `Zoom in/out` with strict two-hand pose: both hands open (all fingers extended), then move hands apart/together.
 - DOM target resolution (`target-resolver.js`) for clickable, scrollable, and zoomable elements.
 - Action dispatch (`action-dispatcher.js`) for page-level and component-level interactions.

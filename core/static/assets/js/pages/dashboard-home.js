@@ -4,7 +4,6 @@ import { SummaryPanels } from "../components/summary-panels.js";
 import { HighFrequencyIndicators } from "../components/high-frequency-indicators.js";
 import { ProjectStrip } from "../components/project-strip.js";
 import { InitiativeSpotlight } from "../components/initiative-spotlight.js";
-import { bootPageGestureControl } from "./gesture-bootstrap.js";
 
 function mountWhenVisible(selector, mount) {
   const element = document.querySelector(selector);
@@ -65,5 +64,3 @@ document.querySelectorAll(
     element.setAttribute("data-gesture-zoomable", "true");
   }
 });
-
-bootPageGestureControl();

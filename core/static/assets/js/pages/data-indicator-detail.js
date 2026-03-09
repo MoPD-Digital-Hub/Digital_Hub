@@ -1,5 +1,3 @@
-import { bootPageGestureControl } from "./gesture-bootstrap.js";
-
 const mediaBaseUrl = "https://time-series.mopd.gov.et/";
 let indicatorChartInstance = null;
 let indicatorChartWindowSize = null;
@@ -726,4 +724,3 @@ async function loadIndicatorDetail() {
 }
 
 loadIndicatorDetail();
-bootPageGestureControl();

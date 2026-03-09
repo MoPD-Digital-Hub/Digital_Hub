@@ -43,6 +43,7 @@
     <link rel="stylesheet" href="{% static 'assets/css/style-preset.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/components/data-hub-typography.css' %}?v=20260306a">
     <link rel="stylesheet" href="{% static 'assets/css/components/data-hub-performance.css' %}?v=20260307b">
+    <link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260309a">
     <style>
       .pc-content > * {
         min-width: 0;
@@ -93,6 +94,7 @@
     
     {% endblock %}
     {% block script_extra %}{% endblock %}
+    <script type="module" src="{% static 'assets/js/pages/gesture-global.js' %}?v=20260309a"></script>
 
     
 </body>

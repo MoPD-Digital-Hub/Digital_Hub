@@ -1,5 +1,3 @@
-import { bootPageGestureControl } from "./gesture-bootstrap.js";
-
 const mediaBaseUrl = "https://time-series.mopd.gov.et/";
 
 function escapeHtml(value) {
@@ -380,4 +378,3 @@ async function loadTopicDetail() {
 }
 
 loadTopicDetail();
-bootPageGestureControl();

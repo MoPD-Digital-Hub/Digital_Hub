@@ -5,9 +5,11 @@ const GESTURE_ENABLED_STORAGE_KEY = "digital-hub:gesture-control:enabled";
 const DEFAULT_PAGE_GESTURE_CONFIG = {
   maxHands: 2,
   minHandPresenceScore: 0.45,
-  clickCooldownMs: 700,
-  smoothFactor: 0.38,
-  pointerSmoothFactor: 0.36,
+  clickCooldownMs: 380,
+  smoothFactor: 0.46,
+  pointerSmoothFactor: 0.48,
+  clickPinchDistance: 0.05,
+  clickPinchReleaseDistance: 0.075,
   directionBias: 1.2,
   scrollDirectionDelta: 0.015,
   scrollHoldFrames: 1,
@@ -64,24 +66,19 @@ export function bootPageGestureControl(config = {}) {
   window.appGestureController = controller;
 
   const originalEnable = controller.enable.bind(controller);
-  const originalDisable = controller.disable.bind(controller);
   const originalToggle = controller.toggle.bind(controller);
 
   controller.enable = async (...args) => {
+    persistGestureEnabled(true);
     const result = await originalEnable(...args);
-    if (controller.isEnabled()) {
-      persistGestureEnabled(true);
-    }
     return result;
   };
 
-  controller.disable = (...args) => {
-    const result = originalDisable(...args);
-    persistGestureEnabled(false);
-    return result;
+  controller.toggle = (...args) => {
+    const nextEnabled = !controller.isEnabled();
+    persistGestureEnabled(nextEnabled);
+    return originalToggle(...args);
   };
-
-  controller.toggle = (...args) => originalToggle(...args);
 
   if (isGesturePersistedEnabled()) {
     controller.enable();
