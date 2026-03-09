@@ -259,7 +259,7 @@ function createSubProjectCard(project, mediaBaseUrl) {
   const investment = primary?.["Amount of investment"] || "Investment not available";
 
   return `
-    <article class="sub-project-card">
+    <article class="sub-project-card" data-sub-project-card>
       <div class="sub-project-card__media">
         ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(title)}" loading="lazy" decoding="async">` : ""}
         <div class="sub-project-card__overlay"></div>
@@ -289,19 +289,28 @@ function createSubProjectCard(project, mediaBaseUrl) {
 
         <p class="sub-project-card__description">${escapeHtml(description)}</p>
 
-        <div class="sub-project-card__facts">
-          ${createFact("Location", primary?.Location)}
-          ${createFact("Investment", primary?.["Amount of investment"])}
-          ${createFact("Start date", primary?.["Start date"])}
-          ${createFact("End date", primary?.["End date"])}
+        <div class="sub-project-card__actions">
+          <button type="button" class="sub-project-card__toggle" data-sub-project-toggle aria-expanded="false">
+            <span>Show more</span>
+            <i class="ti ti-chevron-down"></i>
+          </button>
         </div>
 
-        <div class="sub-project-card__progress">
-          ${createPerformanceBlock("Physical performance", udppPlan, udppPerformance, udpp, "#0f766e")}
-          ${createPerformanceBlock("Financial performance", udfpPlan, udfpPerformance, udfp, "#d97706")}
-        </div>
+        <div class="sub-project-card__details" data-sub-project-details hidden>
+          <div class="sub-project-card__facts">
+            ${createFact("Location", primary?.Location)}
+            ${createFact("Investment", primary?.["Amount of investment"])}
+            ${createFact("Start date", primary?.["Start date"])}
+            ${createFact("End date", primary?.["End date"])}
+          </div>
 
-        ${meta.length ? `<div class="sub-project-card__meta">${meta.map((item) => `<span class="sub-project-chip">${escapeHtml(item)}</span>`).join("")}</div>` : ""}
+          <div class="sub-project-card__progress">
+            ${createPerformanceBlock("Physical performance", udppPlan, udppPerformance, udpp, "#0f766e")}
+            ${createPerformanceBlock("Financial performance", udfpPlan, udfpPerformance, udfp, "#d97706")}
+          </div>
+
+          ${meta.length ? `<div class="sub-project-card__meta">${meta.map((item) => `<span class="sub-project-chip">${escapeHtml(item)}</span>`).join("")}</div>` : ""}
+        </div>
       </div>
     </article>
   `;
@@ -433,18 +442,97 @@ function initGallery(container) {
 
 function createSubProjects(projects, mediaBaseUrl) {
   return `
-    <section class="sector-project-section">
+    <section class="sector-project-section" data-sub-project-section>
       <div class="sector-project-section__head">
         <div>
           <h2>Sub-project Delivery</h2>
-          <p>Each card combines basic implementation facts with UDPP and UDFP performance visibility.</p>
+          <p>Review the project set page by page and expand only the records you want in detail.</p>
         </div>
       </div>
-      <div class="sector-project-grid">
-        ${projects.map((project) => createSubProjectCard(project, mediaBaseUrl)).join("")}
-      </div>
+      <div class="sector-project-grid" data-sub-project-grid></div>
+      <div class="sector-project-pagination" data-sub-project-pagination></div>
+      <template data-sub-project-template>${projects.map((project) => createSubProjectCard(project, mediaBaseUrl)).join("")}</template>
     </section>
   `;
+}
+
+function initSubProjectCards(scope) {
+  scope.querySelectorAll("[data-sub-project-card]").forEach((card) => {
+    const toggle = card.querySelector("[data-sub-project-toggle]");
+    const details = card.querySelector("[data-sub-project-details]");
+    const label = toggle?.querySelector("span");
+
+    if (!toggle || !details || !label) {
+      return;
+    }
+
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      details.hidden = expanded;
+      label.textContent = expanded ? "Show more" : "Collapse";
+      card.classList.toggle("is-expanded", !expanded);
+    });
+  });
+}
+
+function initSubProjectSection(container) {
+  const section = container.querySelector("[data-sub-project-section]");
+  const grid = section?.querySelector("[data-sub-project-grid]");
+  const pager = section?.querySelector("[data-sub-project-pagination]");
+  const template = section?.querySelector("[data-sub-project-template]");
+
+  if (!section || !grid || !pager || !template) {
+    return;
+  }
+
+  const holder = document.createElement("div");
+  holder.innerHTML = template.innerHTML.trim();
+  const cards = Array.from(holder.children);
+  const pageSize = 4;
+  const pageCount = Math.max(1, Math.ceil(cards.length / pageSize));
+  let currentPage = 1;
+
+  const renderPager = () => {
+    if (pageCount <= 1) {
+      pager.innerHTML = "";
+      return;
+    }
+
+    pager.innerHTML = `
+      <button type="button" class="sector-project-pagination__btn" data-page-prev ${currentPage === 1 ? "disabled" : ""}>
+        <i class="ti ti-arrow-left"></i>
+      </button>
+      <div class="sector-project-pagination__pages">
+        ${Array.from({ length: pageCount }, (_, index) => {
+          const page = index + 1;
+          return `<button type="button" class="sector-project-pagination__page${page === currentPage ? " is-active" : ""}" data-page="${page}">${page}</button>`;
+        }).join("")}
+      </div>
+      <button type="button" class="sector-project-pagination__btn" data-page-next ${currentPage === pageCount ? "disabled" : ""}>
+        <i class="ti ti-arrow-right"></i>
+      </button>
+    `;
+
+    pager.querySelector("[data-page-prev]")?.addEventListener("click", () => renderPage(currentPage - 1));
+    pager.querySelector("[data-page-next]")?.addEventListener("click", () => renderPage(currentPage + 1));
+    pager.querySelectorAll("[data-page]").forEach((button) => {
+      button.addEventListener("click", () => renderPage(Number(button.dataset.page)));
+    });
+  };
+
+  const renderPage = (page) => {
+    currentPage = Math.max(1, Math.min(pageCount, page));
+    const start = (currentPage - 1) * pageSize;
+    const items = cards.slice(start, start + pageSize);
+    grid.innerHTML = "";
+    items.forEach((card) => grid.appendChild(card.cloneNode(true)));
+    initSubProjectCards(grid);
+    renderPager();
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  renderPage(1);
 }
 
 function renderDetail(container, project, mediaBaseUrl) {
@@ -464,6 +552,7 @@ function renderDetail(container, project, mediaBaseUrl) {
     createGallery(galleryImages),
   ].join("");
 
+  initSubProjectSection(container);
   initGallery(container);
 }
 
