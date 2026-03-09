@@ -278,6 +278,52 @@
   box-shadow: none;
 }
 
+.policy-area-card-grid {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.policy-area-card-grid:hover,
+.policy-area-card-grid:focus-visible {
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.1);
+  border-color: color-mix(in srgb, var(--policy-area-accent) 42%, #ffffff);
+}
+
+.policy-area-card-grid:hover .policy-area-card-media,
+.policy-area-card-grid:focus-visible .policy-area-card-media {
+  border-bottom-color: color-mix(in srgb, var(--policy-area-accent) 34%, #ffffff);
+}
+
+.policy-area-card-grid:hover .policy-area-rank,
+.policy-area-card-grid:focus-visible .policy-area-rank {
+  background: color-mix(in srgb, var(--policy-area-accent) 16%, #ffffff);
+}
+
+.policy-area-card-grid:hover .policy-area-score,
+.policy-area-card-grid:focus-visible .policy-area-score {
+  filter: brightness(1.04);
+}
+
+.policy-area-card-grid:hover .policy-area-progress,
+.policy-area-card-grid:focus-visible .policy-area-progress {
+  background: color-mix(in srgb, var(--policy-area-accent) 14%, #e2e8f0);
+}
+
+.policy-area-card-grid:hover .policy-area-card-shell,
+.policy-area-card-grid:focus-visible .policy-area-card-shell {
+  transform: scale(1.005);
+}
+
+.policy-area-card-grid:hover h3,
+.policy-area-card-grid:focus-visible h3 {
+  color: color-mix(in srgb, var(--policy-area-accent) 64%, #1f2937);
+}
+
+.policy-area-card-grid:hover .policy-area-card-footer strong,
+.policy-area-card-grid:focus-visible .policy-area-card-footer strong {
+  color: color-mix(in srgb, var(--policy-area-accent) 88%, #0f172a);
+}
+
 .policy-area-progress {
   height: 6px;
   border-radius: 999px;
@@ -453,6 +499,17 @@ body[data-pc-theme="dark"] .policy-area-card-grid h3 {
 
 body[data-pc-theme="dark"] .policy-area-card-grid .policy-area-card-meta {
   color: #cbd5e1;
+}
+
+body[data-pc-theme="dark"] .policy-area-card-grid:hover,
+body[data-pc-theme="dark"] .policy-area-card-grid:focus-visible {
+  box-shadow: 0 20px 32px rgba(2, 6, 23, 0.3);
+  border-color: color-mix(in srgb, var(--policy-area-accent) 34%, #111b26);
+}
+
+body[data-pc-theme="dark"] .policy-area-card-grid:hover h3,
+body[data-pc-theme="dark"] .policy-area-card-grid:focus-visible h3 {
+  color: #ffffff;
 }
 
 body[data-pc-theme="dark"] .policy-area-card-skeleton {

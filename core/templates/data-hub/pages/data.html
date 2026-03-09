@@ -5,18 +5,188 @@
 
 {% block style %}
 <link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260306a">
+<link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260309a">
+<style>
+  .data-page-sections {
+    display: grid;
+    gap: 28px;
+  }
+
+  .data-page-panel {
+    border-radius: 28px;
+    border: 1px solid #dbe8e2;
+    background: linear-gradient(180deg, #ffffff, #f9fcfb);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+    padding: 22px;
+  }
+
+  .data-page-panel-head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .data-page-panel-copy {
+    display: grid;
+    gap: 6px;
+  }
+
+  .data-page-panel-kicker {
+    color: #0f766e;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .data-page-panel-copy h2 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.3rem;
+  }
+
+  .data-page-panel-copy p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .data-page-panel-more {
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    border: 1px solid #d8e3d4;
+    background: #f5f9f2;
+    color: #587644;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .data-page-panel-more:hover {
+    color: #0f766e;
+    border-color: #bfd5cb;
+  }
+
+  .data-page-topic-frame {
+    display: grid;
+    gap: 20px;
+  }
+
+  .data-page-panel--hf {
+    display: grid;
+    gap: 18px;
+  }
+
+  .data-page-panel--hf .hf-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  @media (max-width: 1199.98px) {
+    .data-page-panel--hf .hf-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .data-page-panel {
+      padding: 16px;
+      border-radius: 22px;
+    }
+
+    .data-page-panel-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .data-page-panel--hf .hf-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  body[data-pc-theme="dark"] .data-page-panel {
+    border-color: #314252;
+    background: linear-gradient(180deg, #0f172a, #13212d);
+  }
+
+  body[data-pc-theme="dark"] .data-page-panel-copy h2 {
+    color: #f8fafc;
+  }
+
+  body[data-pc-theme="dark"] .data-page-panel-kicker {
+    color: #8ef1e5;
+  }
+
+  body[data-pc-theme="dark"] .data-page-panel-copy p {
+    color: #cbd5e1;
+  }
+
+  body[data-pc-theme="dark"] .data-page-panel-more {
+    background: rgba(110, 231, 183, 0.12);
+    border-color: #314252;
+    color: #86efac;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="data-topic-page" data-topic-browser data-endpoint="/api/mobile/topic-list/" data-media-base-url="https://time-series.mopd.gov.et/">
+<section class="data-topic-page">
   <div class="data-topic-hero">
     <h1>{{ page_title }}</h1>
     <p>{{ subtitle }}</p>
   </div>
-  <div class="data-topic-grid" data-topic-browser-grid></div>
+  <div class="data-page-sections">
+    <section
+      class="data-page-panel"
+      data-topic-browser
+      data-endpoint="/api/mobile/topic-list/"
+      data-media-base-url="https://time-series.mopd.gov.et/"
+    >
+      <div class="data-page-topic-frame">
+        <div class="data-page-panel-head">
+          <div class="data-page-panel-copy">
+            <span class="data-page-panel-kicker">Catalog</span>
+            <h2>Topic Catalog</h2>
+            <p>Browse development topics, then move into categories, KPIs, and indicator history.</p>
+          </div>
+        </div>
+        <div class="data-topic-grid" data-topic-browser-grid></div>
+      </div>
+    </section>
+    <section class="data-page-panel data-page-panel--hf">
+      <section
+        class="hf-section"
+        data-high-frequency
+        data-endpoint="/api/mobile/trending/"
+        data-limit="6"
+        data-detail-base="/dashboard/data/indicator/"
+      >
+        <div class="data-page-panel-head">
+          <div class="data-page-panel-copy">
+            <span class="data-page-panel-kicker">Live Feed</span>
+            <h2>High Frequency Indicators</h2>
+            <p>Keep recent operational KPIs in view while you navigate the broader data catalog.</p>
+          </div>
+          <a class="data-page-panel-more" href="{% url 'high_frequency_dashboard' %}">
+            <span>More</span>
+            <i class="ti ti-arrow-up-right"></i>
+          </a>
+        </div>
+        <div class="hf-grid" data-hf-grid></div>
+      </section>
+    </section>
+  </div>
 </section>
 {% endblock %}
 
 {% block script %}
-<script type="module" src="{% static 'assets/js/pages/data-page.js' %}?v=20260306a"></script>
+<script type="module" src="{% static 'assets/js/pages/data-page.js' %}?v=20260309c"></script>
 {% endblock %}

@@ -4,6 +4,7 @@ import { SummaryPanels } from "../components/summary-panels.js";
 import { HighFrequencyIndicators } from "../components/high-frequency-indicators.js";
 import { ProjectStrip } from "../components/project-strip.js";
 import { InitiativeSpotlight } from "../components/initiative-spotlight.js";
+import { resolveDefaultTime } from "../components/default-time.js";
 
 function mountWhenVisible(selector, mount) {
   const element = document.querySelector(selector);
@@ -44,7 +45,35 @@ function mountWhenVisible(selector, mount) {
 }
 
 TopicScroller.init(document.querySelector("[data-topic-scroller]"));
-MinistryScorecard.init(document.querySelector("[data-ministry-scorecard]"));
+const ministryElement = document.querySelector("[data-ministry-scorecard]");
+
+async function mountHomeMinistryScorecard() {
+  if (!ministryElement) {
+    return;
+  }
+
+  const defaultTime = await resolveDefaultTime({
+    endpoint: ministryElement.dataset.defaultTimeEndpoint || "/api/mobile/default-time/",
+    fallback: {
+      year: "2018",
+      quarter: "3month",
+      dateType: "quarterly",
+    },
+  });
+  const params = new URLSearchParams();
+  params.set("year", defaultTime.year);
+
+  if (defaultTime.dateType === "quarterly" && defaultTime.quarter) {
+    params.set("quarter", defaultTime.quarter);
+  }
+
+  const endpointBase = ministryElement.dataset.endpointBase || "/api/mobile/ministries/";
+  ministryElement.dataset.endpoint = `${endpointBase}?${params.toString()}`;
+
+  MinistryScorecard.init(ministryElement);
+}
+
+mountHomeMinistryScorecard();
 
 mountWhenVisible("[data-summary-panels]", (element) => SummaryPanels.init(element));
 mountWhenVisible("[data-high-frequency]", (element) => HighFrequencyIndicators.init(element));

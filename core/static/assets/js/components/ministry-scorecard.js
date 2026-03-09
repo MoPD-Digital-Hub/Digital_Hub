@@ -4,6 +4,7 @@ const DEFAULT_OPTIONS = {
   autoScrollStep: 320,
   autoScrollInterval: 2600,
   limit: 10,
+  detailBase: "",
   filterItem(item) {
     return Boolean(item && item.show_mobile_dashboard && item.ministry_is_visable);
   },
@@ -51,16 +52,47 @@ function buildImageUrl(value) {
   }
 }
 
-function createCard(item) {
+function buildDetailHref(item, endpoint, detailBase) {
+  if (!detailBase || !item?.id) {
+    return "";
+  }
+
+  const params = new URLSearchParams();
+
+  try {
+    const endpointUrl = new URL(endpoint, window.location.origin);
+    const year = endpointUrl.searchParams.get("year");
+    const quarter = endpointUrl.searchParams.get("quarter");
+
+    if (year) {
+      params.set("year", year);
+    }
+
+    if (quarter) {
+      params.set("quarter", quarter);
+    }
+  } catch (_error) {
+    // Ignore malformed endpoints and fall back to the base detail path.
+  }
+
+  const base = `${String(detailBase).replace(/\/?$/, "/")}${item.id}/`;
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
+}
+
+function createCard(item, endpoint, detailBase) {
   const accent = item.ministry_score_card?.scorecard_color || "#0f766e";
   const score = formatScore(item.ministry_score_card?.avg_score);
   const code = item.code || "N/A";
   const title = item.responsible_ministry_eng || item.responsible_ministry_amh || "Ministry";
   const rank = Number(item.ministry_rank || 0);
   const logo = buildImageUrl(item.image);
+  const href = buildDetailHref(item, endpoint, detailBase);
+  const tagName = href ? "a" : "article";
+  const hrefAttr = href ? ` href="${escapeHtml(href)}"` : "";
 
   return `
-    <article class="ministry-card" style="--ministry-accent: ${escapeHtml(accent)};">
+    <${tagName} class="ministry-card" style="--ministry-accent: ${escapeHtml(accent)};"${hrefAttr}>
       <div class="ministry-card-shell">
         <div class="ministry-card-mark">
           ${
@@ -90,7 +122,7 @@ function createCard(item) {
           <span class="ministry-card-indicators">${escapeHtml(indicatorLabel(item.count_indicator))}</span>
         </div>
       </div>
-    </article>
+    </${tagName}>
   `;
 }
 
@@ -206,6 +238,7 @@ async function mountMinistryScorecard(element, options = {}) {
         ? false
         : options.autoScroll,
     limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
+    detailBase: element.dataset.detailBase || options.detailBase || DEFAULT_OPTIONS.detailBase,
     ...options,
   });
 
@@ -242,7 +275,7 @@ async function mountMinistryScorecard(element, options = {}) {
       return null;
     }
 
-    track.innerHTML = sorted.map(createCard).join("");
+    track.innerHTML = sorted.map((item) => createCard(item, settings.endpoint, settings.detailBase)).join("");
     updateNavState(viewport, previousButton, nextButton);
 
     const autoScroller = createAutoScroller(viewport, settings);

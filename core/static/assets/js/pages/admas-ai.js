@@ -8,8 +8,11 @@
   const newInstanceBtn = document.getElementById("newInstanceBtn");
   const renameInstanceBtn = document.getElementById("renameInstanceBtn");
   const deleteInstanceBtn = document.getElementById("deleteInstanceBtn");
+  const chatShell = document.getElementById("aiChatShell");
+  const sidebarCollapseBtn = document.getElementById("sidebarCollapseBtn");
+  const sidebarExpandBtn = document.getElementById("sidebarExpandBtn");
 
-  if (!chatInput || !sendBtn || !chatOutput || !micBtn || !chatSearch || !chatTitle) {
+  if (!chatInput || !sendBtn || !chatOutput || !micBtn || !chatTitle) {
     return;
   }
 
@@ -24,6 +27,7 @@
   let streamHtmlBuffer = "";
   let loadingElement = null;
   let chartCounter = 0;
+  const sidebarStorageKey = "admas-ai-sidebar-collapsed";
 
   function escapeHtml(value) {
     return String(value || "")
@@ -32,6 +36,50 @@
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function shouldAllowSidebarCollapse() {
+    return window.innerWidth >= 1200;
+  }
+
+  function syncSidebarButtons(collapsed) {
+    if (sidebarExpandBtn) {
+      sidebarExpandBtn.hidden = !collapsed || !shouldAllowSidebarCollapse();
+    }
+    if (sidebarCollapseBtn) {
+      sidebarCollapseBtn.hidden = collapsed || !shouldAllowSidebarCollapse();
+    }
+  }
+
+  function setSidebarCollapsed(collapsed) {
+    if (!chatShell) {
+      return;
+    }
+
+    const nextState = Boolean(collapsed) && shouldAllowSidebarCollapse();
+    chatShell.classList.toggle("is-collapsed", nextState);
+    syncSidebarButtons(nextState);
+
+    try {
+      window.localStorage.setItem(sidebarStorageKey, nextState ? "1" : "0");
+    } catch (_error) {
+      // Ignore storage failures.
+    }
+  }
+
+  function restoreSidebarState() {
+    if (!chatShell) {
+      return;
+    }
+
+    let collapsed = false;
+    try {
+      collapsed = window.localStorage.getItem(sidebarStorageKey) === "1";
+    } catch (_error) {
+      collapsed = false;
+    }
+
+    setSidebarCollapsed(collapsed);
   }
 
   function appendUserMessage(text) {
@@ -295,14 +343,18 @@
         return x !== null;
       });
 
-    if (!labels.length || !data.length) return null;
+    const pointCount = Math.min(labels.length, data.length);
+    if (!pointCount) return null;
+
+    const normalizedLabels = labels.slice(0, pointCount);
+    const normalizedData = data.slice(0, pointCount);
 
     return {
       kind: "chart",
       type: type,
       label: obj.label ? String(obj.label) : "AI Chart",
-      labels: labels,
-      data: data,
+      labels: normalizedLabels,
+      data: normalizedData,
       score_color: obj.score_color ? String(obj.score_color).trim() : ""
     };
   }
@@ -412,12 +464,6 @@
         return;
       }
 
-      if (payload.type === "bar") {
-        renderBarChart(holder, payload);
-        holder.dataset.rendered = "1";
-        return;
-      }
-
       holder.innerHTML =
         '<div class="ai-chart-card">' +
         '<div class="ai-chart-title">' + escapeHtml(payload.label || "AI Chart") + "</div>" +
@@ -431,64 +477,120 @@
       const pieSeries = isSingleScorePie ? [payload.data[0], Number((100 - payload.data[0]).toFixed(2))] : payload.data;
       const pieLabels = isSingleScorePie ? [payload.labels[0] || "Achieved", "Remaining"] : payload.labels;
       const pieColors = isSingleScorePie ? [color, dark ? "#475569" : "#cbd5e1"] : [color];
-      const options = {
+      const cartesianPoints = payload.labels.map(function (label, index) {
+        return {
+          x: label,
+          y: payload.data[index]
+        };
+      });
+      const baseOptions = {
         chart: {
           type: payload.type,
           height: 280,
           toolbar: { show: false },
           animations: { enabled: true }
         },
-        series: payload.type === "pie"
-          ? pieSeries
-          : [{
-              name: payload.label || "Series",
-              data: payload.data
-            }],
-        labels: payload.type === "pie" ? pieLabels : undefined,
-        xaxis: payload.type === "pie"
-          ? undefined
-          : {
-              categories: payload.labels,
-              type: "category",
-              labels: { rotate: -30, trim: false, hideOverlappingLabels: false }
-            },
-        yaxis: payload.type === "pie" ? undefined : { labels: { formatter: function (val) { return val === null ? "" : Number(val).toLocaleString(); } } },
-        stroke: {
-          curve: payload.type === "line" || payload.type === "area" ? "smooth" : "straight",
-          width: payload.type === "bar" ? 1 : 3
-        },
         dataLabels: { enabled: false },
         colors: payload.type === "pie" ? pieColors : [color],
         grid: { borderColor: dark ? "#334155" : "#e2e8f0" },
         tooltip: { theme: dark ? "dark" : "light" },
-        fill: payload.type === "area" ? {
-          type: "gradient",
-          gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 100] }
-        } : { opacity: 1 },
-        plotOptions: {
-          bar: {
-            horizontal: false,
-            borderRadius: 6,
-            columnWidth: "44%",
-            distributed: true
-          },
-          pie: {
-            donut: {
-              size: "58%"
-            }
-          }
-        },
         legend: { position: "bottom" },
         responsive: [{
           breakpoint: 768,
           options: { chart: { height: 240 } }
         }]
       };
+      let options;
+
+      if (payload.type === "pie") {
+        options = Object.assign({}, baseOptions, {
+          series: pieSeries,
+          labels: pieLabels,
+          plotOptions: {
+            pie: {
+              donut: {
+                size: "58%"
+              }
+            }
+          }
+        });
+      } else if (payload.type === "bar") {
+        options = Object.assign({}, baseOptions, {
+          series: [{
+            name: payload.label || "Series",
+            data: payload.data
+          }],
+          xaxis: {
+            categories: payload.labels,
+            labels: { rotate: -30, trim: false, hideOverlappingLabels: false }
+          },
+          yaxis: {
+            labels: {
+              formatter: function (val) {
+                return val === null ? "" : Number(val).toLocaleString();
+              }
+            }
+          },
+          stroke: {
+            width: 0
+          },
+          fill: {
+            opacity: 1
+          },
+          plotOptions: {
+            bar: {
+              horizontal: false,
+              borderRadius: 6,
+              columnWidth: "52%",
+              distributed: false
+            }
+          }
+        });
+      } else {
+        options = Object.assign({}, baseOptions, {
+          series: [{
+            name: payload.label || "Series",
+            data: cartesianPoints
+          }],
+          xaxis: {
+            type: "category",
+            labels: { rotate: -30, trim: false, hideOverlappingLabels: false }
+          },
+          yaxis: {
+            labels: {
+              formatter: function (val) {
+                return val === null ? "" : Number(val).toLocaleString();
+              }
+            }
+          },
+          stroke: {
+            curve: payload.type === "line" || payload.type === "area" ? "smooth" : "straight",
+            width: 3
+          },
+          fill: payload.type === "area" ? {
+            type: "gradient",
+            gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 100] }
+          } : { opacity: 1 }
+        });
+      }
 
       try {
         const chart = new window.ApexCharts(chartEl, options);
-        chart.render();
-        holder.dataset.rendered = "1";
+        chart.render()
+          .then(function () {
+            holder.dataset.rendered = "1";
+          })
+          .catch(function () {
+            if (payload.type === "bar") {
+              renderBarChart(holder, payload);
+            } else {
+              holder.innerHTML =
+                '<div class="ai-chart-error">Chart render failed for type ' +
+                escapeHtml(payload.type || "unknown") +
+                '.</div>';
+            }
+            holder.dataset.rendered = "1";
+          });
       } catch (err) {
         if (payload.type === "bar") {
           renderBarChart(holder, payload);
@@ -506,25 +608,25 @@
   function renderBarChart(holder, payload) {
     const color = payload.score_color || "#f59e0b";
     const maxValue = Math.max.apply(null, payload.data.concat([0])) || 1;
-    let rows = "";
+    let bars = "";
 
     payload.labels.forEach(function (label, index) {
       const value = payload.data[index];
-      const width = maxValue > 0 ? Math.max(6, Math.round((value / maxValue) * 100)) : 0;
-      rows +=
-        '<div class="ai-bar-row">' +
-        '<div class="ai-bar-label" title="' + escapeHtml(label) + '">' + escapeHtml(label) + "</div>" +
-        '<div class="ai-bar-track">' +
-        '<div class="ai-bar-fill" style="width:' + width + '%; background:' + escapeHtml(color) + ';"></div>' +
-        "</div>" +
+      const height = maxValue > 0 ? Math.max(8, Math.round((value / maxValue) * 100)) : 0;
+      bars +=
+        '<div class="ai-bar-item">' +
         '<div class="ai-bar-value">' + escapeHtml(Number(value).toLocaleString()) + "</div>" +
+        '<div class="ai-bar-column-wrap">' +
+        '<div class="ai-bar-column" style="height:' + height + '%; background:' + escapeHtml(color) + ';"></div>' +
+        "</div>" +
+        '<div class="ai-bar-label" title="' + escapeHtml(label) + '">' + escapeHtml(label) + "</div>" +
         "</div>";
     });
 
     holder.innerHTML =
       '<div class="ai-chart-card ai-bar-chart-card">' +
       '<div class="ai-chart-title">' + escapeHtml(payload.label || "AI Chart") + "</div>" +
-      '<div class="ai-bar-chart">' + rows + "</div>" +
+      '<div class="ai-bar-chart">' + bars + "</div>" +
       "</div>";
   }
 
@@ -673,6 +775,12 @@
   function scrollToBottom() {
     requestAnimationFrame(function () {
       chatOutput.scrollTop = chatOutput.scrollHeight;
+      const lastMessage = chatOutput.lastElementChild;
+      if (lastMessage && typeof lastMessage.scrollIntoView === "function") {
+        lastMessage.scrollIntoView({ block: "end", behavior: "auto" });
+      } else {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" });
+      }
     });
   }
 
@@ -842,8 +950,33 @@
 
   instances.forEach(attachInstanceClick);
 
+  if (sidebarCollapseBtn) {
+    sidebarCollapseBtn.addEventListener("click", function () {
+      setSidebarCollapsed(true);
+    });
+  }
+
+  if (sidebarExpandBtn) {
+    sidebarExpandBtn.addEventListener("click", function () {
+      setSidebarCollapsed(false);
+    });
+  }
+
+  window.addEventListener("resize", function () {
+    if (!shouldAllowSidebarCollapse()) {
+      if (chatShell) {
+        chatShell.classList.remove("is-collapsed");
+      }
+      syncSidebarButtons(false);
+      return;
+    }
+
+    const collapsed = chatShell ? chatShell.classList.contains("is-collapsed") : false;
+    syncSidebarButtons(collapsed);
+  });
+
   function filterInstances() {
-    const q = (chatSearch.value || "").toLowerCase();
+    const q = chatSearch ? (chatSearch.value || "").toLowerCase() : "";
 
     instances.forEach(function (item) {
       const txt = (item.dataset.title || "").toLowerCase();
@@ -854,7 +987,9 @@
     });
   }
 
-  chatSearch.addEventListener("input", filterInstances);
+  if (chatSearch) {
+    chatSearch.addEventListener("input", filterInstances);
+  }
 
   tags.forEach(function (tagBtn) {
     tagBtn.addEventListener("click", function () {
@@ -873,6 +1008,8 @@
       chatInput.focus();
     });
   });
+
+  restoreSidebarState();
 
   if (newInstanceBtn) {
     newInstanceBtn.addEventListener("click", async function () {

@@ -1,6 +1,7 @@
 const DEFAULT_OPTIONS = {
   endpoint: "/api/mobile/trending/",
   limit: 8,
+  detailBase: "/dashboard/data/indicator/",
 };
 
 function escapeHtml(value) {
@@ -108,7 +109,16 @@ function shuffle(items) {
   return copy;
 }
 
-function createCard(item) {
+function buildDetailHref(item, detailBase) {
+  const indicatorId = item?.indicator?.id;
+  if (!detailBase || !indicatorId) {
+    return "";
+  }
+
+  return `${String(detailBase).replace(/\/?$/, "/")}${indicatorId}/`;
+}
+
+function createCard(item, detailBase) {
   const indicator = item?.indicator || {};
   const latestPoint = getLatestPoint(indicator);
   const title = indicator.title_ENG || indicator.title_AMH || "Indicator";
@@ -117,9 +127,12 @@ function createCard(item) {
     indicator.measurement_units ||
     "-";
   const value = latestPoint ? latestPoint.performance : null;
+  const href = buildDetailHref(item, detailBase);
+  const tagName = href ? "a" : "article";
+  const hrefAttr = href ? ` href="${escapeHtml(href)}"` : "";
 
   return `
-    <article class="hf-card">
+    <${tagName} class="hf-card"${hrefAttr}>
       <div class="hf-card-head">
         <span class="hf-card-icon">
           <i class="ti ti-chart-donut-2"></i>
@@ -133,7 +146,7 @@ function createCard(item) {
         <span>${escapeHtml(unit || "-")}</span>
       </div>
       <p>${escapeHtml(title)}</p>
-    </article>
+    </${tagName}>
   `;
 }
 
@@ -159,6 +172,7 @@ async function mountHighFrequencyIndicators(element, options = {}) {
     ...options,
     endpoint: element.dataset.endpoint || options.endpoint || DEFAULT_OPTIONS.endpoint,
     limit: Number(element.dataset.limit || options.limit || DEFAULT_OPTIONS.limit),
+    detailBase: element.dataset.detailBase || options.detailBase || DEFAULT_OPTIONS.detailBase,
   };
 
   const grid = element.querySelector("[data-hf-grid]");
@@ -190,7 +204,7 @@ async function mountHighFrequencyIndicators(element, options = {}) {
       return null;
     }
 
-    grid.innerHTML = items.map(createCard).join("");
+    grid.innerHTML = items.map((item) => createCard(item, settings.detailBase)).join("");
   } catch (_error) {
     renderError(grid);
   }

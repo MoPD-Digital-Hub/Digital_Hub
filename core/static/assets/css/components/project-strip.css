@@ -65,11 +65,13 @@
   overflow: hidden;
   min-height: 236px;
   border-radius: 22px;
+  border: 1px solid transparent;
   background: #0f172a;
   box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
   text-decoration: none;
   color: inherit;
   display: block;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .project-card-media,
@@ -123,6 +125,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #ffffff;
   backdrop-filter: blur(10px);
+  transition: transform 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .project-card-body {
@@ -132,6 +135,7 @@
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.12));
   backdrop-filter: blur(16px);
+  transition: transform 0.18s ease, background 0.18s ease;
 }
 
 .project-card-body h3 {
@@ -164,6 +168,22 @@
 
 .project-card:hover {
   color: inherit;
+  transform: translateY(-6px) scale(1.015);
+  border-color: rgba(20, 184, 166, 0.46);
+  box-shadow: 0 24px 40px rgba(15, 23, 42, 0.2);
+}
+
+.project-card:hover .project-card-open,
+.project-card:focus-visible .project-card-open {
+  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.project-card:hover .project-card-body,
+.project-card:focus-visible .project-card-body {
+  transform: scale(1.01);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.14));
 }
 
 .project-card-skeleton {

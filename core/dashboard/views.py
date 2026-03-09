@@ -143,6 +143,15 @@ def public_body_detail_page(request, ministry_id):
 
 
 @login_required(login_url="/dashboard/login/")
+def high_frequency_dashboard_page(request):
+    context = {
+        "page_title": "High Frequency Dashboard",
+        "subtitle": "Review configured high-frequency indicator widgets in a dashboard layout.",
+    }
+    return render(request, "data-hub/pages/high-frequency-dashboard.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
 def sector_project_list_page(request):
     context = {
         "page_title": "Sector Projects",
@@ -159,3 +168,22 @@ def sector_project_detail_page(request, project_id):
         "project_id": project_id,
     }
     return render(request, "data-hub/pages/sector-project-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def initiative_list_page(request):
+    context = {
+        "page_title": "National Initiatives",
+        "subtitle": "Review national initiatives, strategic narratives, and implementation focus areas in one place.",
+    }
+    return render(request, "data-hub/pages/initiative-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def initiative_detail_page(request, initiative_id):
+    context = {
+        "page_title": "Initiative Detail",
+        "subtitle": "Review initiative context, implementation narrative, and summary metadata.",
+        "initiative_id": initiative_id,
+    }
+    return render(request, "data-hub/pages/initiative-detail.html", context)
