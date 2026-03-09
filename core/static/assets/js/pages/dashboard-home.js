@@ -4,6 +4,7 @@ import { SummaryPanels } from "../components/summary-panels.js";
 import { HighFrequencyIndicators } from "../components/high-frequency-indicators.js";
 import { ProjectStrip } from "../components/project-strip.js";
 import { InitiativeSpotlight } from "../components/initiative-spotlight.js";
+import { bootPageGestureControl } from "./gesture-bootstrap.js";
 
 function mountWhenVisible(selector, mount) {
   const element = document.querySelector(selector);
@@ -43,10 +44,26 @@ function mountWhenVisible(selector, mount) {
   observer.observe(element);
 }
 
-TopicScroller.init(document.querySelector("[data-topic-scroller]"));
-MinistryScorecard.init(document.querySelector("[data-ministry-scorecard]"));
+
 
 mountWhenVisible("[data-summary-panels]", (element) => SummaryPanels.init(element));
 mountWhenVisible("[data-high-frequency]", (element) => HighFrequencyIndicators.init(element));
 mountWhenVisible("[data-project-strip]", (element) => ProjectStrip.init(element));
 mountWhenVisible("[data-initiative-spotlight]", (element) => InitiativeSpotlight.init(element));
+TopicScroller.initAll("[data-topic-scroller]");
+MinistryScorecard.initAll("[data-ministry-scorecard]");
+SummaryPanels.initAll("[data-summary-panels]");
+HighFrequencyIndicators.initAll("[data-high-frequency]");
+ProjectStrip.initAll("[data-project-strip]");
+InitiativeSpotlight.initAll("[data-initiative-spotlight]");
+
+// Mark major dashboard sections as zoomable surfaces for two-hand zoom gestures.
+document.querySelectorAll(
+  ".summary-panels, .hf-section, .project-strip, .initiative-section, [data-gesture-zoomable]"
+).forEach((element) => {
+  if (!element.hasAttribute("data-gesture-zoomable")) {
+    element.setAttribute("data-gesture-zoomable", "true");
+  }
+});
+
+bootPageGestureControl();
