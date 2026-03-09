@@ -55,6 +55,13 @@
                     </div>
                 </li>
 
+                <li class="pc-h-item">
+                    <a href="#" class="pc-head-link me-0" id="gesture-control-nav-toggle" role="button" aria-pressed="false" title="Toggle hand gesture control">
+                        <i class="ti ti-hand-stop"></i>
+                        <span id="gesture-control-nav-label" style="margin-left: 6px;">Gesture</span>
+                    </a>
+                </li>
+
               
 
                 <!--Profile-->
@@ -134,4 +141,40 @@ function apply_theme_default() {
     } catch (e) {}
     layout_change_default();
 }
+
+function bindGestureNavToggle() {
+    var btn = document.getElementById("gesture-control-nav-toggle");
+    var label = document.getElementById("gesture-control-nav-label");
+    if (!btn) {
+        return;
+    }
+
+    function getController() {
+        return window.appGestureController || window.dashboardGestureController || null;
+    }
+
+    function sync() {
+        var controller = getController();
+        var enabled = Boolean(controller && controller.isEnabled && controller.isEnabled());
+        btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+        if (label) {
+            label.textContent = enabled ? "Gesture On" : "Gesture";
+        }
+    }
+
+    btn.addEventListener("click", function (event) {
+        event.preventDefault();
+        var controller = getController();
+        if (!controller || !controller.toggle) {
+            return;
+        }
+        controller.toggle();
+    });
+
+    window.addEventListener("gesture-control:state", sync);
+    window.setTimeout(sync, 0);
+    window.setTimeout(sync, 600);
+}
+
+document.addEventListener("DOMContentLoaded", bindGestureNavToggle);
 </script>

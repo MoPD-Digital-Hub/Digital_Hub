@@ -1,3 +1,5 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260309a">
 <style>
     #chat-log {
         width: 100%;
@@ -131,3 +133,4 @@
         scrollBottom();
     }
 </script>
+<script type="module" src="{% static 'assets/js/pages/gesture-global.js' %}?v=20260309a"></script>
