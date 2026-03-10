@@ -19,6 +19,25 @@ function indicatorLabel(count) {
   return `${numeric} indicator${numeric === 1 ? "" : "s"}`;
 }
 
+function formatPeriodLabel(filterState) {
+  const quarterMap = {
+    "3month": "Q1",
+    "6month": "Q2",
+    "9month": "Q3",
+    "12month": "Q4",
+  };
+
+  if (filterState?.year && filterState?.dateType === "quarterly" && filterState?.quarter) {
+    return `${filterState.year} ${quarterMap[filterState.quarter] || filterState.quarter}`;
+  }
+
+  if (filterState?.year) {
+    return String(filterState.year);
+  }
+
+  return "Current period";
+}
+
 function buildImageUrl(value) {
   if (!value) {
     return "";
@@ -32,8 +51,7 @@ function buildImageUrl(value) {
 
 function renderSkeletons(track, options = {}) {
   const count = options.variant === "grid" ? 12 : 4;
-  const itemClass = options.variant === "grid" ? " ministry-card-grid" : "";
-  track.innerHTML = Array.from({ length: count }, () => `<div class="ministry-card-skeleton${itemClass}"></div>`).join("");
+  track.innerHTML = Array.from({ length: count }, () => `<div class="ministry-card-skeleton"></div>`).join("");
 }
 
 function renderEmpty(track, message) {
@@ -71,21 +89,23 @@ function createGridCard(item, filterState) {
   const title = item.responsible_ministry_eng || item.responsible_ministry_amh || "Public Body";
   const logo = buildImageUrl(item.image);
   const indicators = indicatorLabel(item.count_indicator);
-  const progressValue = Math.max(0, Math.min(Number(item.ministry_score_card?.avg_score || 0), 100));
+  const periodLabel = formatPeriodLabel(filterState);
   const params = new URLSearchParams({ year: filterState.year });
   if (filterState.dateType === "quarterly") {
     params.set("quarter", filterState.quarter);
   }
 
   return `
-    <a class="ministry-card ministry-card-grid" href="/dashboard/statistics/public-bodies/${escapeHtml(item.id)}/?${escapeHtml(params.toString())}" style="--ministry-accent:${escapeHtml(accent)};">
+    <a class="ministry-card" href="/dashboard/statistics/public-bodies/${escapeHtml(item.id)}/?${escapeHtml(params.toString())}" style="--ministry-accent:${escapeHtml(accent)};">
       <div class="ministry-card-shell">
-        <div class="ministry-card-mark"></div>
+        <div class="ministry-card-mark">
+          <span class="ministry-card-period">${escapeHtml(periodLabel)}</span>
+        </div>
         <div class="ministry-card-body">
           <div class="ministry-card-logo">
             ${
               logo
-                ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(code)} logo" loading="lazy" decoding="async" fetchpriority="low" sizes="36px">`
+                ? `<img src="${escapeHtml(logo)}" alt="${escapeHtml(code)} logo" loading="lazy" decoding="async" fetchpriority="low" sizes="40px">`
                 : `<span>${escapeHtml(code.slice(0, 2))}</span>`
             }
           </div>
@@ -94,15 +114,14 @@ function createGridCard(item, filterState) {
             <h5>${escapeHtml(title)}</h5>
           </div>
         </div>
-        <div class="ministry-card-progress" aria-hidden="true">
-          <span class="ministry-card-progress-bar" style="width:${escapeHtml(progressValue)}%; background:${escapeHtml(accent)}"></span>
-        </div>
         <div class="ministry-card-score">
           <div class="ministry-card-score-panel">
             <span>Score</span>
             <strong>${escapeHtml(score)}</strong>
           </div>
-          <span class="ministry-card-indicators">${escapeHtml(indicators)}</span>
+          <div class="ministry-card-side">
+            <span class="ministry-card-indicators">${escapeHtml(indicators)}</span>
+          </div>
         </div>
       </div>
     </a>

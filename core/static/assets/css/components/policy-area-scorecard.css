@@ -12,13 +12,13 @@
 
 .policy-area-strip-title {
   margin: 0;
-  color: #0f172a;
+  color: var(--dh-text);
   font-size: clamp(28px, 2.2vw, 34px);
 }
 
 .policy-area-strip-subtitle {
   margin: 8px 0 0;
-  color: #64748b;
+  color: var(--dh-text-muted);
   font-size: 15px;
   line-height: 1.6;
   max-width: 60ch;
@@ -32,13 +32,13 @@
 .policy-area-strip-nav-btn {
   width: 42px;
   height: 42px;
-  border: 1px solid #d8e3d4;
+  border: 1px solid var(--dh-elevated-border);
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #f5f9f2;
-  color: #587644;
+  background: var(--dh-surface-soft);
+  color: var(--dh-accent);
   font-size: 18px;
 }
 
@@ -105,9 +105,31 @@
 
 .policy-area-card-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.policy-area-card-leading {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.policy-area-card-scoreblock {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.policy-area-card-scoreblock small {
+  color: var(--dh-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .policy-area-rank,
@@ -179,20 +201,18 @@
 
 .policy-area-card-grid {
   min-height: 0;
-  border-radius: 16px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--policy-area-accent) 12%, #ffffff),
-    color-mix(in srgb, var(--policy-area-accent) 5%, #ffffff)
-  );
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
-  border: 1px solid color-mix(in srgb, var(--policy-area-accent) 26%, #ffffff);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(var(--dh-accent-rgb), 0.02), transparent 32%),
+    linear-gradient(180deg, color-mix(in srgb, var(--policy-area-accent) 4%, var(--dh-surface-bg)), color-mix(in srgb, var(--policy-area-accent) 8%, var(--dh-surface-soft)));
+  box-shadow: var(--dh-shadow);
+  border: 1px solid color-mix(in srgb, var(--policy-area-accent) 24%, var(--dh-border));
 }
 
 .policy-area-card-grid .policy-area-card-shell {
   min-height: 0;
-  padding: 10px 10px 10px;
-  gap: 8px;
+  padding: 12px 12px 14px;
+  gap: 14px;
   align-content: start;
 }
 
@@ -202,9 +222,10 @@
 }
 
 .policy-area-card-media {
-  aspect-ratio: 2.9 / 1;
+  aspect-ratio: 3.2 / 1;
   overflow: hidden;
-  border-bottom: 1px solid color-mix(in srgb, var(--policy-area-accent) 22%, #ffffff);
+  border-bottom: 1px solid color-mix(in srgb, var(--policy-area-accent) 18%, var(--dh-border));
+  border-radius: 14px 14px 10px 10px;
 }
 
 .policy-area-card-media img,
@@ -216,66 +237,99 @@
 }
 
 .policy-area-card-media-fallback {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--policy-area-accent) 22%, #fff), #e2e8f0 84%);
+  background:
+    radial-gradient(circle at top right, rgba(255,255,255,0.18), transparent 30%),
+    linear-gradient(135deg, color-mix(in srgb, var(--policy-area-accent) 70%, #ffffff), color-mix(in srgb, var(--policy-area-accent) 18%, var(--dh-surface-muted)));
 }
 
 .policy-area-card-grid .policy-area-rank {
-  background: color-mix(in srgb, var(--policy-area-accent) 10%, #ffffff);
+  background: color-mix(in srgb, var(--policy-area-accent) 12%, var(--dh-surface-bg));
   font-weight: 800;
   letter-spacing: 0;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   min-height: 0;
   padding: 0;
-  font-size: 9px;
-  color: #294445;
-  border-color: color-mix(in srgb, var(--policy-area-accent) 34%, #ffffff);
+  font-size: 10px;
+  color: color-mix(in srgb, var(--policy-area-accent) 82%, var(--dh-text));
+  border-color: color-mix(in srgb, var(--policy-area-accent) 32%, var(--dh-border));
   border-radius: 10px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
 }
 
 .policy-area-card-grid .policy-area-rank img {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
 }
 
-.policy-area-card-grid .policy-area-score {
-  min-height: 26px;
-  padding: 0 10px;
-  font-size: 11px;
-  border-color: transparent;
-  background: var(--policy-area-accent);
-  font-weight: 800;
-}
-
 .policy-area-card-grid h3 {
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 15px;
+  line-height: 1.34;
   -webkit-line-clamp: 2;
-  color: #294445;
-  min-height: 28px;
-  text-transform: uppercase;
-}
-
-.policy-area-card-grid .policy-area-card-body {
-  gap: 8px;
-}
-
-.policy-area-card-grid .policy-area-card-meta {
-  font-size: 11px;
-  letter-spacing: 0;
-  color: #5f6368;
-  font-weight: 500;
+  color: var(--dh-text);
+  min-height: 40px;
   text-transform: none;
 }
 
-.policy-area-card-grid .policy-area-score {
-  color: #fff;
+.policy-area-card-grid .policy-area-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
 }
 
-.policy-area-card-grid .policy-area-score,
-.policy-area-card-grid .policy-area-rank {
+.policy-area-card-grid .policy-area-card-meta {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--dh-text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.policy-area-card-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.policy-area-card-kicker {
+  margin: 0;
+  color: var(--dh-text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.policy-area-card-grid .policy-area-card-scoreblock {
+  min-width: 108px;
+  padding: 10px 10px 12px;
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--policy-area-accent) 12%, var(--dh-surface-bg)), color-mix(in srgb, var(--policy-area-accent) 6%, var(--dh-surface-soft)));
+  border: 1px solid color-mix(in srgb, var(--policy-area-accent) 22%, var(--dh-border));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.policy-area-card-grid .policy-area-card-scoreblock small {
+  color: var(--dh-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.policy-area-card-grid .policy-area-score {
+  min-height: 0;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--policy-area-accent) 88%, var(--dh-text));
+  font-weight: 900;
   box-shadow: none;
+  justify-content: flex-end;
 }
 
 .policy-area-card-grid {
@@ -284,9 +338,9 @@
 
 .policy-area-card-grid:hover,
 .policy-area-card-grid:focus-visible {
-  transform: translateY(-6px) scale(1.015);
-  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.1);
-  border-color: color-mix(in srgb, var(--policy-area-accent) 42%, #ffffff);
+  transform: translateY(-5px);
+  box-shadow: 0 20px 34px rgba(var(--dh-accent-rgb), 0.12);
+  border-color: color-mix(in srgb, var(--policy-area-accent) 38%, var(--dh-border));
 }
 
 .policy-area-card-grid:hover .policy-area-card-media,
@@ -296,38 +350,28 @@
 
 .policy-area-card-grid:hover .policy-area-rank,
 .policy-area-card-grid:focus-visible .policy-area-rank {
-  background: color-mix(in srgb, var(--policy-area-accent) 16%, #ffffff);
-}
-
-.policy-area-card-grid:hover .policy-area-score,
-.policy-area-card-grid:focus-visible .policy-area-score {
-  filter: brightness(1.04);
+  background: color-mix(in srgb, var(--policy-area-accent) 18%, var(--dh-surface-bg));
 }
 
 .policy-area-card-grid:hover .policy-area-progress,
 .policy-area-card-grid:focus-visible .policy-area-progress {
-  background: color-mix(in srgb, var(--policy-area-accent) 14%, #e2e8f0);
-}
-
-.policy-area-card-grid:hover .policy-area-card-shell,
-.policy-area-card-grid:focus-visible .policy-area-card-shell {
-  transform: scale(1.005);
+  background: color-mix(in srgb, var(--policy-area-accent) 18%, var(--dh-surface-muted));
 }
 
 .policy-area-card-grid:hover h3,
 .policy-area-card-grid:focus-visible h3 {
-  color: color-mix(in srgb, var(--policy-area-accent) 64%, #1f2937);
+  color: color-mix(in srgb, var(--policy-area-accent) 56%, var(--dh-text));
 }
 
 .policy-area-card-grid:hover .policy-area-card-footer strong,
 .policy-area-card-grid:focus-visible .policy-area-card-footer strong {
-  color: color-mix(in srgb, var(--policy-area-accent) 88%, #0f172a);
+  color: color-mix(in srgb, var(--policy-area-accent) 88%, var(--dh-text));
 }
 
 .policy-area-progress {
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
-  background: #e0e7e9;
+  background: color-mix(in srgb, var(--policy-area-accent) 12%, var(--dh-surface-muted));
   overflow: hidden;
 }
 
@@ -339,17 +383,20 @@
 }
 
 .policy-area-card-footer {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: #5f6368;
-  font-size: 10px;
+  color: var(--dh-text-muted);
+  font-size: 11px;
+  padding-top: 2px;
+  border-top: 1px solid color-mix(in srgb, var(--policy-area-accent) 14%, var(--dh-border));
 }
 
 .policy-area-card-footer strong {
   color: var(--policy-area-accent);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
 }
 
@@ -440,9 +487,9 @@
 .policy-area-empty {
   padding: 18px;
   border-radius: 20px;
-  border: 1px solid #dde7da;
-  background: #f7faf6;
-  color: #64748b;
+  border: 1px solid var(--dh-elevated-border);
+  background: var(--dh-surface-soft);
+  color: var(--dh-text-muted);
 }
 
 @keyframes policyAreaPulse {
@@ -456,60 +503,24 @@
     flex-direction: column;
     align-items: flex-start;
   }
-}
 
-body[data-pc-theme="dark"] .policy-area-strip-title {
-  color: #f8fafc;
-}
+  .policy-area-card-grid .policy-area-card-body {
+    grid-template-columns: 1fr;
+  }
 
-body[data-pc-theme="dark"] .policy-area-strip-subtitle,
-body[data-pc-theme="dark"] .policy-area-empty {
-  color: #cbd5e1;
-}
+  .policy-area-card-grid .policy-area-card-scoreblock {
+    min-width: 0;
+    justify-items: start;
+    text-align: left;
+  }
 
-body[data-pc-theme="dark"] .policy-area-strip-nav-btn,
-body[data-pc-theme="dark"] .policy-area-empty {
-  background: rgba(110, 231, 183, 0.12);
-  border-color: #314252;
-  color: #86efac;
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--policy-area-accent) 16%, #111b26),
-    color-mix(in srgb, var(--policy-area-accent) 9%, #111b26)
-  );
-  border-color: color-mix(in srgb, var(--policy-area-accent) 18%, #111b26);
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid .policy-area-rank {
-  background: rgba(255, 255, 255, 0.06);
-  color: #e2e8f0;
-  border-color: color-mix(in srgb, var(--policy-area-accent) 28%, #111b26);
+  .policy-area-card-grid .policy-area-score {
+    justify-content: flex-start;
+  }
 }
 
 body[data-pc-theme="dark"] .policy-area-card-grid .policy-area-rank img {
   filter: brightness(0) invert(1);
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid h3 {
-  color: #f8fafc;
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid .policy-area-card-meta {
-  color: #cbd5e1;
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid:hover,
-body[data-pc-theme="dark"] .policy-area-card-grid:focus-visible {
-  box-shadow: 0 20px 32px rgba(2, 6, 23, 0.3);
-  border-color: color-mix(in srgb, var(--policy-area-accent) 34%, #111b26);
-}
-
-body[data-pc-theme="dark"] .policy-area-card-grid:hover h3,
-body[data-pc-theme="dark"] .policy-area-card-grid:focus-visible h3 {
-  color: #ffffff;
 }
 
 body[data-pc-theme="dark"] .policy-area-card-skeleton {
@@ -524,12 +535,4 @@ body[data-pc-theme="dark"] .policy-area-skeleton-title,
 body[data-pc-theme="dark"] .policy-area-skeleton-meta,
 body[data-pc-theme="dark"] .policy-area-progress-bar--skeleton {
   background: rgba(226, 232, 240, 0.12);
-}
-
-body[data-pc-theme="dark"] .policy-area-progress {
-  background: rgba(203, 213, 225, 0.12);
-}
-
-body[data-pc-theme="dark"] .policy-area-card-footer {
-  color: #cbd5e1;
 }

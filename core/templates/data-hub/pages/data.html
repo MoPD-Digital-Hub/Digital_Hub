@@ -14,9 +14,9 @@
 
   .data-page-panel {
     border-radius: 28px;
-    border: 1px solid #dbe8e2;
-    background: linear-gradient(180deg, #ffffff, #f9fcfb);
-    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.05);
+    border: 1px solid var(--dh-elevated-border);
+    background: var(--dh-panel-bg);
+    box-shadow: var(--dh-shadow);
     padding: 22px;
   }
 
@@ -33,7 +33,7 @@
   }
 
   .data-page-panel-kicker {
-    color: #0f766e;
+    color: var(--dh-accent);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.12em;
@@ -42,13 +42,13 @@
 
   .data-page-panel-copy h2 {
     margin: 0;
-    color: #0f172a;
+    color: var(--dh-text);
     font-size: 1.3rem;
   }
 
   .data-page-panel-copy p {
     margin: 0;
-    color: #64748b;
+    color: var(--dh-text-muted);
     font-size: 14px;
     line-height: 1.55;
   }
@@ -62,17 +62,17 @@
     justify-content: center;
     gap: 8px;
     text-decoration: none;
-    border: 1px solid #d8e3d4;
-    background: #f5f9f2;
-    color: #587644;
+    border: 1px solid var(--dh-chip-border);
+    background: var(--dh-chip-bg);
+    color: var(--dh-chip-text);
     font-size: 12px;
     font-weight: 800;
     white-space: nowrap;
   }
 
   .data-page-panel-more:hover {
-    color: #0f766e;
-    border-color: #bfd5cb;
+    color: var(--dh-accent);
+    border-color: rgba(var(--dh-accent-rgb), 0.28);
   }
 
   .data-page-topic-frame {
@@ -110,29 +110,6 @@
     .data-page-panel--hf .hf-grid {
       grid-template-columns: 1fr;
     }
-  }
-
-  body[data-pc-theme="dark"] .data-page-panel {
-    border-color: #314252;
-    background: linear-gradient(180deg, #0f172a, #13212d);
-  }
-
-  body[data-pc-theme="dark"] .data-page-panel-copy h2 {
-    color: #f8fafc;
-  }
-
-  body[data-pc-theme="dark"] .data-page-panel-kicker {
-    color: #8ef1e5;
-  }
-
-  body[data-pc-theme="dark"] .data-page-panel-copy p {
-    color: #cbd5e1;
-  }
-
-  body[data-pc-theme="dark"] .data-page-panel-more {
-    background: rgba(110, 231, 183, 0.12);
-    border-color: #314252;
-    color: #86efac;
   }
 </style>
 {% endblock %}

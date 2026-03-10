@@ -15,7 +15,7 @@
 .dh-filterbar__label {
   font-size: 11px;
   font-weight: 700;
-  color: #5b6678;
+  color: var(--dh-text-muted);
   line-height: 1.2;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -27,16 +27,16 @@
   gap: 6px;
   width: 100%;
   padding: 4px;
-  border: 1px solid #d8e3d4;
+  border: 1px solid var(--dh-elevated-border);
   border-radius: 999px;
-  background: #edf4ef;
+  background: var(--dh-surface-soft);
 }
 
 .dh-segmented__btn {
   flex: 1 1 0;
   border: 0;
   background: transparent;
-  color: #5b6678;
+  color: var(--dh-text-muted);
   font-size: 14px;
   font-weight: 700;
   padding: 9px 14px;
@@ -45,25 +45,25 @@
 }
 
 .dh-segmented__btn.active {
-  background: linear-gradient(135deg, #0f766e, #14532d);
+  background: linear-gradient(135deg, var(--dh-accent), var(--dh-accent-strong));
   color: #fff;
-  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.22);
+  box-shadow: 0 8px 18px rgba(var(--dh-accent-rgb), 0.22);
 }
 
 .dh-filterbar__select,
 .dh-filterbar__search {
   width: 100%;
   min-height: 42px;
-  border: 1px solid #d8e3d4;
+  border: 1px solid var(--dh-elevated-border);
   border-radius: 12px;
   outline: 0;
   font-size: 15px;
-  color: #0f172a;
+  color: var(--dh-text);
 }
 
 .dh-filterbar__select {
   padding: 10px 12px;
-  background: #fff;
+  background: var(--dh-surface-bg);
   font-weight: 700;
   line-height: 1.2;
 }
@@ -72,7 +72,7 @@
   padding: 10px 14px 10px 42px;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,251,249,0.98));
+    linear-gradient(180deg, color-mix(in srgb, var(--dh-surface-bg) 96%, transparent), color-mix(in srgb, var(--dh-surface-soft) 96%, transparent));
   background-repeat: no-repeat, no-repeat;
   background-position: 14px center, 0 0;
   font-weight: 600;
@@ -80,7 +80,7 @@
 }
 
 .dh-filterbar__search::placeholder {
-  color: #94a3b8;
+  color: var(--dh-text-muted);
   font-weight: 500;
 }
 
@@ -93,38 +93,4 @@
   .dh-segmented__btn {
     padding-inline: 12px;
   }
-}
-
-body[data-pc-theme="dark"] .dh-filterbar__label {
-  color: #94a3b8;
-}
-
-body[data-pc-theme="dark"] .dh-segmented {
-  background: #16212d;
-  border-color: #314252;
-}
-
-body[data-pc-theme="dark"] .dh-segmented__btn {
-  color: #cbd5e1;
-}
-
-body[data-pc-theme="dark"] .dh-segmented__btn.active {
-  background: #0f766e;
-  color: #fff;
-}
-
-body[data-pc-theme="dark"] .dh-filterbar__select {
-  color: #f8fafc;
-  background: #16212d;
-  border-color: #314252;
-}
-
-body[data-pc-theme="dark"] .dh-filterbar__search {
-  color: #f8fafc;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, #16212d, #16212d);
-  background-repeat: no-repeat, no-repeat;
-  background-position: 14px center, 0 0;
-  border-color: #314252;
 }

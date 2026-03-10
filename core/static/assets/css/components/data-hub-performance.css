@@ -48,17 +48,17 @@ body,
 }
 
 .pc-header {
-  background: rgb(var(--bs-body-bg-rgb)) !important;
-  background-color: rgb(var(--bs-body-bg-rgb)) !important;
+  background: var(--dh-header-bg) !important;
+  background-color: var(--dh-header-bg) !important;
   background-image: none !important;
   opacity: 1 !important;
-  box-shadow: 0 1px 0 rgba(148, 163, 184, 0.12) !important;
+  box-shadow: 0 1px 0 var(--dh-border) !important;
   isolation: isolate;
 }
 
 .pc-header .header-wrapper {
-  background: rgb(var(--bs-body-bg-rgb)) !important;
-  background-color: rgb(var(--bs-body-bg-rgb)) !important;
+  background: var(--dh-header-bg) !important;
+  background-color: var(--dh-header-bg) !important;
   background-image: none !important;
   opacity: 1 !important;
 }

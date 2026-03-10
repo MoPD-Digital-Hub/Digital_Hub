@@ -144,20 +144,26 @@ function renderCards(track, items, options = {}, filterState) {
                     : `<i class="ti ti-chart-pie-2"></i>`
                 }
               </span>
-              <span class="policy-area-score">${escapeHtml(scoreText)}</span>
+              <span class="policy-area-card-meta">Policy Area</span>
             </div>
             <div class="policy-area-card-body">
-              <h3>${escapeHtml(title)}</h3>
+              <div class="policy-area-card-copy">
+                <h3>${escapeHtml(title)}</h3>
+                <p class="policy-area-card-kicker">Performance overview</p>
+              </div>
+              <div class="policy-area-card-scoreblock">
+                <small>Average score</small>
+                <span class="policy-area-score">${escapeHtml(scoreText)}</span>
+              </div>
               ${
                 options.variant === "grid"
                   ? `
-                    <p class="policy-area-card-meta">Area Performance</p>
                     <div class="policy-area-progress" aria-hidden="true">
                       <span class="policy-area-progress-bar" style="width:${escapeHtml(progressValue)}%; background:${escapeHtml(scoreColor)}"></span>
                     </div>
                     <div class="policy-area-card-footer">
-                      <span>Tap to explore</span>
-                      <strong>${escapeHtml(scoreText)}</strong>
+                      <span>Open scorecard</span>
+                      <strong>${escapeHtml(progressValue.toFixed(0))}% complete</strong>
                     </div>
                   `
                   : ""

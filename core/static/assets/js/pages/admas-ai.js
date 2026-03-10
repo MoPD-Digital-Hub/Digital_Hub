@@ -29,6 +29,38 @@
   let chartCounter = 0;
   const sidebarStorageKey = "admas-ai-sidebar-collapsed";
 
+  function getThemeValue(name, fallback) {
+    const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return value || fallback;
+  }
+
+  function getAIChartTheme() {
+    const accent = getThemeValue("--dh-accent", "#0f766e");
+    const accentStrong = getThemeValue("--dh-accent-strong", accent);
+    const accentRgb = getThemeValue("--dh-accent-rgb", "15, 118, 110");
+    const text = getThemeValue("--dh-text", "#0f172a");
+    const muted = getThemeValue("--dh-text-muted", "#64748b");
+    const border = getThemeValue("--dh-border", "#e2e8f0");
+    const elevatedBorder = getThemeValue("--dh-elevated-border", border);
+    const soft = getThemeValue("--dh-surface-soft", "#f8fafc");
+    const mutedSurface = getThemeValue("--dh-surface-muted", "#eef3f7");
+    const isDark = (getThemeValue("--dh-body-bg", "").toLowerCase() || "").startsWith("#0");
+
+    return {
+      accent: accent,
+      accentStrong: accentStrong,
+      accentRgb: accentRgb,
+      text: text,
+      muted: muted,
+      border: border,
+      elevatedBorder: elevatedBorder,
+      soft: soft,
+      mutedSurface: mutedSurface,
+      tooltipTheme: isDark ? "dark" : "light",
+      pieFallback: "rgba(" + accentRgb + ", 0.18)"
+    };
+  }
+
   function escapeHtml(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
@@ -471,12 +503,12 @@
         "</div>";
 
       const chartEl = holder.querySelector(".ai-chart-canvas");
-      const color = payload.score_color || (payload.type === "line" ? "#0f766e" : payload.type === "area" ? "#0ea5a4" : payload.type === "pie" ? "#22c55e" : "#f59e0b");
-      const dark = document.body.getAttribute("data-pc-theme") === "dark";
+      const theme = getAIChartTheme();
+      const color = payload.score_color || (payload.type === "line" ? theme.accent : payload.type === "area" ? theme.accentStrong : payload.type === "pie" ? theme.accent : theme.accentStrong);
       const isSingleScorePie = payload.type === "pie" && payload.data.length === 1 && payload.data[0] >= 0 && payload.data[0] <= 100;
       const pieSeries = isSingleScorePie ? [payload.data[0], Number((100 - payload.data[0]).toFixed(2))] : payload.data;
       const pieLabels = isSingleScorePie ? [payload.labels[0] || "Achieved", "Remaining"] : payload.labels;
-      const pieColors = isSingleScorePie ? [color, dark ? "#475569" : "#cbd5e1"] : [color];
+      const pieColors = isSingleScorePie ? [color, theme.pieFallback] : [color];
       const cartesianPoints = payload.labels.map(function (label, index) {
         return {
           x: label,
@@ -492,9 +524,12 @@
         },
         dataLabels: { enabled: false },
         colors: payload.type === "pie" ? pieColors : [color],
-        grid: { borderColor: dark ? "#334155" : "#e2e8f0" },
-        tooltip: { theme: dark ? "dark" : "light" },
-        legend: { position: "bottom" },
+        grid: { borderColor: theme.border },
+        tooltip: { theme: theme.tooltipTheme },
+        legend: {
+          position: "bottom",
+          labels: { colors: theme.muted }
+        },
         responsive: [{
           breakpoint: 768,
           options: { chart: { height: 240 } }
@@ -522,10 +557,18 @@
           }],
           xaxis: {
             categories: payload.labels,
-            labels: { rotate: -30, trim: false, hideOverlappingLabels: false }
+            labels: {
+              rotate: -30,
+              trim: false,
+              hideOverlappingLabels: false,
+              style: { colors: payload.labels.map(function () { return theme.muted; }) }
+            },
+            axisBorder: { color: theme.border },
+            axisTicks: { color: theme.border }
           },
           yaxis: {
             labels: {
+              style: { colors: [theme.muted] },
               formatter: function (val) {
                 return val === null ? "" : Number(val).toLocaleString();
               }
@@ -554,10 +597,18 @@
           }],
           xaxis: {
             type: "category",
-            labels: { rotate: -30, trim: false, hideOverlappingLabels: false }
+            labels: {
+              rotate: -30,
+              trim: false,
+              hideOverlappingLabels: false,
+              style: { colors: payload.labels.map(function () { return theme.muted; }) }
+            },
+            axisBorder: { color: theme.border },
+            axisTicks: { color: theme.border }
           },
           yaxis: {
             labels: {
+              style: { colors: [theme.muted] },
               formatter: function (val) {
                 return val === null ? "" : Number(val).toLocaleString();
               }
@@ -567,6 +618,11 @@
             curve: payload.type === "line" || payload.type === "area" ? "smooth" : "straight",
             width: 3
           },
+          markers: payload.type === "line" || payload.type === "area" ? {
+            size: 4,
+            strokeColors: theme.accentStrong,
+            hover: { size: 6 }
+          } : undefined,
           fill: payload.type === "area" ? {
             type: "gradient",
             gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 100] }
@@ -606,7 +662,7 @@
   }
 
   function renderBarChart(holder, payload) {
-    const color = payload.score_color || "#f59e0b";
+    const color = payload.score_color || getAIChartTheme().accentStrong;
     const maxValue = Math.max.apply(null, payload.data.concat([0])) || 1;
     let bars = "";
 
@@ -628,6 +684,15 @@
       '<div class="ai-chart-title">' + escapeHtml(payload.label || "AI Chart") + "</div>" +
       '<div class="ai-bar-chart">' + bars + "</div>" +
       "</div>";
+  }
+
+  function rerenderAICharts() {
+    const holders = document.querySelectorAll(".ai-chart-payload");
+    holders.forEach(function (holder) {
+      holder.dataset.rendered = "0";
+      holder.innerHTML = '<div class="ai-chart-loading">Refreshing chart theme...</div>';
+    });
+    renderCharts(document);
   }
 
   function renderActionButtons(scope) {
@@ -1010,6 +1075,9 @@
   });
 
   restoreSidebarState();
+  document.addEventListener("dashboard-theme-change", function () {
+    rerenderAICharts();
+  });
 
   if (newInstanceBtn) {
     newInstanceBtn.addEventListener("click", async function () {

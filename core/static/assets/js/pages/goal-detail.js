@@ -98,12 +98,14 @@ function normalizeGoalDetail(detail, context) {
     return {};
   }
 
-  const isMinistryGoal = context?.ministryId != null && context?.ministryId !== "";
+  const isScopedGoal =
+    (context?.ministryId != null && context?.ministryId !== "") ||
+    (context?.orgId != null && context?.orgId !== "");
   return {
     ...detail,
     goal_score_card: detail.goal_score_card || detail.ministry_strategic_goal_score_card || {},
     kra_goal: (Array.isArray(detail.kra_goal) ? detail.kra_goal : []).map(normalizeKra),
-    __goalContext: isMinistryGoal ? "ministry" : "policy-area",
+    __goalContext: isScopedGoal ? "ministry" : "policy-area",
   };
 }
 
@@ -170,6 +172,10 @@ function getPerformanceBuckets(detail) {
 }
 
 function renderPerformanceSummary(detail, selectedBucket) {
+  if (detail?.__goalContext !== "policy-area") {
+    return "";
+  }
+
   const buckets = getPerformanceBuckets(detail);
   const labelMap = {
     good: "Good",
@@ -808,14 +814,22 @@ async function loadGoalDetail() {
       }
 
       const payload = await fetchJson(endpoint);
-      const detail = normalizeGoalDetail(normalizeDetail(payload), { ministryId });
+      const detail = normalizeGoalDetail(normalizeDetail(payload), { ministryId, orgId });
       currentDetail = detail;
+      const showPerformanceSnapshot = detail.__goalContext === "policy-area";
+      if (!showPerformanceSnapshot) {
+        selectedBucket = "";
+      }
 
       hero.innerHTML = renderHero(detail, state);
       body.innerHTML = `
         <div class="goal-layout">
           ${renderPerformanceSummary(detail, selectedBucket)}
-          ${selectedBucket ? renderBucketSection(detail, state, selectedBucket) : renderKraSection(detail, state)}
+          ${
+            showPerformanceSnapshot && selectedBucket
+              ? renderBucketSection(detail, state, selectedBucket)
+              : renderKraSection(detail, state)
+          }
         </div>
       `;
 
