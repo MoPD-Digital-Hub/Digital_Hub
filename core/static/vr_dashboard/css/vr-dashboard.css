@@ -1,0 +1,325 @@
+:root {
+    --bg-top: #04131d;
+    --bg-bottom: #0b2230;
+    --panel: rgba(8, 20, 30, 0.72);
+    --panel-border: rgba(136, 218, 255, 0.22);
+    --text: #eff9ff;
+    --muted: #95b8c9;
+    --accent: #5de4c7;
+    --accent-secondary: #7cb8ff;
+    --shadow: 0 24px 80px rgba(1, 7, 12, 0.35);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "IBM Plex Sans", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at top left, rgba(93, 228, 199, 0.15), transparent 30%),
+        radial-gradient(circle at top right, rgba(124, 184, 255, 0.12), transparent 26%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black 40%, transparent 88%);
+    pointer-events: none;
+}
+
+.dashboard-shell {
+    width: min(1240px, calc(100vw - 32px));
+    margin: 0 auto;
+    padding: 32px 0 56px;
+}
+
+.hero-panel,
+.glass-card,
+.vr-stage-panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(20px);
+}
+
+.hero-panel {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 28px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+}
+
+.eyebrow,
+.card-label,
+.section-header span,
+.xr-status {
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.hero-copy h1,
+.section-header h2 {
+    margin: 0;
+    font-family: "Space Grotesk", sans-serif;
+}
+
+.hero-copy h1 {
+    font-size: clamp(2.4rem, 4vw, 4.1rem);
+    line-height: 1;
+    max-width: 12ch;
+    margin-top: 12px;
+}
+
+.hero-text {
+    max-width: 58ch;
+    color: #d4edf9;
+    line-height: 1.65;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.vr-toggle,
+.secondary-action {
+    border-radius: 999px;
+    padding: 14px 22px;
+    border: 1px solid transparent;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.vr-toggle {
+    color: #02141d;
+    background: linear-gradient(135deg, var(--accent), #b9fff1);
+    font-weight: 700;
+}
+
+.secondary-action {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+}
+
+.vr-toggle:hover,
+.secondary-action:hover {
+    transform: translateY(-1px);
+}
+
+.hero-orbit {
+    min-height: 280px;
+    position: relative;
+    display: grid;
+    place-items: center;
+}
+
+.orbit-grid {
+    position: absolute;
+    inset: 8%;
+    border-radius: 50%;
+    border: 1px solid rgba(124, 184, 255, 0.18);
+    box-shadow: inset 0 0 48px rgba(124, 184, 255, 0.08);
+}
+
+.orbit-card {
+    position: absolute;
+    min-width: 180px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(9, 22, 33, 0.86);
+    border: 1px solid rgba(136, 218, 255, 0.18);
+}
+
+.orbit-card span {
+    display: block;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.orbit-card strong {
+    font: 700 2rem/1 "Space Grotesk", sans-serif;
+}
+
+.orbit-card-primary {
+    top: 18%;
+    left: 8%;
+}
+
+.orbit-card-secondary {
+    right: 10%;
+    bottom: 12%;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.glass-card,
+.vr-stage-panel {
+    padding: 22px;
+}
+
+.kpi-card {
+    grid-column: span 4;
+}
+
+.chart-card,
+.notifications-card {
+    grid-column: span 6;
+}
+
+.nav-card,
+.widget-card {
+    grid-column: span 6;
+}
+
+.kpi-card strong {
+    display: block;
+    margin: 12px 0 8px;
+    font: 700 2.15rem/1 "Space Grotesk", sans-serif;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.chart-bars {
+    height: 180px;
+    display: grid;
+    grid-auto-flow: column;
+    align-items: end;
+    gap: 12px;
+}
+
+.chart-bars span {
+    height: var(--size);
+    border-radius: 999px 999px 8px 8px;
+    background: linear-gradient(180deg, rgba(93, 228, 199, 0.95), rgba(124, 184, 255, 0.55));
+    box-shadow: 0 0 22px rgba(93, 228, 199, 0.2);
+}
+
+.notifications-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.notifications-card li {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.notifications-card strong,
+.notifications-card span {
+    display: block;
+}
+
+.notifications-card span,
+.widget-card p,
+.kpi-card p {
+    color: #cae0eb;
+}
+
+.nav-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.nav-pills span {
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(124, 184, 255, 0.12);
+    border: 1px solid rgba(124, 184, 255, 0.18);
+}
+
+.vr-stage-panel {
+    margin-top: 22px;
+}
+
+.vr-stage {
+    min-height: 540px;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, rgba(3, 11, 17, 0.82), rgba(6, 20, 30, 0.96));
+}
+
+.vr-stage[data-state="loaded"] {
+    min-height: 640px;
+}
+
+.vr-placeholder {
+    min-height: 540px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: #d4edf9;
+    padding: 24px;
+}
+
+.vr-stage a-scene {
+    width: 100%;
+    height: 100%;
+}
+
+@media (max-width: 920px) {
+    .hero-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .kpi-card,
+    .chart-card,
+    .notifications-card,
+    .nav-card,
+    .widget-card {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-shell {
+        width: min(100vw - 18px, 1240px);
+        padding-top: 14px;
+    }
+
+    .hero-panel,
+    .glass-card,
+    .vr-stage-panel {
+        border-radius: 20px;
+        padding: 18px;
+    }
+
+    .hero-copy h1 {
+        font-size: 2.3rem;
+    }
+}

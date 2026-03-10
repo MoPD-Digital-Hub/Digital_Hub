@@ -1,0 +1,128 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Hub XR Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'vr_dashboard/css/vr-dashboard.css' %}">
+</head>
+<body>
+    <main class="dashboard-shell">
+        <section class="hero-panel">
+            <div class="hero-copy">
+                <p class="eyebrow">Digital Hub Spatial Analytics</p>
+                <h1>Immersive dashboards for WebXR headsets and standard browsers.</h1>
+                <p class="hero-text">
+                    Switch between a conventional control room and a virtual workspace with floating KPI cards,
+                    spatial charts, holographic alerts, and movable data panels.
+                </p>
+                <div class="hero-actions">
+                    <button id="enter-vr-button" class="vr-toggle" type="button">Enter VR</button>
+                    <button id="focus-vr-preview" class="secondary-action" type="button">Preview 3D Layout</button>
+                </div>
+                <p id="xr-status" class="xr-status" aria-live="polite">
+                    Checking WebXR support...
+                </p>
+            </div>
+            <div class="hero-orbit">
+                <div class="orbit-card orbit-card-primary">
+                    <span>Revenue Pulse</span>
+                    <strong>+18.4%</strong>
+                </div>
+                <div class="orbit-card orbit-card-secondary">
+                    <span>Live Sessions</span>
+                    <strong>128</strong>
+                </div>
+                <div class="orbit-grid"></div>
+            </div>
+        </section>
+
+        <section class="dashboard-grid" aria-label="2D Dashboard Overview">
+            <article class="glass-card kpi-card">
+                <span class="card-label">Monthly Revenue</span>
+                <strong>$284K</strong>
+                <p>Projected to beat last month by 12%.</p>
+            </article>
+            <article class="glass-card kpi-card">
+                <span class="card-label">Activation Rate</span>
+                <strong>76%</strong>
+                <p>Hand-off to customer success improved onboarding.</p>
+            </article>
+            <article class="glass-card kpi-card">
+                <span class="card-label">Critical Alerts</span>
+                <strong>3</strong>
+                <p>One billing hold and two escalated user reports.</p>
+            </article>
+            <article class="glass-card chart-card">
+                <div class="section-header">
+                    <h2>Engagement Timeline</h2>
+                    <span>Floating panel in VR</span>
+                </div>
+                <div class="chart-bars" aria-hidden="true">
+                    <span style="--size: 46%"></span>
+                    <span style="--size: 72%"></span>
+                    <span style="--size: 58%"></span>
+                    <span style="--size: 88%"></span>
+                    <span style="--size: 67%"></span>
+                    <span style="--size: 94%"></span>
+                </div>
+            </article>
+            <article class="glass-card notifications-card">
+                <div class="section-header">
+                    <h2>Notifications</h2>
+                    <span>Holographic stack in VR</span>
+                </div>
+                <ul>
+                    <li><strong>API anomaly</strong><span>Latency spike in East Africa region.</span></li>
+                    <li><strong>New enterprise signup</strong><span>Spatial onboarding requested.</span></li>
+                    <li><strong>Video pipeline</strong><span>Encoding queue back to nominal load.</span></li>
+                </ul>
+            </article>
+            <article class="glass-card nav-card">
+                <div class="section-header">
+                    <h2>Spatial Navigation</h2>
+                    <span>Curved menu in VR</span>
+                </div>
+                <div class="nav-pills">
+                    <span>Overview</span>
+                    <span>Analytics</span>
+                    <span>Users</span>
+                    <span>Alerts</span>
+                    <span>Media</span>
+                </div>
+            </article>
+            <article class="glass-card widget-card">
+                <div class="section-header">
+                    <h2>Widget Dock</h2>
+                    <span>Grab to reposition in VR</span>
+                </div>
+                <p>
+                    Draggable panels are spatially arranged in front of the user with secondary surfaces in a semi-circle
+                    to reduce occlusion and keep depth readable.
+                </p>
+            </article>
+        </section>
+
+        <section class="vr-stage-panel">
+            <div class="section-header">
+                <h2>VR Workspace</h2>
+                <span>WebXR / A-Frame layer</span>
+            </div>
+            <div id="vr-stage" class="vr-stage" data-state="idle">
+                <div class="vr-placeholder">
+                    <p>VR scene not loaded.</p>
+                    <p>Select <strong>Enter VR</strong> to lazy-load the immersive layer, or <strong>Preview 3D Layout</strong> for an inline desktop view.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {{ dashboard_payload|json_script:"vr-dashboard-data" }}
+
+    <script src="{% static 'vr_dashboard/js/vr-dashboard.js' %}" defer></script>
+</body>
+</html>
