@@ -40,6 +40,32 @@ function indicatorLabel(count) {
   return `${numeric} indicator${numeric === 1 ? "" : "s"}`;
 }
 
+function formatPeriodLabel(endpoint) {
+  try {
+    const endpointUrl = new URL(endpoint, window.location.origin);
+    const year = endpointUrl.searchParams.get("year");
+    const quarter = endpointUrl.searchParams.get("quarter");
+    const quarterMap = {
+      "3month": "Q1",
+      "6month": "Q2",
+      "9month": "Q3",
+      "12month": "Q4",
+    };
+
+    if (year && quarter) {
+      return `${year} ${quarterMap[quarter] || quarter}`;
+    }
+
+    if (year) {
+      return String(year);
+    }
+  } catch (_error) {
+    // Ignore malformed endpoints.
+  }
+
+  return "Current period";
+}
+
 function buildImageUrl(value) {
   if (!value) {
     return "";
@@ -85,9 +111,9 @@ function createCard(item, endpoint, detailBase) {
   const score = formatScore(item.ministry_score_card?.avg_score);
   const code = item.code || "N/A";
   const title = item.responsible_ministry_eng || item.responsible_ministry_amh || "Ministry";
-  const rank = Number(item.ministry_rank || 0);
   const logo = buildImageUrl(item.image);
   const href = buildDetailHref(item, endpoint, detailBase);
+  const periodLabel = formatPeriodLabel(endpoint);
   const tagName = href ? "a" : "article";
   const hrefAttr = href ? ` href="${escapeHtml(href)}"` : "";
 
@@ -95,11 +121,7 @@ function createCard(item, endpoint, detailBase) {
     <${tagName} class="ministry-card" style="--ministry-accent: ${escapeHtml(accent)};"${hrefAttr}>
       <div class="ministry-card-shell">
         <div class="ministry-card-mark">
-          ${
-            Number.isFinite(rank) && rank > 0
-              ? `<span class="ministry-card-rank">#${rank}</span>`
-              : ""
-          }
+          <span class="ministry-card-period">${escapeHtml(periodLabel)}</span>
         </div>
         <div class="ministry-card-body">
           <div class="ministry-card-logo">
@@ -119,7 +141,9 @@ function createCard(item, endpoint, detailBase) {
             <span>Score</span>
             <strong>${escapeHtml(score)}</strong>
           </div>
-          <span class="ministry-card-indicators">${escapeHtml(indicatorLabel(item.count_indicator))}</span>
+          <div class="ministry-card-side">
+            <span class="ministry-card-indicators">${escapeHtml(indicatorLabel(item.count_indicator))}</span>
+          </div>
         </div>
       </div>
     </${tagName}>
