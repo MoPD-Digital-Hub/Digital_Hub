@@ -250,6 +250,19 @@
   break-inside: avoid;
   margin-bottom: 8px;
   width: 100%;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.data-topic-kpi:hover,
+.data-topic-kpi:focus-visible {
+  transform: translateY(-3px);
+  border-color: #7fa866;
+  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08);
+}
+
+.data-topic-kpi:focus-visible {
+  outline: none;
 }
 
 .data-topic-kpi-head {

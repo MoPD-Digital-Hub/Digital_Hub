@@ -57,7 +57,14 @@ function renderSubIndicatorSection(kpi, level) {
 
 function renderKpiCard(kpi, level = 0) {
   return `
-    <article class="data-topic-kpi data-topic-kpi-level-${Math.min(level, 3)}">
+    <article
+      class="data-topic-kpi data-topic-kpi-level-${Math.min(level, 3)}"
+      data-kpi-card
+      data-kpi-url="/dashboard/data/indicator/${escapeHtml(kpi.id)}/"
+      tabindex="0"
+      role="link"
+      aria-label="Open ${escapeHtml(kpi.title_ENG || kpi.title_AMH || "KPI")} indicator detail"
+    >
       <div class="data-topic-kpi-head">
         <div class="data-topic-kpi-copy">
           <h4>${escapeHtml(kpi.title_ENG || kpi.title_AMH || "KPI")}</h4>
@@ -261,6 +268,7 @@ function bindCategoryAccordions(container) {
         content.innerHTML = renderKpiList(kpis);
         bindKpiHistory(content);
         bindKpiChildren(content);
+        bindKpiCards(content);
         loaded = true;
       } catch (_error) {
         content.innerHTML = '<div class="data-topic-kpi-empty">Unable to load KPIs for this category right now.</div>';
@@ -304,6 +312,35 @@ function bindKpiChildren(container) {
       if (panel) {
         panel.hidden = expanded;
       }
+    });
+  });
+}
+
+function bindKpiCards(container) {
+  const cards = Array.from(container.querySelectorAll("[data-kpi-card]"));
+
+  cards.forEach((card) => {
+    const openUrl = card.dataset.kpiUrl;
+    if (!openUrl) {
+      return;
+    }
+
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("a, button, [data-kpi-children-trigger], [data-kpi-history-item]")) {
+        return;
+      }
+      window.location.href = openUrl;
+    });
+
+    card.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      if (event.target.closest("a, button")) {
+        return;
+      }
+      event.preventDefault();
+      window.location.href = openUrl;
     });
   });
 }
