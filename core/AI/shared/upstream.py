@@ -123,7 +123,7 @@ def format_ministry_score(data):
         f"<h3>Ministry Performance Overview: {data.get('responsible_ministry_eng', 'Unknown')} ({data.get('code', 'N/A')})</h3>"
         f"<p><b>Reporting Period:</b> {score_card.get('year', 'N/A')} - {score_card.get('quarter', 'Annual')}</p>"
         f"<p><b>Overall Ministry Score:</b> {score_card.get('score', 'N/A')}</p>"
-        f"<p><b>Performance Status Color:</b>{score_card.get('score_color', "#000000")}</p>"
+        f"<p><b>Performance Status Color:</b>{score_card.get('score_color', '#000000')}</p>"
         f"<table><thead><tr><th>Policy Area</th><th>Score</th></tr></thead><tbody>{rows}</tbody></table>"
     )
 
