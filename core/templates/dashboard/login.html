@@ -1,0 +1,184 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard Login</title>
+  <link rel="icon" href="{% static 'assets/images/logo.png' %}" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260309a">
+  <style>
+    :root {
+      --brand: #0f766e;
+      --brand-dark: #115e59;
+      --ink: #0f172a;
+      --muted: #475569;
+    }
+    body {
+      font-family: "Plus Jakarta Sans", sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 10% 20%, #d9f7ec 0%, transparent 45%),
+        radial-gradient(circle at 92% 10%, #dbeafe 0%, transparent 40%),
+        linear-gradient(145deg, #f8fafc 0%, #eef4ff 100%);
+      display: grid;
+      place-items: center;
+      padding: 28px;
+    }
+    .auth-shell {
+      width: 100%;
+      max-width: 980px;
+    }
+    .login-card {
+      border: 0;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 65px rgba(15, 118, 110, 0.18);
+    }
+    .hero-pane {
+      background:
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.22), transparent 35%),
+        linear-gradient(155deg, var(--brand-dark), var(--brand));
+      color: #fff;
+      padding: 40px 34px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .hero-title {
+      font-size: 36px;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    .hero-sub {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.86);
+      max-width: 340px;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .brand img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #fff;
+      padding: 4px;
+    }
+    .form-pane {
+      padding: 40px 34px;
+      background: #fff;
+    }
+    .form-title {
+      color: var(--ink);
+      margin-bottom: 2px;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .form-sub {
+      color: var(--muted);
+      margin-bottom: 26px;
+    }
+    .form-control {
+      min-height: 48px;
+      border-radius: 12px;
+    }
+    .btn-login {
+      border-radius: 12px;
+      padding: 12px 24px;
+      min-width: 160px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      border: 0;
+    }
+    .password-block {
+      margin-bottom: 0 !important;
+    }
+    .login-actions {
+      margin-top: 38px !important;
+      padding-top: 0 !important;
+    }
+    .btn-login:hover {
+      filter: brightness(0.97);
+    }
+    @media (max-width: 991.98px) {
+      .hero-pane {
+        min-height: 220px;
+      }
+      .hero-title {
+        font-size: 30px;
+      }
+    }
+    @media (max-width: 575.98px) {
+      .hero-pane,
+      .form-pane {
+        padding: 28px 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-shell">
+    <div class="card login-card">
+      <div class="row g-0">
+        <div class="col-lg-6 d-none d-lg-block">
+          <section class="hero-pane">
+            <div>
+              <h1 class="hero-title">Admas Data Hub</h1>
+              <p class="hero-sub">Secure dashboard access for data, analytics, and AI-powered planning workflows.</p>
+            </div>
+            <div class="brand text-white">
+              <img src="{% static 'assets/images/logo.png' %}" alt="logo">
+              <span>MoPD Intelligence Console</span>
+            </div>
+          </section>
+        </div>
+        <div class="col-12 col-lg-6">
+          <section class="form-pane">
+            <div class="brand mb-3">
+              <img src="{% static 'assets/images/logo.png' %}" alt="logo">
+              <span>Dashboard Access</span>
+            </div>
+            <h2 class="form-title">Welcome back</h2>
+            <p class="form-sub">Sign in to continue.</p>
+
+            {% if error %}
+              <div class="alert alert-danger py-2">{{ error }}</div>
+            {% endif %}
+
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ next }}">
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" name="email" placeholder="you@example.com" required>
+              </div>
+              <div class="password-block">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" placeholder="••••••••" required>
+              </div>
+              <div class="login-actions d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary btn-login">Login</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="{% static 'assets/js/pages/gesture-global.js' %}?v=20260309a"></script>
+</body>
+</html>

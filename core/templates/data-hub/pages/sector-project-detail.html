@@ -1,0 +1,26 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/sector-project-detail.css' %}?v=20260309a">
+{% endblock %}
+
+{% block content %}
+<div
+  class="sector-project-detail-page"
+  data-project-detail
+  data-project-id="{{ project_id }}"
+  data-endpoint="/api/mobile/project-detail/{{ project_id }}/"
+  data-list-endpoint="/api/mobile/project-list/"
+  data-detail-base="/dashboard/projects/sector/"
+  data-media-base-url="https://time-series.mopd.gov.et/"
+>
+  <div class="sector-project-detail-state" data-project-detail-state>Loading project details...</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/sector-project-detail.js' %}?v=20260309a"></script>
+{% endblock %}

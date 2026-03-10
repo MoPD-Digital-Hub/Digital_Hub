@@ -1,0 +1,30 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-dashboard.css' %}?v=20260309a">
+{% endblock %}
+
+{% block content %}
+<section
+  class="hf-dashboard-page"
+  data-hf-dashboard
+  data-endpoint="/api/mobile/high-frequency/"
+  data-detail-base="/dashboard/data/indicator/"
+>
+  <div class="hf-dashboard-head">
+    <div>
+      <h1 class="hf-dashboard-title">{{ page_title }}</h1>
+      <p class="hf-dashboard-subtitle">{{ subtitle }}</p>
+    </div>
+  </div>
+
+  <div class="hf-dashboard-body" data-hf-dashboard-body></div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/high-frequency-dashboard.js' %}?v=20260309a"></script>
+{% endblock %}

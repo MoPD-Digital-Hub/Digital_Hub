@@ -1,0 +1,35 @@
+{% load static %}
+
+<footer class="pc-footer">
+    <div class="footer-wrapper container-fluid">
+        <div class="row">
+            <div class="col my-1">
+                <p class="m-0">© Crafted by Team MoPD</p>
+            </div>
+            <div class="col-auto my-1">
+                <ul class="list-inline footer-link mb-0">
+                    <!-- <li class="list-inline-item"><a href="#">Documentation</a></li> -->
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Required Js -->
+<script defer src="{% static 'assets/js/plugins/popper.min.js' %}"></script>
+<script defer src="{% static 'assets/js/plugins/simplebar.min.js' %}"></script>
+<script defer src="{% static 'assets/js/plugins/bootstrap.min.js' %}"></script>
+<script defer src="{% static 'assets/js/icon/custom-font.js' %}"></script>
+<script defer src="{% static 'assets/js/plugins/feather.min.js' %}"></script>
+<script defer src="{% static 'assets/js/script.js' %}"></script>
+<script defer src="{% static 'assets/js/theme.js' %}"></script>
+<script>
+window.addEventListener("DOMContentLoaded", function () {
+  if (typeof change_box_container === "function") change_box_container("false");
+  if (typeof layout_caption_change === "function") layout_caption_change("true");
+  if (typeof layout_rtl_change === "function") layout_rtl_change("false");
+  if (typeof preset_change === "function") preset_change("preset-9");
+  if (typeof main_layout_change === "function") main_layout_change("vertical");
+  if (typeof layout_theme_contrast_change === "function") layout_theme_contrast_change("false");
+});
+</script>

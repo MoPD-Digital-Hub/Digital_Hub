@@ -1,0 +1,58 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/goal-detail.css' %}?v=20260307x">
+<link rel="stylesheet" href="{% static 'assets/css/components/filter-toolbar.css' %}?v=20260307a">
+{% endblock %}
+
+{% block content %}
+<section class="goal-detail" data-goal-detail data-goal-id="{{ goal_id }}">
+  <div class="dh-filterbar" data-goal-filter>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label">Select Date Type</label>
+      <div class="dh-segmented" role="group" aria-label="Select date type">
+        <button type="button" class="dh-segmented__btn" data-dpmes-date-type-btn data-value="yearly" aria-pressed="false">Yearly</button>
+        <button type="button" class="dh-segmented__btn active" data-dpmes-date-type-btn data-value="quarterly" aria-pressed="true">Quarterly</button>
+      </div>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label" for="goalDetailPeriod">Select Period</label>
+      <select id="goalDetailPeriod" class="dh-filterbar__select" data-dpmes-period></select>
+    </div>
+    <div class="dh-filterbar__group">
+      <label class="dh-filterbar__label">Selection</label>
+      <div class="goal-current" data-goal-current-period></div>
+    </div>
+  </div>
+  <div data-goal-hero></div>
+  <div data-goal-body></div>
+</section>
+
+<div class="goal-kpi-drawer-backdrop" hidden data-goal-kpi-backdrop></div>
+<aside class="goal-kpi-drawer" tabindex="-1" id="goalKpiDrawer" aria-labelledby="goalKpiDrawerLabel" aria-hidden="true" data-goal-kpi-drawer>
+  <div class="goal-kpi-drawer__header">
+    <div class="goal-kpi-drawer__titlewrap">
+      <span class="goal-kpi-drawer__icon"><i class="ti ti-chart-histogram"></i></span>
+      <h5 class="goal-kpi-drawer__title" id="goalKpiDrawerLabel" data-goal-kpi-title>Indicator Detail</h5>
+    </div>
+    <button type="button" class="goal-kpi-drawer__close" aria-label="Close" data-goal-kpi-close>
+      <i class="ti ti-x"></i>
+    </button>
+  </div>
+  <div class="goal-kpi-drawer__body" data-goal-kpi-content>
+    <div class="goal-loading">
+      <div class="goal-loading__line goal-loading__line--lg"></div>
+      <div class="goal-loading__line goal-loading__line--md"></div>
+      <div class="goal-loading__line goal-loading__line--sm"></div>
+    </div>
+  </div>
+</aside>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
+<script type="module" src="{% static 'assets/js/pages/goal-detail.js' %}?v=20260308a"></script>
+{% endblock %}

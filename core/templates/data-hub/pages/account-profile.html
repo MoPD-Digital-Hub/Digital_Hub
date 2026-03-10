@@ -1,0 +1,73 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}Edit Profile | DPMEs{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-9">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <h2 class="mb-1">Edit Profile</h2>
+        <p class="text-muted mb-0">Update your dashboard account details.</p>
+      </div>
+      <a href="{% url 'change_password' %}" class="btn btn-outline-secondary">Change Password</a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4 p-lg-5">
+        <form method="post" enctype="multipart/form-data" class="row g-4">
+          {% csrf_token %}
+
+          <div class="col-md-6">
+            <label class="form-label">First name</label>
+            {{ form.first_name }}
+            {{ form.first_name.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Last name</label>
+            {{ form.last_name }}
+            {{ form.last_name.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Email</label>
+            {{ form.email }}
+            {{ form.email.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Username</label>
+            {{ form.username }}
+            {{ form.username.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Title</label>
+            {{ form.excellence }}
+            {{ form.excellence.errors }}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label">Photo</label>
+            {{ form.photo }}
+            {{ form.photo.errors }}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Bio</label>
+            {{ form.bio }}
+            {{ form.bio.errors }}
+          </div>
+
+          <div class="col-12 d-flex justify-content-end gap-2">
+            <a href="{% url 'dashboard_home' %}" class="btn btn-light">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

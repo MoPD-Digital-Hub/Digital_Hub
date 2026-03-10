@@ -54,7 +54,7 @@ class ActivityTrackerMiddleware:
 
         try:
             match = resolve(request.path)
-            url_name = match.url_name
+            url_name = match.url_name or "unnamed_route"
             namespace = match.namespace
         except Resolver404:
             return self.get_response(request)

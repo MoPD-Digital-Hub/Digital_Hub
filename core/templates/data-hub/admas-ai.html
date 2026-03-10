@@ -1,0 +1,704 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+{% block body_attrs %}class="admas-ai-body" data-pc-preset="preset-7" data-pc-sidebar-caption="true" data-pc-layout="vertical" data-pc-direction="ltr" data-pc-theme_contrast="true" data-pc-theme="light"{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20260306c">
+<style>
+  :root {
+    --ai-sticky-top: 74px;
+  }
+  .ai-chat-shell {
+    display: grid;
+    grid-template-columns: minmax(0, var(--ai-sidebar-width, 320px)) minmax(0, 1fr);
+    gap: 0;
+    min-height: calc(100vh - 84px);
+    height: auto;
+    align-items: start;
+    overflow: visible;
+    background: transparent;
+  }
+  .ai-chat-shell.is-collapsed {
+    --ai-sidebar-width: 0px;
+  }
+  .ai-sidebar {
+    position: sticky;
+    top: var(--ai-sticky-top);
+    height: calc(100vh - var(--ai-sticky-top));
+    overflow: hidden;
+    transition: opacity 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+    border-right: 1px solid color-mix(in srgb, var(--bs-border-color) 86%, transparent);
+    background: transparent;
+    align-self: start;
+  }
+  .ai-chat-shell.is-collapsed .ai-sidebar {
+    opacity: 0;
+    transform: translateX(-12px);
+    pointer-events: none;
+    border-color: transparent;
+  }
+  .ai-panel-body {
+    height: 100%;
+    padding: 0 20px 0 0;
+    display: grid;
+    align-content: start;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .ai-sidebar-static {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    gap: 10px;
+    padding: 8px 0 14px;
+    background: color-mix(in srgb, var(--bs-body-bg) 96%, #ffffff 4%);
+    border-bottom: 1px solid color-mix(in srgb, var(--bs-border-color) 82%, transparent);
+    box-shadow: 0 12px 20px -18px rgba(15, 23, 42, 0.22);
+  }
+  .ai-sidebar-head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .ai-sidebar-title {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .ai-sidebar-title h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--pc-heading-color, var(--bs-heading-color));
+  }
+  .ai-sidebar-title p {
+    margin: 4px 0 0;
+    color: var(--bs-secondary-color);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .ai-sidebar-toggle,
+  .ai-main-expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    border-radius: 12px;
+    border: 1px solid #dbe6ef;
+    background: linear-gradient(180deg, #ffffff, #f7fafc);
+    color: #0f172a;
+    flex-shrink: 0;
+  }
+  .ai-sidebar-toggle {
+    width: 40px;
+    padding: 0;
+  }
+  .ai-main-expand {
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .ai-search {
+    border-radius: 12px;
+  }
+  .ai-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 10px 0 12px;
+  }
+  .ai-instance-tools {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 8px;
+    border: 1px solid #dbe6ef;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+  .ai-instance-tools .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-width: 1px;
+  }
+  .ai-instance-tools .btn-outline-primary {
+    border-color: #c9d8e6;
+    color: #0f172a;
+    background: #ffffff;
+  }
+  .ai-instance-tools .btn-outline-primary:hover,
+  .ai-instance-tools .btn-outline-primary:focus {
+    border-color: #0f766e;
+    background: #ecfdf5;
+    color: #0f766e;
+  }
+  .ai-instance-tools .btn-outline-secondary {
+    border-color: #d4dee8;
+    color: #334155;
+    background: #ffffff;
+  }
+  .ai-instance-tools .btn-outline-secondary:hover,
+  .ai-instance-tools .btn-outline-secondary:focus {
+    border-color: #94a3b8;
+    background: #f8fafc;
+    color: #0f172a;
+  }
+  .ai-instance-tools .btn-outline-danger {
+    border-color: #f3c5cc;
+    color: #b42318;
+    background: #fff7f7;
+  }
+  .ai-instance-tools .btn-outline-danger:hover,
+  .ai-instance-tools .btn-outline-danger:focus {
+    border-color: #e11d48;
+    background: #fff1f2;
+    color: #be123c;
+  }
+  .ai-instance-tools .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .ai-tag {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--bs-secondary-color);
+    background: var(--bs-tertiary-bg);
+  }
+  .ai-tag.active {
+    border-color: #0f766e;
+    background: rgba(15, 118, 110, 0.12);
+    color: #0f766e;
+    font-weight: 600;
+  }
+  .ai-instance-list {
+    display: grid;
+    gap: 6px;
+    grid-auto-rows: 56px;
+    padding-right: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    overscroll-behavior: contain;
+    padding-bottom: 20px;
+  }
+  .ai-instance {
+    border: 1px solid #d9e5ef;
+    border-radius: 8px;
+    padding: 6px 8px;
+    height: 56px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    cursor: pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .ai-instance.active {
+    border-color: #0f766e;
+    background: linear-gradient(180deg, #effcf7 0%, #e6f8f1 100%);
+    box-shadow: 0 6px 12px rgba(15, 118, 110, 0.1);
+    transform: translateY(-1px);
+  }
+  .ai-instance h6 {
+    margin: 0;
+    color: var(--pc-heading-color, var(--bs-heading-color));
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ai-instance p {
+    margin: 0;
+    color: var(--bs-secondary-color);
+    font-size: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ai-main {
+    display: grid;
+    grid-template-rows: auto auto auto;
+    min-width: 0;
+    height: auto;
+    background: transparent;
+    overflow: visible;
+    padding-left: 20px;
+  }
+  .ai-main-head {
+    position: sticky;
+    top: var(--ai-sticky-top);
+    z-index: 5;
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 8px 0 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 16px;
+    background: color-mix(in srgb, var(--bs-body-bg) 96%, #ffffff 4%);
+    box-shadow: 0 12px 20px -18px rgba(15, 23, 42, 0.22);
+  }
+  .ai-main-head-main {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    min-width: 0;
+  }
+  .ai-main-head-main > div {
+    min-width: 0;
+  }
+  .ai-main-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .ai-main-head h5 {
+    margin: 0;
+    color: var(--pc-heading-color, var(--bs-heading-color));
+  }
+  .ai-main-head p {
+    margin: 2px 0 0;
+    color: var(--bs-secondary-color);
+    font-size: 13px;
+  }
+  .ai-chat-output {
+    min-height: auto;
+    padding: 18px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: transparent;
+    overflow: visible;
+  }
+  .msg {
+    max-width: min(960px, 92%);
+    border-radius: 14px;
+    padding: 12px 14px;
+    line-height: 1.55;
+    border: 1px solid var(--bs-border-color);
+  }
+  .msg.user {
+    margin-left: auto;
+    background: linear-gradient(135deg, #0f766e, #115e59);
+    border: 0;
+    color: #fff;
+  }
+  .msg.ai {
+    margin-right: auto;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--bs-body-color);
+  }
+  .msg.ai .ai-msg-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f766e;
+  }
+  .msg.ai .ai-msg-content {
+    font-size: 14px;
+  }
+  .msg.ai .ai-msg-content p {
+    margin: 0 0 8px;
+  }
+  .msg.ai .ai-msg-content p:last-child {
+    margin-bottom: 0;
+  }
+  .msg.ai .ai-msg-content ul {
+    margin: 0 0 0 18px;
+    padding: 0;
+  }
+  .msg.ai .ai-msg-content li {
+    margin-bottom: 4px;
+  }
+  .msg.ai .ai-msg-content li:last-child {
+    margin-bottom: 0;
+  }
+  .ai-composer {
+    border-top: 1px solid var(--bs-border-color);
+    padding: 14px 0 8px;
+    background: transparent;
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    background: color-mix(in srgb, var(--bs-body-bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .ai-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px 10px 16px;
+    border: 1px solid #d6e2ee;
+    border-radius: 28px;
+    background: color-mix(in srgb, var(--bs-body-bg) 94%, #ffffff 6%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
+  .ai-input {
+    min-height: 44px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none !important;
+    padding-inline: 0;
+  }
+  .ai-input:focus {
+    background: transparent;
+  }
+  .ai-input-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ai-icon-btn {
+    height: 40px;
+    width: 40px;
+    border-radius: 999px;
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color);
+  }
+  .ai-send-btn {
+    min-height: 42px;
+    min-width: 42px;
+    border-radius: 999px;
+    padding: 0 14px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .ai-quick-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .ai-quick-tag {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    background: transparent;
+  }
+  .ai-quick-tag:hover {
+    border-color: #7ab4de;
+    color: var(--bs-body-color);
+  }
+  .ai-mic-on {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+  }
+  .ai-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--bs-secondary-color);
+    font-size: 13px;
+  }
+  .ai-loading .spinner-border {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-width: 0.12em;
+    animation: spinner-border 0.75s linear infinite !important;
+  }
+  @media (max-width: 1199.98px) {
+    :root {
+      --ai-sticky-top: 0px;
+    }
+    .ai-chat-shell {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: auto;
+      overflow: visible;
+    }
+    .ai-chat-shell.is-collapsed {
+      --ai-sidebar-width: 1fr;
+    }
+    .ai-sidebar {
+      position: static;
+      height: auto;
+      overflow: visible;
+      opacity: 1 !important;
+      transform: none !important;
+      pointer-events: auto !important;
+      border-color: var(--bs-border-color) !important;
+      border-right: 0;
+      border-bottom: 1px solid var(--bs-border-color);
+    }
+    .ai-sidebar-static,
+    .ai-main-head {
+      position: static;
+    }
+    .ai-panel-body {
+      height: auto;
+      padding: 0 0 18px;
+      grid-template-rows: auto auto;
+    }
+    .ai-instance-list {
+      max-height: none;
+      overflow: visible;
+      padding-bottom: 0;
+    }
+    .ai-main {
+      height: auto;
+      overflow: visible;
+      padding-left: 0;
+    }
+    .ai-chat-output {
+      overflow: visible;
+    }
+    .ai-composer {
+      position: static;
+      backdrop-filter: none;
+    }
+    .ai-main-head {
+      flex-wrap: wrap;
+    }
+  }
+  body[data-pc-theme="dark"] .ai-sidebar {
+    background: transparent;
+  }
+  body[data-pc-theme="dark"] .ai-sidebar-static {
+    background: color-mix(in srgb, var(--bs-body-bg) 94%, #0f172a 6%);
+    box-shadow: 0 16px 24px -20px rgba(2, 6, 23, 0.8);
+  }
+  body[data-pc-theme="dark"] .ai-input-row {
+    border-color: #334155;
+    background: color-mix(in srgb, var(--bs-body-bg) 92%, #0f172a 8%);
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.26);
+  }
+  body[data-pc-theme="dark"] .ai-icon-btn {
+    color: #cbd5e1;
+  }
+  body[data-pc-theme="dark"] .ai-tag.active {
+    border-color: #2dd4bf;
+    color: #99f6e4;
+    background: rgba(45, 212, 191, 0.16);
+  }
+  body[data-pc-theme="dark"] .ai-instance.active {
+    border-color: #2dd4bf;
+    background: linear-gradient(180deg, rgba(20, 184, 166, 0.14), rgba(13, 148, 136, 0.14));
+    box-shadow: 0 12px 22px rgba(20, 184, 166, 0.12);
+  }
+  body[data-pc-theme="dark"] .msg.ai .ai-msg-head {
+    color: #5eead4;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools {
+    border-color: #334155;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary {
+    border-color: #334155;
+    color: #e2e8f0;
+    background: #0f172a;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-primary:focus {
+    border-color: #14b8a6;
+    background: rgba(20, 184, 166, 0.14);
+    color: #99f6e4;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary {
+    border-color: #334155;
+    color: #cbd5e1;
+    background: #111827;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-secondary:focus {
+    border-color: #64748b;
+    background: rgba(148, 163, 184, 0.12);
+    color: #f8fafc;
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger {
+    border-color: rgba(244, 114, 182, 0.28);
+    color: #fda4af;
+    background: rgba(127, 29, 29, 0.18);
+  }
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger:hover,
+  body[data-pc-theme="dark"] .ai-instance-tools .btn-outline-danger:focus {
+    border-color: #fb7185;
+    background: rgba(190, 24, 93, 0.18);
+    color: #fecdd3;
+  }
+  body[data-pc-theme="dark"] .ai-sidebar-toggle,
+  body[data-pc-theme="dark"] .ai-main-expand {
+    border-color: #334155;
+    background: linear-gradient(180deg, #0f172a, #172135);
+    color: #e2e8f0;
+  }
+
+  body[data-pc-theme="light"] .ai-main-head {
+    background: color-mix(in srgb, var(--bs-body-bg) 97%, #ffffff 3%);
+  }
+  body.admas-ai-body[data-pc-theme="light"] .pc-header {
+    background: var(--bs-body-bg) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body.admas-ai-body[data-pc-theme="dark"] .pc-header {
+    background: var(--bs-body-bg) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  body[data-pc-theme="light"] .ai-instance:hover {
+    border-color: #94a3b8;
+    background: #f8fbff;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+  }
+  body[data-pc-theme="light"] .msg.ai {
+    border-color: #cfe0ef;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none;
+  }
+  body[data-pc-theme="light"] .ai-tag {
+    border-color: #c8dcef;
+    background: #f4f9ff;
+    color: #334155;
+  }
+  body[data-pc-theme="light"] .ai-tag:hover {
+    border-color: #7ab4de;
+    background: #eaf5ff;
+    color: #0f172a;
+  }
+  body[data-pc-theme="light"] .ai-input-row {
+    background: rgba(255, 255, 255, 0.96);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admas-ai-page">
+  <input type="hidden" id="csrfTokenValue" value="{{ csrf_token }}">
+
+  <div class="ai-chat-shell" id="aiChatShell">
+    <aside class="ai-sidebar" id="aiSidebar">
+      <div class="ai-panel-body">
+        <div class="ai-sidebar-static">
+          <div class="ai-sidebar-head">
+            <div class="ai-sidebar-title">
+              <h4>{{ page_title }}</h4>
+              <p>{{ subtitle }}</p>
+            </div>
+            <button id="sidebarCollapseBtn" class="ai-sidebar-toggle" type="button" aria-label="Collapse chat instances">
+              <i class="ti ti-layout-sidebar-left-collapse"></i>
+            </button>
+          </div>
+
+          <div class="ai-instance-tools">
+            <button id="newInstanceBtn" class="btn btn-outline-primary" type="button"><i class="ti ti-plus"></i><span>New</span></button>
+            <button id="renameInstanceBtn" class="btn btn-outline-secondary" type="button"><i class="ti ti-edit"></i><span>Rename</span></button>
+            <button id="deleteInstanceBtn" class="btn btn-outline-danger" type="button"><i class="ti ti-trash"></i><span>Delete</span></button>
+          </div>
+        </div>
+
+        <div class="ai-instance-list" id="instanceList">
+          {% for instance in chat_instances %}
+          <div
+            class="ai-instance {% if instance.id == active_instance.id %}active{% endif %}"
+            data-room="{{ instance.id }}"
+            data-title="{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}"
+            data-tags="policy ministry indicator"
+          >
+            <h6>{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}</h6>
+            <p>Instance #{{ instance.id }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+
+    <section class="ai-main">
+      <div class="ai-main-head">
+        <div class="ai-main-head-main">
+          <button id="sidebarExpandBtn" class="ai-main-expand" type="button" aria-label="Show chat instances">
+            <i class="ti ti-layout-sidebar-left-expand"></i>
+            <span>Instances</span>
+          </button>
+          <div>
+            <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}Chat {{ active_instance.id }}{% endif %}</h5>
+            <p>Admas AI assistant for policy and indicator analytics.</p>
+          </div>
+        </div>
+        <div class="ai-main-head-actions">
+          <span class="badge text-bg-primary">AI</span>
+        </div>
+      </div>
+
+      <div class="ai-chat-output" id="chatOutput" data-room="{{ active_instance.id }}">
+        {% if history %}
+          {% for item in history %}
+            <div class="msg user">{{ item.question }}</div>
+            {% if item.response %}
+            <div class="msg ai">
+              <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+              <div class="ai-msg-content">{{ item.response|safe }}</div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+        <div class="msg ai">
+          <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+          <div class="ai-msg-content">
+            <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="ai-composer">
+        <div class="ai-quick-tags">
+          <button type="button" class="ai-quick-tag" data-prompt="Ministry Score">Ministry Score</button>
+          <button type="button" class="ai-quick-tag" data-prompt="Coffee Export">Coffee Export</button>
+          <button type="button" class="ai-quick-tag" data-prompt="Gold Export">Gold Export</button>
+          <button type="button" class="ai-quick-tag" data-prompt="Inflation Rate">Inflation Rate</button>
+          <button type="button" class="ai-quick-tag" data-prompt="GDP Growth">GDP Growth</button>
+        </div>
+        <div class="ai-input-row">
+          <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
+          <div class="ai-input-actions">
+            <button id="micBtn" class="btn ai-icon-btn" type="button" title="Voice input">
+              <i class="ti ti-microphone"></i>
+            </button>
+            <button id="sendBtn" class="btn btn-primary ai-send-btn" type="button">
+              <i class="ti ti-arrow-up"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
+<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260309d"></script>
+{% endblock %}

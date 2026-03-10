@@ -19,6 +19,7 @@ from axes.helpers import get_client_username
 from axes.handlers.proxy import AxesProxyHandler
 from axes.signals import user_login_failed
 from ipware import get_client_ip
+from kombu.exceptions import OperationalError as KombuOperationalError
 
 
 
@@ -63,7 +64,11 @@ def generate_login_opt(request):
                 user.tokenExpiration = expire_date
             user.save()
 
-            send_email.delay(user.email, otp)
+            try:
+                send_email.delay(user.email, otp)
+            except (KombuOperationalError, ConnectionRefusedError, OSError):
+                # Dev/local fallback when broker is unavailable.
+                send_email(user.email, otp)
 
             return Response({
                 "result": "SUCCESS",
@@ -244,4 +249,3 @@ def reset_password(request):
 
         
     return Response({"result" : "FAILURE", "data" : None, "message" : "Invalid Input!", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
-

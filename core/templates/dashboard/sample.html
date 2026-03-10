@@ -1,0 +1,177 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}Home | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260307a">
+<link rel="stylesheet" href="{% static 'assets/css/components/topic-scroller.css' %}?v=20260307j">
+<link rel="stylesheet" href="{% static 'assets/css/components/ministry-scorecard.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/summary-panels.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/project-strip.css' %}?v=20260307g">
+<link rel="stylesheet" href="{% static 'assets/css/components/initiative-spotlight.css' %}?v=20260307g">
+<style>
+  .home-topic-section {
+    display: grid;
+    gap: 16px;
+  }
+
+  .home-dashboard-sections {
+    display: grid;
+    gap: 28px;
+  }
+
+  .home-section-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f766e;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .home-section-more:hover {
+    color: #0b5f59;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="home-dashboard-sections">
+  <section class="home-topic-section" data-topic-scroller data-endpoint="/api/mobile/topic-list/" data-limit="8" data-auto-scroll="false">
+    <div class="topic-strip-head">
+      <div>
+        <h2 class="topic-strip-title">Key Development Statistics</h2>
+        <p class="topic-strip-subtitle">Browse priority economic and development topics in a horizontally scrollable strip.</p>
+      </div>
+      <div class="topic-strip-nav">
+        <button type="button" class="topic-strip-nav-btn" data-topic-prev aria-label="Previous topics">
+          <i class="ti ti-arrow-left"></i>
+        </button>
+        <button type="button" class="topic-strip-nav-btn" data-topic-next aria-label="Next topics">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+        <a class="home-section-more" href="{% url 'data_categories' %}">More</a>
+      </div>
+    </div>
+
+    <div class="topic-strip-viewport">
+      <div class="topic-strip-track"></div>
+    </div>
+  </section>
+
+  <section class="ministry-strip" data-ministry-scorecard data-endpoint-base="/api/mobile/ministries/" data-default-time-endpoint="/api/mobile/default-time/" data-detail-base="/dashboard/statistics/public-bodies/" data-limit="8" data-auto-scroll="false">
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">Ministry Scorecard</h2>
+        <p class="ministry-strip-subtitle">Track ministry performance highlights for the selected reporting quarter.</p>
+      </div>
+      <div class="ministry-strip-nav">
+        <button type="button" class="ministry-strip-nav-btn" data-ministry-prev aria-label="Previous ministries">
+          <i class="ti ti-arrow-left"></i>
+        </button>
+        <button type="button" class="ministry-strip-nav-btn" data-ministry-next aria-label="Next ministries">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+        <a class="home-section-more" href="{% url 'public_body_list' %}">More</a>
+      </div>
+    </div>
+
+    <div class="ministry-strip-viewport">
+      <div class="ministry-strip-track"></div>
+    </div>
+  </section>
+
+  <section class="summary-panels" data-summary-panels data-fayda-endpoint="https://time-series.mopd.gov.et/api/fayda/" data-gesture-label="Program summaries" data-gesture-zoomable="true">
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">Program Summaries</h2>
+        <p class="ministry-strip-subtitle">Review quick performance snapshots from Fayda and Mesob in one place.</p>
+      </div>
+    </div>
+    <div class="summary-panels-grid">
+      <article class="summary-panel summary-panel-fayda" tabindex="0" aria-label="Fayda program summary">
+        <div class="summary-panel-head">
+          <div class="summary-panel-brand">
+            <span class="summary-panel-logo"><i class="ti ti-id-badge-2"></i></span>
+            <div>
+              <h3>Fayda</h3>
+              <p>National ID Program Insights</p>
+            </div>
+          </div>
+        </div>
+        <div class="summary-panel-body" data-summary-fayda-body></div>
+      </article>
+
+      <article class="summary-panel summary-panel-mesob" tabindex="0" aria-label="Mesob program summary">
+        <div class="summary-panel-head">
+          <div class="summary-panel-brand">
+            <span class="summary-panel-logo"><i class="ti ti-layout-dashboard"></i></span>
+            <div>
+              <h3>Mesob</h3>
+              <p>Public Service Delivery Snapshot</p>
+            </div>
+          </div>
+        </div>
+        <div class="summary-panel-body" data-summary-mesob-body></div>
+      </article>
+    </div>
+  </section>
+
+  <section class="hf-section" data-high-frequency data-endpoint="/api/mobile/trending/" data-detail-base="/dashboard/data/indicator/" data-limit="6">
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">High Frequency Indicators</h2>
+        <p class="ministry-strip-subtitle">Monitor the latest trending indicators across key economic and service delivery areas.</p>
+      </div>
+      <a class="home-section-more" href="{% url 'high_frequency_dashboard' %}">More</a>
+    </div>
+    <div class="hf-grid" data-hf-grid></div>
+  </section>
+
+  <section class="project-strip" data-project-strip data-endpoint="/api/mobile/project-list/" data-media-base-url="https://time-series.mopd.gov.et/" data-detail-base="/dashboard/projects/sector/" data-limit="6" data-auto-scroll="false">
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">Projects</h2>
+        <p class="ministry-strip-subtitle">Explore project portfolios, infrastructure work, and implementation stories across sectors.</p>
+      </div>
+      <div class="topic-strip-nav">
+        <button type="button" class="topic-strip-nav-btn" data-project-prev aria-label="Previous projects">
+          <i class="ti ti-arrow-left"></i>
+        </button>
+        <button type="button" class="topic-strip-nav-btn" data-project-next aria-label="Next projects">
+          <i class="ti ti-arrow-right"></i>
+        </button>
+        <a class="home-section-more" href="{% url 'sector_project_list' %}">More</a>
+      </div>
+    </div>
+    <div class="project-strip-viewport" data-project-viewport>
+      <div class="project-strip-track" data-project-track></div>
+    </div>
+  </section>
+
+  <section class="initiative-section" data-initiative-spotlight data-endpoint="/api/mobile/initiatives/" data-media-base-url="https://time-series.mopd.gov.et/" data-detail-base="/dashboard/projects/initiatives/" data-limit="8" data-image-cards="4" data-initial-visible-stacked="3">
+    <div class="ministry-strip-head">
+      <div>
+        <h2 class="ministry-strip-title">Initiatives</h2>
+        <p class="ministry-strip-subtitle">Follow national initiatives through modern spotlight cards with strategic context and KPI coverage.</p>
+      </div>
+      <a class="home-section-more" href="{% url 'initiative_list' %}">More</a>
+    </div>
+    <div class="initiative-layout" data-initiative-layout></div>
+    <div class="initiative-actions">
+      <button type="button" class="initiative-toggle" data-initiative-toggle hidden>
+        <span>Show more</span>
+        <i class="ti ti-chevron-down"></i>
+      </button>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/dashboard-home.js' %}?v=20260309a"></script>
+{% endblock %}
