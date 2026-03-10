@@ -185,6 +185,14 @@ body::before {
     grid-column: span 4;
 }
 
+.source-card {
+    grid-column: span 8;
+}
+
+.catalog-card {
+    grid-column: span 4;
+}
+
 .chart-card,
 .notifications-card {
     grid-column: span 6;
@@ -262,20 +270,118 @@ body::before {
     border: 1px solid rgba(124, 184, 255, 0.18);
 }
 
+.source-frame-shell {
+    min-height: 480px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(3, 10, 16, 0.9);
+}
+
+.source-frame {
+    width: 100%;
+    height: 480px;
+    border: 0;
+    background: #fff;
+}
+
+.catalog-list {
+    display: grid;
+    gap: 12px;
+    max-height: 480px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.catalog-link {
+    display: block;
+    padding: 14px 16px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.catalog-link strong,
+.catalog-link span {
+    display: block;
+}
+
+.catalog-link span {
+    margin-top: 4px;
+    color: #a8c9d8;
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.section-map-card {
+    grid-column: 1 / -1;
+}
+
+.section-panel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.section-panel-card {
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.section-panel-card strong,
+.section-panel-card span {
+    display: block;
+}
+
+.section-panel-card span {
+    margin-top: 6px;
+    color: #b8d6e3;
+}
+
+.section-panel-items {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.section-panel-items small {
+    color: #89adbe;
+    font-size: 0.82rem;
+}
+
 .vr-stage-panel {
     margin-top: 22px;
 }
 
 .vr-stage {
     min-height: 540px;
+    height: 540px;
     border-radius: 22px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: linear-gradient(180deg, rgba(3, 11, 17, 0.82), rgba(6, 20, 30, 0.96));
+    position: relative;
 }
 
 .vr-stage[data-state="loaded"] {
     min-height: 640px;
+    height: 640px;
+}
+
+.vr-stage[data-state="loading"] {
+    display: grid;
+    place-items: center;
+}
+
+.vr-stage[data-state="loading"]::before {
+    content: "Loading 3D workspace...";
+    color: #d4edf9;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
 }
 
 .vr-placeholder {
@@ -289,7 +395,15 @@ body::before {
 
 .vr-stage a-scene {
     width: 100%;
-    height: 100%;
+    height: 640px;
+    min-height: 640px;
+    display: block;
+}
+
+.vr-stage canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
 }
 
 @media (max-width: 920px) {
@@ -303,6 +417,10 @@ body::before {
     .nav-card,
     .widget-card {
         grid-column: 1 / -1;
+    }
+
+    .section-panel-grid {
+        grid-template-columns: 1fr;
     }
 }
 

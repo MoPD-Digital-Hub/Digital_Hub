@@ -20,13 +20,9 @@ urlpatterns = [
     path('api/video/', include('Videos.urls')),
     path('api/mobile/', include('mobile.urls')),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
-<<<<<<< HEAD
     path('api/ai-chat/', include('AI.urls')),
     path('api/notification/', include('Notification.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('oidc/', include('mozilla_django_oidc.urls')),
 
-=======
-    path('api/ai-chat/', include('AI.urls'))
->>>>>>> 232d5d3 (3d started)
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

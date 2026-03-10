@@ -318,7 +318,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
 SECURE_HSTS_PRELOAD = config('SECURE_HSTS_PRELOAD', default=not DEBUG, cast=bool)
 SECURE_CONTENT_TYPE_NOSNIFF = config('SECURE_CONTENT_TYPE_NOSNIFF', default=True, cast=bool)
 SECURE_REFERRER_POLICY = config('SECURE_REFERRER_POLICY', default='same-origin')
-X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='DENY')
+X_FRAME_OPTIONS = config('X_FRAME_OPTIONS', default='SAMEORIGIN')
 
 LOGGING = {
     "version": 1,

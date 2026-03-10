@@ -9,6 +9,7 @@ urlpatterns = [
     path('faq/' , api.faq),
     path('contact-us/' , api.contact_us),
     path('check-update/', api.check_update, name='check-update'),
+    path('vr-image-proxy/', vr_image_proxy, name='vr_image_proxy'),
 
     #Time Series
     path('topic-list/', time_series_api.topic_list, name='time-series-topic-list'),

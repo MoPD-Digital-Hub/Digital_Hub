@@ -24,6 +24,20 @@ function renderState(container, message) {
   container.innerHTML = `<div class="data-topic-detail-state">${escapeHtml(message)}</div>`;
 }
 
+function normalizeTopic(payload, topicId) {
+  const source = payload?.data ?? payload ?? {};
+  if (Array.isArray(source)) {
+    return source.find((item) => Number(item?.id) === Number(topicId)) || source[0] || {};
+  }
+  if (Array.isArray(source?.results)) {
+    return source.results.find((item) => Number(item?.id) === Number(topicId)) || source.results[0] || {};
+  }
+  if (source && typeof source === "object") {
+    return source;
+  }
+  return {};
+}
+
 function hasChildKpis(kpi) {
   return Array.isArray(kpi?.children) && kpi.children.length > 0;
 }
@@ -356,18 +370,25 @@ async function loadTopicDetail() {
   const body = root.querySelector("[data-topic-detail-body]");
 
   try {
-    const [topicListPayload, categoriesPayload] = await Promise.all([
-      fetchJson("/api/mobile/topic-list/"),
+    const [topicDetailPayload, categoriesPayload] = await Promise.all([
+      fetchJson(`/api/mobile/topic-detail/${topicId}/`),
       fetchJson(`/api/mobile/categories/${topicId}/`),
     ]);
 
-    const topics = Array.isArray(topicListPayload?.data) ? topicListPayload.data : [];
-    const topic = topics.find((item) => Number(item.id) === Number(topicId)) || {};
+    const topic = normalizeTopic(topicDetailPayload, topicId);
     const categories = Array.isArray(categoriesPayload?.data) ? categoriesPayload.data : [];
     const title = topic.title_ENG || topic.title_AMH || `Topic ${topicId}`;
     const description = topic.description || "Explore topic categories and open each category to inspect KPI details.";
     const image = buildMediaUrl(topic.background_image || topic.image);
     const icon = buildMediaUrl(topic.image_icons);
+    const categoryCount = Number(topic.count_category || categories.length || 0);
+    const kpiCount = Number(topic.count_kpis || 0);
+    const code = topic.code || topic.topic_code || "No code";
+    const rank = topic.rank ? `Rank ${topic.rank}` : "Featured topic";
+    const categoryPreview = categories
+      .slice(0, 4)
+      .map((category) => category.name_ENG || category.name_AMH || "Category")
+      .filter(Boolean);
 
     hero.innerHTML = `
       <div class="data-topic-hero-card">
@@ -389,8 +410,9 @@ async function loadTopicDetail() {
             <h1>${escapeHtml(title)}</h1>
             <p>${escapeHtml(description)}</p>
             <div class="data-topic-hero-meta">
-              <span>${escapeHtml(`${Number(topic.count_category || categories.length || 0)} categories`)}</span>
-              <span>${escapeHtml(`${Number(topic.count_kpis || 0)} KPIs`)}</span>
+              <span>${escapeHtml(`${categoryCount} categories`)}</span>
+              <span>${escapeHtml(`${kpiCount} KPIs`)}</span>
+              <span>${escapeHtml(rank)}</span>
             </div>
           </div>
         </div>
@@ -398,10 +420,41 @@ async function loadTopicDetail() {
     `;
 
     body.innerHTML = `
+      <section class="data-topic-overview-grid">
+        <article class="data-topic-overview-card">
+          <span class="data-topic-overview-kicker">Profile</span>
+          <h3>Topic Snapshot</h3>
+          <dl class="data-topic-overview-list">
+            <div>
+              <dt>Code</dt>
+              <dd>${escapeHtml(code)}</dd>
+            </div>
+            <div>
+              <dt>Categories</dt>
+              <dd>${escapeHtml(String(categoryCount))}</dd>
+            </div>
+            <div>
+              <dt>KPIs</dt>
+              <dd>${escapeHtml(String(kpiCount))}</dd>
+            </div>
+          </dl>
+        </article>
+        <article class="data-topic-overview-card">
+          <span class="data-topic-overview-kicker">Preview</span>
+          <h3>Category Highlights</h3>
+          <div class="data-topic-overview-tags">
+            ${
+              categoryPreview.length
+                ? categoryPreview.map((item) => `<span>${escapeHtml(item)}</span>`).join("")
+                : '<span>No categories available yet</span>'
+            }
+          </div>
+        </article>
+      </section>
       <section class="data-topic-detail-section">
         <div class="data-topic-detail-head">
           <h2>Categories</h2>
-          <p>Open a category to load and inspect its KPI list.</p>
+          <p>Loaded from the topic detail and categories APIs. Open a category to inspect its KPI list.</p>
         </div>
         ${renderCategoryAccordion(categories)}
       </section>

@@ -15,10 +15,10 @@
         <section class="hero-panel">
             <div class="hero-copy">
                 <p class="eyebrow">Digital Hub Spatial Analytics</p>
-                <h1>Immersive dashboards for WebXR headsets and standard browsers.</h1>
+                <h1>Immersive dashboards for every Digital Hub page.</h1>
                 <p class="hero-text">
-                    Switch between a conventional control room and a virtual workspace with floating KPI cards,
-                    spatial charts, holographic alerts, and movable data panels.
+                    The current dashboard page is mirrored below for desktop review, while the VR workspace exposes
+                    a spatial page wall so users can jump across the available routes from one immersive environment.
                 </p>
                 <div class="hero-actions">
                     <button id="enter-vr-button" class="vr-toggle" type="button">Enter VR</button>
@@ -30,56 +30,85 @@
             </div>
             <div class="hero-orbit">
                 <div class="orbit-card orbit-card-primary">
-                    <span>Revenue Pulse</span>
-                    <strong>+18.4%</strong>
+                    <span>{{ scene_profile.kpis.0.label }}</span>
+                    <strong>{{ scene_profile.kpis.0.delta }}</strong>
                 </div>
                 <div class="orbit-card orbit-card-secondary">
-                    <span>Live Sessions</span>
-                    <strong>128</strong>
+                    <span>{{ scene_profile.kpis.1.label }}</span>
+                    <strong>{{ scene_profile.kpis.1.value }}</strong>
                 </div>
                 <div class="orbit-grid"></div>
             </div>
         </section>
 
+        <section class="dashboard-grid" aria-label="Page Mirror and Catalog">
+            <article class="glass-card source-card">
+                <div class="section-header">
+                    <h2>{{ source_page_title }}</h2>
+                    <span>Live page mirror</span>
+                </div>
+                <div class="source-frame-shell">
+                    <iframe
+                        class="source-frame"
+                        src="{{ source_page_url }}"
+                        title="{{ source_page_title }}"
+                        loading="lazy"
+                        referrerpolicy="same-origin">
+                    </iframe>
+                </div>
+            </article>
+            <article class="glass-card catalog-card">
+                <div class="section-header">
+                    <h2>Available Pages</h2>
+                    <span>VR launch catalog</span>
+                </div>
+                <div class="catalog-list">
+                    {% for page in available_pages %}
+                        <a class="catalog-link" href="{% url 'vr_dashboard' %}?source={{ page.url|urlencode }}&title={{ page.title|urlencode }}">
+                            <strong>{{ page.title }}</strong>
+                            <span>{{ page.url }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+
         <section class="dashboard-grid" aria-label="2D Dashboard Overview">
             <article class="glass-card kpi-card">
-                <span class="card-label">Monthly Revenue</span>
-                <strong>$284K</strong>
-                <p>Projected to beat last month by 12%.</p>
+                <span class="card-label">{{ scene_profile.kpis.0.label }}</span>
+                <strong>{{ scene_profile.kpis.0.value }}</strong>
+                <p>{{ scene_profile.kpis.0.delta }}</p>
             </article>
             <article class="glass-card kpi-card">
-                <span class="card-label">Activation Rate</span>
-                <strong>76%</strong>
-                <p>Hand-off to customer success improved onboarding.</p>
+                <span class="card-label">{{ scene_profile.kpis.1.label }}</span>
+                <strong>{{ scene_profile.kpis.1.value }}</strong>
+                <p>{{ scene_profile.kpis.1.delta }}</p>
             </article>
             <article class="glass-card kpi-card">
-                <span class="card-label">Critical Alerts</span>
-                <strong>3</strong>
-                <p>One billing hold and two escalated user reports.</p>
+                <span class="card-label">{{ scene_profile.kpis.2.label }}</span>
+                <strong>{{ scene_profile.kpis.2.value }}</strong>
+                <p>{{ scene_profile.kpis.2.delta }}</p>
             </article>
             <article class="glass-card chart-card">
                 <div class="section-header">
-                    <h2>Engagement Timeline</h2>
+                    <h2>{{ scene_profile.analytics_title }}</h2>
                     <span>Floating panel in VR</span>
                 </div>
                 <div class="chart-bars" aria-hidden="true">
-                    <span style="--size: 46%"></span>
-                    <span style="--size: 72%"></span>
-                    <span style="--size: 58%"></span>
-                    <span style="--size: 88%"></span>
-                    <span style="--size: 67%"></span>
-                    <span style="--size: 94%"></span>
+                    {% for value in scene_profile.charts %}
+                        <span style="--size: {% widthratio value 1 100 %}%"></span>
+                    {% endfor %}
                 </div>
             </article>
             <article class="glass-card notifications-card">
                 <div class="section-header">
-                    <h2>Notifications</h2>
+                    <h2>{{ scene_profile.notifications_title }}</h2>
                     <span>Holographic stack in VR</span>
                 </div>
                 <ul>
-                    <li><strong>API anomaly</strong><span>Latency spike in East Africa region.</span></li>
-                    <li><strong>New enterprise signup</strong><span>Spatial onboarding requested.</span></li>
-                    <li><strong>Video pipeline</strong><span>Encoding queue back to nominal load.</span></li>
+                    {% for item in scene_profile.notifications %}
+                        <li><strong>Update {{ forloop.counter }}</strong><span>{{ item }}</span></li>
+                    {% endfor %}
                 </ul>
             </article>
             <article class="glass-card nav-card">
@@ -88,24 +117,47 @@
                     <span>Curved menu in VR</span>
                 </div>
                 <div class="nav-pills">
-                    <span>Overview</span>
-                    <span>Analytics</span>
-                    <span>Users</span>
-                    <span>Alerts</span>
-                    <span>Media</span>
+                    {% for item in scene_profile.menu %}
+                        <span>{{ item }}</span>
+                    {% endfor %}
                 </div>
             </article>
             <article class="glass-card widget-card">
                 <div class="section-header">
-                    <h2>Widget Dock</h2>
+                    <h2>{{ scene_profile.widget_title }}</h2>
                     <span>Grab to reposition in VR</span>
                 </div>
-                <p>
-                    Draggable panels are spatially arranged in front of the user with secondary surfaces in a semi-circle
-                    to reduce occlusion and keep depth readable.
-                </p>
+                {% for line in scene_profile.widget_lines %}
+                    <p>{{ line }}</p>
+                {% endfor %}
             </article>
         </section>
+
+        {% if scene_profile.section_panels %}
+        <section class="dashboard-grid" aria-label="Home Dashboard Section Map">
+            <article class="glass-card section-map-card">
+                <div class="section-header">
+                    <h2>Home Dashboard Sections</h2>
+                    <span>Mapped from /dashboard</span>
+                </div>
+                <div class="section-panel-grid">
+                    {% for panel in scene_profile.section_panels %}
+                        <article class="section-panel-card">
+                            <strong>{{ panel.title }}</strong>
+                            <span>{{ panel.subtitle }}</span>
+                            {% if panel.items %}
+                                <div class="section-panel-items">
+                                    {% for item in panel.items %}
+                                        <small>{{ item }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            </article>
+        </section>
+        {% endif %}
 
         <section class="vr-stage-panel">
             <div class="section-header">
@@ -114,8 +166,8 @@
             </div>
             <div id="vr-stage" class="vr-stage" data-state="idle">
                 <div class="vr-placeholder">
-                    <p>VR scene not loaded.</p>
-                    <p>Select <strong>Enter VR</strong> to lazy-load the immersive layer, or <strong>Preview 3D Layout</strong> for an inline desktop view.</p>
+                    <p>3D workspace is waiting to load.</p>
+                    <p>The desktop preview will load automatically when available. You can still use <strong>Enter VR</strong> on a supported headset.</p>
                 </div>
             </div>
         </section>

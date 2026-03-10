@@ -55,6 +55,17 @@
                     </div>
                 </li>
 
+                <li class="pc-h-item">
+                    <a
+                        class="pc-head-link"
+                        href="{% url 'vr_dashboard' %}?source={{ request.get_full_path|urlencode }}&title={{ page_title|default:'Dashboard'|urlencode }}"
+                        title="Open current page in VR workspace"
+                    >
+                        <i class="ti ti-cube-3d-sphere"></i>
+                        <span class="d-none d-md-inline ms-1">Enter VR</span>
+                    </a>
+                </li>
+
               
 
                 <!--Profile-->
