@@ -412,8 +412,12 @@ function bindCategoryDownloads(container) {
 
   const closeAll = () => {
     shells.forEach((shell) => {
+      const item = shell.closest("[data-category-item]");
       const trigger = shell.querySelector("[data-category-download-trigger]");
       const menu = shell.querySelector("[data-category-download-menu]");
+      if (item) {
+        item.classList.remove("is-download-open");
+      }
       if (trigger) {
         trigger.setAttribute("aria-expanded", "false");
       }
@@ -424,6 +428,7 @@ function bindCategoryDownloads(container) {
   };
 
   shells.forEach((shell) => {
+    const item = shell.closest("[data-category-item]");
     const trigger = shell.querySelector("[data-category-download-trigger]");
     const menu = shell.querySelector("[data-category-download-menu]");
     const categoryId = trigger?.dataset.categoryId;
@@ -436,6 +441,9 @@ function bindCategoryDownloads(container) {
       event.stopPropagation();
       const isOpen = trigger.getAttribute("aria-expanded") === "true";
       closeAll();
+      if (item && !isOpen) {
+        item.classList.add("is-download-open");
+      }
       trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
       menu.hidden = isOpen;
     });

@@ -202,14 +202,20 @@
 .data-topic-categories {
   display: grid;
   gap: 14px;
+  isolation: isolate;
 }
 
 .data-topic-category {
+  position: relative;
   border-radius: 26px;
   border: 1px solid var(--dh-elevated-border);
   background: var(--dh-panel-bg);
   box-shadow: var(--dh-shadow);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.data-topic-category.is-download-open {
+  z-index: 12;
 }
 
 .data-topic-category-head {
@@ -366,6 +372,8 @@
 
 .data-topic-category-panel {
   padding: 0 18px 18px;
+  border-bottom-left-radius: 26px;
+  border-bottom-right-radius: 26px;
 }
 
 .data-topic-category-loading,
