@@ -236,6 +236,51 @@ def project_detail(request, id):
             {"detail": f"Failed to reach Time-Series service: {str(e)}"},
             status=status.HTTP_502_BAD_GATEWAY
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def initiative_detail(request, id):
+    params = request.query_params.dict()
+    try:
+        detail_res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/initiative-detail/{id}/",
+            params=params,
+            timeout=10
+        )
+        if detail_res.ok:
+            return Response(detail_res.json(), status=detail_res.status_code)
+    except requests.exceptions.RequestException:
+        detail_res = None
+
+    try:
+        list_res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/initiatives/",
+            params=params,
+            timeout=10
+        )
+        list_res.raise_for_status()
+        payload = list_res.json()
+        items = payload.get("data") if isinstance(payload, dict) else []
+        initiative = next((item for item in items or [] if str(item.get("id")) == str(id)), None)
+        if initiative:
+            return Response(
+                {
+                    "result": "SUCCUSS",
+                    "message": "SUCCUSS",
+                    "data": initiative,
+                },
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"detail": "Initiative not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
     
 
 

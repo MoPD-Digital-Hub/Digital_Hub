@@ -21,6 +21,7 @@ urlpatterns = [
     path('month-lists/', time_series_api.month_lists, name='time-series-month_lists'),
     path('year-lists/', time_series_api.year_lists, name='time-series-year_lists'),
     path('initiatives/', time_series_api.initiatives, name='time-series-initiatives'),
+    path('initiative-detail/<str:id>/', time_series_api.initiative_detail, name='time-series-initiative-detail'),
     path('project-list/', time_series_api.project_list, name='time-series-project-list'),
     path('project-detail/<str:id>/', time_series_api.project_detail, name='time-series-project-detail'),
     path('overview/', time_series_api.overview, name='time-series-overview'),
