@@ -1,0 +1,28 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }} | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/sdg-detail.css' %}?v=20260311bv">
+{% endblock %}
+
+{% block content %}
+<div
+  class="sdg-detail-page"
+  data-sdg-detail-page
+  data-page-mode="overview"
+  data-goal-id="{{ goal_id }}"
+  data-endpoint="/dashboard/api/sdgs/{{ goal_id }}/"
+  data-list-base="/dashboard/frameworks/sdgs/"
+  data-detail-base="/dashboard/frameworks/sdgs/{{ goal_id }}/"
+  data-data-base="/dashboard/frameworks/sdgs/{{ goal_id }}/data/"
+>
+  <div class="sdg-page-state" data-sdg-detail-state>Loading SDG detail...</div>
+  <div class="sdg-detail-content" data-sdg-detail-content hidden></div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/sdg-detail.js' %}?v=20260311bv"></script>
+{% endblock %}

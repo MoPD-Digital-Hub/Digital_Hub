@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.conf import settings
+from django.http import HttpResponse
 from rest_framework import status
 
 
@@ -336,6 +337,108 @@ def high_frequency(request):
         )
 
         return Response(res.json(), status=res.status_code)
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_topic_data(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/export-topic-data/{id}/",
+            params=params,
+            timeout=30
+        )
+
+        response = HttpResponse(
+            res.content,
+            status=res.status_code,
+            content_type=res.headers.get(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
+        )
+
+        content_disposition = res.headers.get("Content-Disposition")
+        if content_disposition:
+            response["Content-Disposition"] = content_disposition
+
+        return response
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_category_data(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/export-category-data/{id}/",
+            params=params,
+            timeout=30
+        )
+
+        response = HttpResponse(
+            res.content,
+            status=res.status_code,
+            content_type=res.headers.get(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
+        )
+
+        content_disposition = res.headers.get("Content-Disposition")
+        if content_disposition:
+            response["Content-Disposition"] = content_disposition
+
+        return response
+
+    except requests.exceptions.RequestException as e:
+        return Response(
+            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
+            status=status.HTTP_502_BAD_GATEWAY
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_indicator_data(request, id):
+    try:
+        params = request.query_params.dict()
+
+        res = requests.get(
+            f"{TIMESERIES_URL}/api/mobile/export-indicator-data/{id}/",
+            params=params,
+            timeout=30
+        )
+
+        response = HttpResponse(
+            res.content,
+            status=res.status_code,
+            content_type=res.headers.get(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ),
+        )
+
+        content_disposition = res.headers.get("Content-Disposition")
+        if content_disposition:
+            response["Content-Disposition"] = content_disposition
+
+        return response
 
     except requests.exceptions.RequestException as e:
         return Response(

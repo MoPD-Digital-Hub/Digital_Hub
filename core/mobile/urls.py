@@ -29,6 +29,9 @@ urlpatterns = [
     ##updated
     path('categories/<str:id>/', time_series_api.categories, name='time-series-categories'),
     path('kpis/<str:id>/', time_series_api.kpis, name='time-series-kpis'),
+    path('export-topic-data/<str:id>/', time_series_api.export_topic_data, name='time-series-export-topic-data'),
+    path('export-category-data/<str:id>/', time_series_api.export_category_data, name='time-series-export-category-data'),
+    path('export-indicator-data/<str:id>/', time_series_api.export_indicator_data, name='time-series-export-indicator-data'),
 
     #DPMEs
     path('policy-areas/', dpmes_api.policy_areas, name='dpmes-policy-area'),

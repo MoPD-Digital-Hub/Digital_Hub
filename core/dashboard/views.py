@@ -1,11 +1,64 @@
+import json
+import ssl
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 from AI.models import ChatInstance, QuestionHistory
 
 from .forms import DashboardPasswordChangeForm, DashboardProfileForm
+
+
+SDG_DATA_TEMPLATE = "https://sdg.mopd.gov.et/_next/data/IKzAUZqfiBSFdEHfm_tML/goals/sdg/{goal_id}.json"
+
+
+def _open_remote_json(url):
+    request = Request(url, headers={"User-Agent": "DigitalHub/1.0"})
+    contexts = [ssl.create_default_context(), ssl._create_unverified_context()]
+
+    last_error = None
+    for context in contexts:
+        try:
+            with urlopen(request, timeout=20, context=context) as response:
+                return json.load(response)
+        except (HTTPError, URLError, TimeoutError, ssl.SSLError, json.JSONDecodeError) as exc:
+            last_error = exc
+
+    raise last_error or RuntimeError("Unable to load remote SDG data")
+
+
+def _build_sdg_payload(goal_id):
+    remote_payload = _open_remote_json(SDG_DATA_TEMPLATE.format(goal_id=goal_id))
+    page_props = remote_payload.get("pageProps", {})
+    sdg_data = page_props.get("data", {}).get("sdg", {})
+
+    goals = list(sdg_data.get("goals") or [])
+    selected_goal = next((goal for goal in goals if str(goal.get("id")) == str(goal_id)), None)
+    targets = [
+        target
+        for target in (sdg_data.get("targets") or [])
+        if str(target.get("goal")) == str(goal_id)
+    ]
+    indicators = [
+        indicator
+        for indicator in (sdg_data.get("indicators") or [])
+        if str(indicator.get("goal")) == str(goal_id)
+    ]
+
+    return {
+        "countryName": page_props.get("countryName") or "Ethiopia",
+        "country": page_props.get("country") or "ethiopia",
+        "framework": page_props.get("framework") or "sdg",
+        "goal": selected_goal,
+        "goals": goals,
+        "targets": targets,
+        "indicators": indicators,
+    }
 
 
 def dashboard_login(request):
@@ -234,3 +287,60 @@ def initiative_detail_page(request, initiative_id):
         "initiative_id": initiative_id,
     }
     return render(request, "data-hub/pages/initiative-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sdg_list_page(request):
+    context = {
+        "page_title": "Sustainable Development Goals",
+        "subtitle": "Browse the 17 SDGs, open goal-level detail views, and explore targets and indicators from the national SDG platform.",
+    }
+    return render(request, "data-hub/pages/sdg-list.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sdg_detail_page(request, goal_id):
+    context = {
+        "page_title": "SDG Detail",
+        "subtitle": "Review goal narratives, targets, and indicator evidence from the national SDG platform.",
+        "goal_id": goal_id,
+    }
+    return render(request, "data-hub/pages/sdg-detail.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sdg_data_page(request, goal_id):
+    context = {
+        "page_title": "SDG Data Explorer",
+        "subtitle": "Explore goal indicators, charts, downloads, and disaggregation views from the national SDG platform.",
+        "goal_id": goal_id,
+    }
+    return render(request, "data-hub/pages/sdg-data.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
+def sdg_list_data(request):
+    try:
+        payload = _build_sdg_payload(goal_id=1)
+    except Exception as exc:
+        return JsonResponse({"detail": "Unable to load SDG catalog.", "error": str(exc)}, status=502)
+
+    return JsonResponse(
+        {
+            "countryName": payload["countryName"],
+            "goals": payload["goals"],
+        }
+    )
+
+
+@login_required(login_url="/dashboard/login/")
+def sdg_detail_data(request, goal_id):
+    try:
+        payload = _build_sdg_payload(goal_id=goal_id)
+    except Exception as exc:
+        return JsonResponse({"detail": "Unable to load SDG detail.", "error": str(exc)}, status=502)
+
+    if payload["goal"] is None:
+        return JsonResponse({"detail": "SDG goal not found."}, status=404)
+
+    return JsonResponse(payload)

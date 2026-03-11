@@ -7,6 +7,7 @@
 {% url 'public_body_list' as public_body_list_url %}
 {% url 'sector_project_list' as sector_project_list_url %}
 {% url 'initiative_list' as initiative_list_url %}
+{% url 'sdg_list' as sdg_list_url %}
 
 <style>
     .dh-sidebar .pc-user-card {
@@ -162,6 +163,14 @@
                     <a class="pc-link {% if request.path == data_categories_url %}active{% endif %}" href="{{ data_categories_url|default:'#' }}">
                         <span class="pc-micon"><i class="ti ti-database"></i></span>
                         <span class="pc-mtext">{% trans "Data" %}</span>
+                    </a>
+                </li>
+
+                <li class="pc-item {% if request.path == sdg_list_url or '/dashboard/frameworks/sdgs/' in request.path %}active{% endif %}">
+                    <a class="pc-link {% if request.path == sdg_list_url or '/dashboard/frameworks/sdgs/' in request.path %}active{% endif %}" href="{{ sdg_list_url|default:'#' }}">
+                        <span class="pc-micon"><i class="ti ti-world"></i></span>
+                        <span class="pc-mtext">{% trans "SDGs" %}</span>
+                        <span class="dh-chip ms-auto">17</span>
                     </a>
                 </li>
 

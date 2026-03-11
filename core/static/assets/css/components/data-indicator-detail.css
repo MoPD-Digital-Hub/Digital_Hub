@@ -38,7 +38,15 @@
   gap: 12px;
 }
 
+.data-indicator-hero-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .data-indicator-back,
+.data-indicator-download-trigger,
 .data-indicator-chip,
 .data-indicator-hero-meta span {
   min-height: 38px;
@@ -53,6 +61,57 @@
   color: #fff;
   text-decoration: none;
   backdrop-filter: blur(12px);
+}
+
+.data-indicator-download-shell {
+  position: relative;
+}
+
+.data-indicator-download-trigger {
+  border: 0;
+}
+
+.data-indicator-download-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 188px;
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(10, 17, 28, 0.78);
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.32);
+  backdrop-filter: blur(18px);
+  z-index: 4;
+}
+
+.data-indicator-download-head {
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.74);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.data-indicator-download-list {
+  display: grid;
+  gap: 6px;
+}
+
+.data-indicator-download-option {
+  min-height: 38px;
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .data-indicator-hero-main {
@@ -392,6 +451,11 @@
   }
 
   .data-indicator-hero-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .data-indicator-hero-actions {
     flex-direction: column;
     align-items: flex-start;
   }

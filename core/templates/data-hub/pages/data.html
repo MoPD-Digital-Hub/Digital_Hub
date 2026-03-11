@@ -4,12 +4,197 @@
 {% block title %}{{ page_title }} | Data Hub{% endblock %}
 
 {% block style %}
-<link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260306a">
+<link rel="stylesheet" href="{% static 'assets/css/components/data-topic-browser.css' %}?v=20260311a">
 <link rel="stylesheet" href="{% static 'assets/css/components/high-frequency-indicators.css' %}?v=20260309a">
 <style>
   .data-page-sections {
     display: grid;
     gap: 28px;
+  }
+
+  .data-page-search-shell {
+    position: relative;
+    width: min(420px, 100%);
+    flex: 1 1 320px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .data-page-search-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--dh-text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .data-page-search-kicker::before {
+    content: "";
+    width: 24px;
+    height: 1px;
+    background: rgba(var(--dh-accent-rgb), 0.42);
+  }
+
+  .data-page-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 56px;
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--dh-elevated-border) 74%, rgba(var(--dh-accent-rgb), 0.18) 26%);
+    background: color-mix(in srgb, var(--dh-panel-bg) 94%, white 6%);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+  }
+
+  .data-page-search:focus-within {
+    border-color: rgba(var(--dh-accent-rgb), 0.34);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
+  }
+
+  .data-page-search-icon {
+    width: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dh-accent);
+    font-size: 18px;
+  }
+
+  .data-page-search input {
+    flex: 1;
+    min-width: 0;
+    height: 54px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--dh-text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .data-page-search input::placeholder {
+    color: var(--dh-text-muted);
+    font-weight: 500;
+  }
+
+  .data-page-search-clear {
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 12px;
+    margin-right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--dh-text-muted);
+    transition: background-color 0.18s ease, color 0.18s ease;
+  }
+
+  .data-page-search-clear:hover {
+    background: rgba(var(--dh-accent-rgb), 0.08);
+    color: var(--dh-accent);
+  }
+
+  .data-page-search-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    border-radius: 22px;
+    border: 1px solid color-mix(in srgb, var(--dh-elevated-border) 80%, rgba(var(--dh-accent-rgb), 0.2) 20%);
+    background: var(--dh-panel-bg);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.14);
+    overflow: hidden;
+  }
+
+  .data-page-search-results[hidden] {
+    display: none;
+  }
+
+  .data-page-search-state {
+    padding: 16px 18px;
+    color: var(--dh-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .data-page-search-list {
+    display: grid;
+  }
+
+  .data-page-search-item {
+    width: 100%;
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--dh-elevated-border) 78%, transparent 22%);
+    padding: 13px 16px;
+    display: grid;
+    gap: 7px;
+    text-align: left;
+    background: transparent;
+    transition: background-color 0.18s ease;
+  }
+
+  .data-page-search-item:first-child {
+    border-top: 0;
+  }
+
+  .data-page-search-item:hover,
+  .data-page-search-item:focus-visible {
+    background: rgba(var(--dh-accent-rgb), 0.07);
+    outline: 0;
+  }
+
+  .data-page-search-item-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .data-page-search-item-code {
+    color: var(--dh-accent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .data-page-search-item-arrow {
+    color: var(--dh-text-muted);
+    font-size: 16px;
+  }
+
+  .data-page-search-item-title {
+    color: var(--dh-text);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+
+  .data-page-search-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: var(--dh-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .data-page-search-chip {
+    min-height: 22px;
+    border-radius: 999px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    background: var(--dh-chip-bg);
+    color: var(--dh-chip-text);
+    border: 1px solid var(--dh-chip-border);
   }
 
   .data-page-panel {
@@ -134,6 +319,29 @@
             <h2>Topic Catalog</h2>
             <p>Browse development topics, then move into categories, KPIs, and indicator history.</p>
           </div>
+          <div class="data-page-search-shell" data-indicator-search>
+            <div class="data-page-search-kicker">Indicator Search</div>
+            <label class="data-page-search" for="dataIndicatorSearch">
+              <span class="data-page-search-icon" aria-hidden="true"><i class="ti ti-search"></i></span>
+              <input
+                id="dataIndicatorSearch"
+                type="search"
+                placeholder="Search indicators like GDP, inflation, CPI..."
+                autocomplete="off"
+                data-indicator-search-input
+              >
+              <button
+                type="button"
+                class="data-page-search-clear"
+                data-indicator-search-clear
+                aria-label="Clear search"
+                hidden
+              >
+                <i class="ti ti-x"></i>
+              </button>
+            </label>
+            <div class="data-page-search-results" data-indicator-search-results hidden></div>
+          </div>
         </div>
         <div class="data-topic-grid" data-topic-browser-grid></div>
       </div>
@@ -165,5 +373,5 @@
 {% endblock %}
 
 {% block script %}
-<script type="module" src="{% static 'assets/js/pages/data-page.js' %}?v=20260309c"></script>
+<script type="module" src="{% static 'assets/js/pages/data-page.js' %}?v=20260311d"></script>
 {% endblock %}

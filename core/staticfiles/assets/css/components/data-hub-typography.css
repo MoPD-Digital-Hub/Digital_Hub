@@ -1,0 +1,38 @@
+:root {
+  --dh-font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+  --dh-font-display: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+}
+
+body {
+  font-family: var(--dh-font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.card-title,
+.page-header-title,
+.pc-sidebar .pc-item > .pc-link .pc-mtext,
+.pc-sidebar .pc-caption,
+.btn,
+.badge {
+  font-family: var(--dh-font-display);
+}
+
+input,
+textarea,
+select,
+button,
+.form-control,
+.form-select,
+.table,
+.dropdown-menu,
+.nav-link,
+.breadcrumb,
+.pagination,
+.list-group-item {
+  font-family: var(--dh-font-body);
+}

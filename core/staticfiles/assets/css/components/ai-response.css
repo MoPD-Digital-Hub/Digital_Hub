@@ -1,0 +1,179 @@
+.ai-msg-content .ai-table-wrap {
+  border: 1px solid var(--dh-elevated-border);
+  border-radius: 14px;
+  margin: 12px 0;
+  overflow-x: auto;
+  background: var(--dh-surface-bg);
+  box-shadow: var(--dh-shadow);
+}
+
+.ai-msg-content .ai-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-msg-content .ai-table thead th {
+  background: linear-gradient(180deg, var(--dh-surface-soft) 0%, var(--dh-surface-muted) 100%) !important;
+  color: var(--dh-text) !important;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--dh-elevated-border) !important;
+}
+
+.ai-msg-content .ai-table th,
+.ai-msg-content .ai-table td {
+  padding: 11px 12px !important;
+  text-align: left;
+  vertical-align: middle;
+  border-right: 1px solid var(--dh-border) !important;
+  border-bottom: 1px solid var(--dh-border) !important;
+  white-space: nowrap;
+  color: var(--dh-text) !important;
+  background: transparent !important;
+}
+
+.ai-msg-content .ai-table th:last-child,
+.ai-msg-content .ai-table td:last-child {
+  border-right: 0 !important;
+}
+
+.ai-msg-content .ai-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.ai-msg-content .ai-table tbody tr:nth-child(even) td {
+  background: var(--dh-surface-soft) !important;
+}
+
+.ai-msg-content .ai-table tbody tr:hover td {
+  background: rgba(var(--dh-accent-rgb), 0.08) !important;
+}
+
+.ai-msg-content .ai-table .ai-col-number,
+.ai-msg-content .ai-table .ai-cell-number {
+  width: 58px;
+  min-width: 58px;
+  max-width: 58px;
+  text-align: center;
+}
+
+.ai-msg-content .ai-table .ai-col-number {
+  color: var(--dh-text-muted) !important;
+}
+
+.ai-msg-content .ai-table .ai-cell-number {
+  color: var(--dh-text) !important;
+  font-weight: 700;
+}
+
+.ai-chart-payload {
+  margin: 12px 0;
+}
+
+.ai-chart-card {
+  border: 1px solid var(--dh-elevated-border);
+  border-radius: 14px;
+  background: var(--dh-surface-bg);
+  box-shadow: var(--dh-shadow);
+  padding: 12px 12px 8px;
+}
+
+.ai-chart-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dh-text);
+  margin-bottom: 8px;
+}
+
+.ai-chart-loading,
+.ai-chart-error {
+  border: 1px dashed var(--dh-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--dh-text-muted);
+}
+
+.ai-action-payload {
+  margin: 10px 0;
+}
+
+.ai-action-btn {
+  border: 1px solid var(--dh-accent);
+  background: linear-gradient(135deg, var(--dh-accent), var(--dh-accent-strong));
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(var(--dh-accent-rgb), 0.22);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.ai-action-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 12px 22px rgba(var(--dh-accent-rgb), 0.24);
+}
+
+.ai-bar-chart {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(64px, 1fr);
+  align-items: end;
+  gap: 12px;
+  min-height: 252px;
+  padding: 10px 4px 2px;
+  overflow-x: auto;
+}
+
+.ai-bar-item {
+  display: grid;
+  grid-template-rows: auto minmax(160px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.ai-bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dh-text-muted);
+  text-align: center;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ai-bar-column-wrap {
+  position: relative;
+  min-height: 160px;
+  border-radius: 16px 16px 12px 12px;
+  background: rgba(var(--dh-accent-rgb), 0.16);
+  overflow: hidden;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.ai-bar-column {
+  width: 100%;
+  min-height: 8px;
+  border-radius: 14px 14px 8px 8px;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.ai-bar-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dh-text);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}

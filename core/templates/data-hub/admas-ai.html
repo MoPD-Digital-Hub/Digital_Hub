@@ -302,19 +302,60 @@
   }
   .msg {
     max-width: min(960px, 92%);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    gap: 12px;
+    line-height: 1.55;
+  }
+  .msg-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .msg-avatar-glyph {
+    line-height: 1;
+    font-size: 20px;
+  }
+  .msg-avatar-image {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    display: block;
+  }
+  .msg-bubble {
     border-radius: 14px;
     padding: 12px 14px;
-    line-height: 1.55;
     border: 1px solid var(--ai-border);
+    min-width: 0;
   }
   .msg.user {
     margin-left: auto;
+  }
+  .msg.user .msg-avatar {
+    order: 2;
+    background: color-mix(in srgb, var(--ai-accent-strong) 78%, white 22%);
+    color: #fff;
+  }
+  .msg.user .msg-bubble {
     background: var(--ai-user-msg-bg);
     border: 0;
     color: #fff;
   }
   .msg.ai {
     margin-right: auto;
+  }
+  .msg.ai .msg-avatar {
+    background: color-mix(in srgb, rgba(var(--ai-accent-rgb), 0.16) 76%, var(--dh-surface-bg) 24%);
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 22%, transparent);
+    color: var(--ai-accent);
+  }
+  .msg.ai .msg-bubble {
     background: transparent !important;
     background-color: transparent !important;
     color: var(--ai-text);
@@ -568,19 +609,28 @@
       <div class="ai-chat-output" id="chatOutput" data-room="{{ active_instance.id }}">
         {% if history %}
           {% for item in history %}
-            <div class="msg user">{{ item.question }}</div>
+            <div class="msg user">
+              <span class="msg-avatar" aria-hidden="true"><i class="ti ti-user-circle"></i></span>
+              <div class="msg-bubble">{{ item.question }}</div>
+            </div>
             {% if item.response %}
             <div class="msg ai">
-              <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
-              <div class="ai-msg-content">{{ item.response|safe }}</div>
+              <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
+              <div class="msg-bubble">
+                <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+                <div class="ai-msg-content">{{ item.response|safe }}</div>
+              </div>
             </div>
             {% endif %}
           {% endfor %}
         {% else %}
         <div class="msg ai">
-          <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
-          <div class="ai-msg-content">
-            <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+          <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
+          <div class="msg-bubble">
+            <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+            <div class="ai-msg-content">
+              <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+            </div>
           </div>
         </div>
         {% endif %}

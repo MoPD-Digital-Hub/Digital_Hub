@@ -28,6 +28,7 @@
   let loadingElement = null;
   let chartCounter = 0;
   const sidebarStorageKey = "admas-ai-sidebar-collapsed";
+  const aiAvatarSrc = "/static/assets/images/token-branded_ais.png";
 
   function getThemeValue(name, fallback) {
     const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -117,7 +118,13 @@
   function appendUserMessage(text) {
     const el = document.createElement("div");
     el.className = "msg user";
-    el.textContent = text;
+    el.innerHTML =
+      '<span class="msg-avatar" aria-hidden="true"><i class="ti ti-user-circle"></i></span>' +
+      '<div class="msg-bubble"></div>';
+    const bubble = el.querySelector(".msg-bubble");
+    if (bubble) {
+      bubble.textContent = text;
+    }
     chatOutput.appendChild(el);
     scrollToBottom();
   }
@@ -148,8 +155,11 @@
     el.className = "msg ai";
     const normalizedHtml = normalizeAIContent(html);
     el.innerHTML =
+      '<span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="' + aiAvatarSrc + '" alt=""></span>' +
+      '<div class="msg-bubble">' +
       '<div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>' +
-      '<div class="ai-msg-content">' + normalizedHtml + "</div>";
+      '<div class="ai-msg-content">' + normalizedHtml + "</div>" +
+      "</div>";
     chatOutput.appendChild(el);
     hydrateMessageNode(el);
     scrollToBottom();

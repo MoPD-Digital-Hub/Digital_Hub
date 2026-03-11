@@ -1,4 +1,9 @@
 const mediaBaseUrl = "https://time-series.mopd.gov.et/";
+const TOPIC_DOWNLOAD_OPTIONS = [
+  { key: "annual", label: "Annual" },
+  { key: "quarter", label: "Quarter" },
+  { key: "month", label: "Month" },
+];
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -22,6 +27,81 @@ function buildMediaUrl(path) {
 
 function renderState(container, message) {
   container.innerHTML = `<div class="data-topic-detail-state">${escapeHtml(message)}</div>`;
+}
+
+function getTopicExportUrl(topicId, dataType) {
+  const params = new URLSearchParams({
+    data_type: dataType,
+    file_type: "excel",
+  });
+  return `/api/mobile/export-topic-data/${encodeURIComponent(topicId)}/?${params.toString()}`;
+}
+
+function renderTopicDownloadMenu() {
+  return `
+    <div class="data-topic-download-shell">
+      <button
+        type="button"
+        class="data-topic-download-trigger"
+        data-topic-download-trigger
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        <i class="ti ti-file-spreadsheet"></i>
+        <span>Download Excel</span>
+      </button>
+      <div class="data-topic-download-menu" data-topic-download-menu hidden>
+        <div class="data-topic-download-head">Select dataset</div>
+        <div class="data-topic-download-list">
+          ${TOPIC_DOWNLOAD_OPTIONS.map(
+            (option) => `
+              <button
+                type="button"
+                class="data-topic-download-option"
+                data-topic-download-option
+                data-download-type="${escapeHtml(option.key)}"
+              >
+                <span>${escapeHtml(option.label)}</span>
+                <i class="ti ti-file-spreadsheet"></i>
+              </button>
+            `
+          ).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFrequencyDownloadOptions(optionPrefix) {
+  return TOPIC_DOWNLOAD_OPTIONS.map(
+    (option) => `
+      <button
+        type="button"
+        class="${optionPrefix}-option"
+        data-download-option
+        data-download-type="${escapeHtml(option.key)}"
+      >
+        <span>${escapeHtml(option.label)}</span>
+        <i class="ti ti-file-spreadsheet"></i>
+      </button>
+    `
+  ).join("");
+}
+
+function getCategoryExportUrl(categoryId, dataType) {
+  const params = new URLSearchParams({
+    data_type: dataType,
+    file_type: "excel",
+  });
+  return `/api/mobile/export-category-data/${encodeURIComponent(categoryId)}/?${params.toString()}`;
+}
+
+function getIndicatorExportUrl(indicatorId, dataType) {
+  const params = new URLSearchParams({
+    data_type: dataType,
+    file_type: "excel",
+  });
+  return `/api/mobile/export-indicator-data/${encodeURIComponent(indicatorId)}/?${params.toString()}`;
 }
 
 function hasChildKpis(kpi) {
@@ -74,9 +154,30 @@ function renderKpiCard(kpi, level = 0) {
             <span>${escapeHtml(kpi.code || "No code")}</span>
           </div>
         </div>
-        <a class="data-topic-kpi-open" href="/dashboard/data/indicator/${escapeHtml(kpi.id)}/" aria-label="Open indicator detail">
-          <i class="ti ti-chevron-right"></i>
-        </a>
+        <div class="data-topic-kpi-actions">
+          <div class="data-topic-kpi-download-shell">
+            <button
+              type="button"
+              class="data-topic-kpi-download-trigger"
+              data-kpi-download-trigger
+              data-indicator-id="${escapeHtml(kpi.id)}"
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Download indicator data"
+            >
+              <i class="ti ti-file-spreadsheet"></i>
+            </button>
+            <div class="data-topic-kpi-download-menu" data-kpi-download-menu hidden>
+              <div class="data-topic-kpi-download-head">Download Excel</div>
+              <div class="data-topic-kpi-download-list">
+                ${renderFrequencyDownloadOptions("data-topic-kpi-download")}
+              </div>
+            </div>
+          </div>
+          <a class="data-topic-kpi-open" href="/dashboard/data/indicator/${escapeHtml(kpi.id)}/" aria-label="Open indicator detail">
+            <i class="ti ti-chevron-right"></i>
+          </a>
+        </div>
       </div>
       ${renderKpiValuePanel(kpi)}
       ${renderSubIndicatorSection(kpi, level)}
@@ -202,19 +303,42 @@ function renderCategoryAccordion(categories) {
         .map(
           (category) => `
             <article class="data-topic-category" data-category-item data-category-id="${escapeHtml(category.id)}">
-              <button type="button" class="data-topic-category-trigger" data-category-trigger aria-expanded="false">
-                <span class="data-topic-category-icon">
-                  <i class="ti ti-layout-grid"></i>
-                </span>
-                <div class="data-topic-category-copy">
-                  <h3>${escapeHtml(category.name_ENG || category.name_AMH || "Category")}</h3>
-                  <p>${escapeHtml(category.code || "No code")}</p>
+              <div class="data-topic-category-head">
+                <button type="button" class="data-topic-category-trigger" data-category-trigger aria-expanded="false">
+                  <span class="data-topic-category-icon">
+                    <i class="ti ti-layout-grid"></i>
+                  </span>
+                  <div class="data-topic-category-copy">
+                    <h3>${escapeHtml(category.name_ENG || category.name_AMH || "Category")}</h3>
+                    <p>${escapeHtml(category.code || "No code")}</p>
+                  </div>
+                  <span class="data-topic-category-count">View KPIs</span>
+                  <span class="data-topic-category-toggle">
+                    <i class="ti ti-chevron-down"></i>
+                  </span>
+                </button>
+                <div class="data-topic-category-actions">
+                  <div class="data-topic-category-download-shell">
+                    <button
+                      type="button"
+                      class="data-topic-category-download-trigger"
+                      data-category-download-trigger
+                      data-category-id="${escapeHtml(category.id)}"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                    >
+                      <i class="ti ti-file-spreadsheet"></i>
+                      <span>Download</span>
+                    </button>
+                    <div class="data-topic-category-download-menu" data-category-download-menu hidden>
+                      <div class="data-topic-category-download-head">Download Excel</div>
+                      <div class="data-topic-category-download-list">
+                        ${renderFrequencyDownloadOptions("data-topic-category-download")}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <span class="data-topic-category-count">View KPIs</span>
-                <span class="data-topic-category-toggle">
-                  <i class="ti ti-chevron-down"></i>
-                </span>
-              </button>
+              </div>
               <div class="data-topic-category-panel" data-category-panel hidden>
                 <div class="data-topic-category-loading" hidden>Loading KPIs...</div>
                 <div data-category-content></div>
@@ -269,6 +393,7 @@ function bindCategoryAccordions(container) {
         bindKpiHistory(content);
         bindKpiChildren(content);
         bindKpiCards(content);
+        bindKpiDownloads(content);
         loaded = true;
       } catch (_error) {
         content.innerHTML = '<div class="data-topic-kpi-empty">Unable to load KPIs for this category right now.</div>';
@@ -276,6 +401,65 @@ function bindCategoryAccordions(container) {
         loading.hidden = true;
       }
     });
+  });
+}
+
+function bindCategoryDownloads(container) {
+  const shells = Array.from(container.querySelectorAll(".data-topic-category-download-shell"));
+  if (!shells.length) {
+    return;
+  }
+
+  const closeAll = () => {
+    shells.forEach((shell) => {
+      const trigger = shell.querySelector("[data-category-download-trigger]");
+      const menu = shell.querySelector("[data-category-download-menu]");
+      if (trigger) {
+        trigger.setAttribute("aria-expanded", "false");
+      }
+      if (menu) {
+        menu.hidden = true;
+      }
+    });
+  };
+
+  shells.forEach((shell) => {
+    const trigger = shell.querySelector("[data-category-download-trigger]");
+    const menu = shell.querySelector("[data-category-download-menu]");
+    const categoryId = trigger?.dataset.categoryId;
+    if (!trigger || !menu || !categoryId) {
+      return;
+    }
+
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = trigger.getAttribute("aria-expanded") === "true";
+      closeAll();
+      trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      menu.hidden = isOpen;
+    });
+
+    menu.querySelectorAll("[data-download-option]").forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeAll();
+        window.location.assign(getCategoryExportUrl(categoryId, option.dataset.downloadType || "annual"));
+      });
+    });
+  });
+
+  container.addEventListener("click", (event) => {
+    if (!event.target.closest(".data-topic-category-download-shell")) {
+      closeAll();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAll();
+    }
   });
 }
 
@@ -345,6 +529,108 @@ function bindKpiCards(container) {
   });
 }
 
+function bindKpiDownloads(container) {
+  const shells = Array.from(container.querySelectorAll(".data-topic-kpi-download-shell"));
+  if (!shells.length) {
+    return;
+  }
+
+  const closeAll = () => {
+    shells.forEach((shell) => {
+      const trigger = shell.querySelector("[data-kpi-download-trigger]");
+      const menu = shell.querySelector("[data-kpi-download-menu]");
+      if (trigger) {
+        trigger.setAttribute("aria-expanded", "false");
+      }
+      if (menu) {
+        menu.hidden = true;
+      }
+    });
+  };
+
+  shells.forEach((shell) => {
+    const trigger = shell.querySelector("[data-kpi-download-trigger]");
+    const menu = shell.querySelector("[data-kpi-download-menu]");
+    const indicatorId = trigger?.dataset.indicatorId;
+    if (!trigger || !menu || !indicatorId) {
+      return;
+    }
+
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = trigger.getAttribute("aria-expanded") === "true";
+      closeAll();
+      trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      menu.hidden = isOpen;
+    });
+
+    menu.querySelectorAll("[data-download-option]").forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        closeAll();
+        window.location.assign(getIndicatorExportUrl(indicatorId, option.dataset.downloadType || "annual"));
+      });
+    });
+  });
+
+  container.addEventListener("click", (event) => {
+    if (!event.target.closest(".data-topic-kpi-download-shell")) {
+      closeAll();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeAll();
+    }
+  });
+}
+
+function bindTopicDownload(root, topicId) {
+  const shell = root.querySelector(".data-topic-download-shell");
+  const trigger = root.querySelector("[data-topic-download-trigger]");
+  const menu = root.querySelector("[data-topic-download-menu]");
+  if (!shell || !trigger || !menu || !topicId) {
+    return;
+  }
+
+  const close = () => {
+    trigger.setAttribute("aria-expanded", "false");
+    menu.hidden = true;
+  };
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const isOpen = trigger.getAttribute("aria-expanded") === "true";
+    trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
+    menu.hidden = isOpen;
+  });
+
+  menu.querySelectorAll("[data-topic-download-option]").forEach((option) => {
+    option.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      window.location.assign(getTopicExportUrl(topicId, option.dataset.downloadType || "annual"));
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!shell.contains(event.target)) {
+      close();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      close();
+    }
+  });
+}
+
 async function loadTopicDetail() {
   const root = document.querySelector("[data-topic-detail]");
   if (!root) {
@@ -380,7 +666,10 @@ async function loadTopicDetail() {
         <div class="data-topic-hero-shell">
           <div class="data-topic-hero-topline">
             <span class="data-topic-hero-badge">Topic Detail</span>
-            <a class="data-topic-back" href="/dashboard/data/"><i class="ti ti-arrow-left"></i><span>Back to topics</span></a>
+            <div class="data-topic-hero-actions">
+              ${renderTopicDownloadMenu()}
+              <a class="data-topic-back" href="/dashboard/data/"><i class="ti ti-arrow-left"></i><span>Back to topics</span></a>
+            </div>
           </div>
           <div class="data-topic-hero-copy">
             <span class="data-topic-hero-icon">
@@ -408,6 +697,8 @@ async function loadTopicDetail() {
     `;
 
     bindCategoryAccordions(body);
+    bindCategoryDownloads(body);
+    bindTopicDownload(hero, topicId);
   } catch (_error) {
     renderState(hero, "Unable to load topic detail right now.");
     renderState(body, "The categories endpoint did not return a usable payload.");

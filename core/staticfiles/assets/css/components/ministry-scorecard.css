@@ -1,0 +1,571 @@
+.ministry-strip {
+  display: grid;
+  gap: 16px;
+}
+
+.ministry-strip-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ministry-strip-title {
+  margin: 0;
+  color: var(--pc-heading-color, var(--bs-heading-color));
+  font-size: clamp(24px, 2.3vw, 34px);
+  line-height: 1;
+}
+
+.ministry-strip-subtitle {
+  margin: 8px 0 0;
+  color: var(--bs-secondary-color);
+  font-size: 14px;
+}
+
+.ministry-strip-nav {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.ministry-strip-nav-btn {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #d9e5ef;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff, #f4f8fb);
+  color: #0f172a;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.ministry-strip-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ministry-strip-viewport {
+  overflow: auto hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.ministry-strip-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.ministry-strip-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 204px;
+  gap: 12px;
+}
+
+.ministry-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 252px;
+  border-radius: 22px;
+  border: 1.5px solid rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0 22%, transparent 22% 100%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ministry-accent, #0f766e) 60%, #ffffff) 0%, color-mix(in srgb, var(--ministry-accent, #0f766e) 40%, #ffffff) 56%, color-mix(in srgb, var(--ministry-accent, #0f766e) 18%, #ffffff) 56%, color-mix(in srgb, var(--ministry-accent, #0f766e) 18%, #ffffff) 100%);
+  box-shadow: 0 18px 30px rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    filter 0.22s ease;
+}
+
+.ministry-card::before {
+  content: "";
+  position: absolute;
+  inset: 14px 14px auto 14px;
+  height: 44%;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.02)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.08) 0,
+      rgba(255, 255, 255, 0.08) 1px,
+      transparent 1px,
+      transparent 24px
+    );
+  pointer-events: none;
+  opacity: 0.85;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+
+.ministry-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 58%;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent),
+    linear-gradient(90deg, transparent 0 64%, rgba(255, 255, 255, 0.14) 64% 100%);
+  pointer-events: none;
+  opacity: 0.9;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+
+.ministry-card:hover,
+.ministry-card:focus-visible {
+  border-color: color-mix(in srgb, var(--ministry-accent, #0f766e) 72%, #ffffff);
+  box-shadow:
+    0 30px 52px rgba(15, 23, 42, 0.24),
+    0 0 0 2px color-mix(in srgb, var(--ministry-accent, #0f766e) 36%, transparent);
+  transform: translateY(-6px) rotate(-0.35deg);
+  filter: saturate(1.03);
+}
+
+.ministry-card:hover::before,
+.ministry-card:focus-visible::before {
+  transform: translateY(-6px);
+  opacity: 1;
+}
+
+.ministry-card:hover::after,
+.ministry-card:focus-visible::after {
+  transform: translateX(-8px);
+  opacity: 1;
+}
+
+.ministry-card-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 252px;
+  height: 100%;
+  padding: 12px 12px 0;
+}
+
+.ministry-card-mark {
+  display: flex;
+  align-items: start;
+  justify-content: end;
+  gap: 10px;
+  min-height: 18px;
+}
+
+.ministry-card-period,
+.ministry-card-indicators {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ministry-card-period {
+  background: rgba(255, 255, 255, 0.72);
+  color: color-mix(in srgb, var(--ministry-accent, #0f766e) 72%, #0f172a);
+  backdrop-filter: blur(10px);
+}
+
+.ministry-card-body {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 0;
+  padding: 8px 8px 10px;
+  align-content: start;
+}
+
+.ministry-card-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 3px solid rgba(255, 255, 255, 0.54);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 8px 14px rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.ministry-card-logo img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.ministry-card-heading {
+  display: grid;
+  gap: 4px;
+  min-height: 0;
+  align-content: start;
+}
+
+.ministry-card-heading h4 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
+}
+
+.ministry-card-heading h5 {
+  margin: 0;
+  color: rgba(15, 23, 42, 0.88);
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 600;
+  display: block;
+  overflow: visible;
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+.ministry-card-score {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 10px;
+  padding: 12px 12px 14px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, rgba(250, 252, 247, 0.72), rgba(245, 248, 239, 0.96));
+  border-radius: 0 0 20px 20px;
+  margin-top: 8px;
+}
+
+.ministry-card-side {
+  display: grid;
+  justify-items: start;
+  align-content: center;
+  gap: 0;
+  min-width: 0;
+  padding-left: 0;
+}
+
+.ministry-card-score-panel {
+  display: grid;
+  gap: 4px;
+  color: #0f172a;
+  min-width: 0;
+}
+
+.ministry-card-score-panel span {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.74;
+  color: #4b5563;
+}
+
+.ministry-card-score-panel strong {
+  font-size: 29px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 1000;
+  color: #000814;
+  letter-spacing: -0.05em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+  white-space: nowrap;
+}
+
+.ministry-card-indicators {
+  background: rgba(255, 255, 255, 0.78);
+  color: #334155;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 9px;
+  min-height: 30px;
+  justify-self: start;
+  white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+  .ministry-card,
+  .ministry-card-shell {
+    min-height: 262px;
+  }
+
+  .ministry-card-score {
+    align-items: start;
+  }
+
+  .ministry-card-side {
+    width: 100%;
+  }
+
+  .ministry-card-body {
+    grid-template-columns: 54px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+
+  .ministry-card-heading h4 {
+    font-size: 22px;
+  }
+
+  .ministry-card-heading h5 {
+    font-size: 12px;
+  }
+}
+
+
+.ministry-card-empty,
+.ministry-card-error {
+  min-height: 220px;
+  border: 1px dashed var(--bs-border-color);
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  color: var(--bs-secondary-color);
+  background: linear-gradient(180deg, #fbfdff, #f4f8fb);
+}
+
+.ministry-card-skeleton {
+  min-height: 300px;
+  border-radius: 28px;
+  background: linear-gradient(90deg, #edf2f7 25%, #f8fbff 50%, #edf2f7 75%);
+  background-size: 200% 100%;
+  animation: ministry-skeleton 1.3s linear infinite;
+}
+
+.ministry-card-grid {
+  min-height: 202px;
+  border-radius: 18px;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+}
+
+.ministry-card-grid.ministry-card-skeleton {
+  min-height: 202px;
+  border-radius: 18px;
+}
+
+.ministry-card-grid .ministry-card-shell {
+  min-height: 202px;
+  padding: 10px 10px 0;
+}
+
+.ministry-card-grid .ministry-card-body {
+  gap: 8px;
+  padding: 2px 6px 8px;
+}
+
+.ministry-card-grid .ministry-card-logo {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
+}
+
+.ministry-card-grid .ministry-card-logo img {
+  width: 48px;
+  height: 48px;
+}
+
+.ministry-card-grid .ministry-card-heading {
+  min-height: 48px;
+}
+
+.ministry-card-grid .ministry-card-heading h4 {
+  font-size: 22px;
+}
+
+.ministry-card-grid .ministry-card-heading h5 {
+  font-size: 11px;
+  -webkit-line-clamp: 2;
+}
+
+.ministry-card-grid .ministry-card-rank,
+.ministry-card-grid .ministry-card-indicators {
+  padding: 5px 8px;
+  font-size: 10px;
+}
+
+.ministry-card-progress {
+  height: 8px;
+  margin: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+  overflow: hidden;
+}
+
+.ministry-card-progress-bar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.ministry-card-grid .ministry-card-score {
+  padding: 8px 6px 10px;
+  gap: 8px;
+}
+
+.ministry-card-grid .ministry-card-score-panel span {
+  font-size: 10px;
+}
+
+.ministry-card-grid .ministry-card-score-panel strong {
+  font-size: 17px;
+}
+
+.ministry-card-grid {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+  will-change: transform;
+}
+
+.ministry-card-grid:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 26px rgba(15, 23, 42, 0.1);
+  border-color: color-mix(in srgb, var(--ministry-accent, #0f766e) 28%, #ffffff);
+}
+
+.ministry-card-grid:hover .ministry-card-progress-bar {
+  filter: saturate(1.08);
+}
+
+.ministry-card-grid:hover .ministry-card-logo {
+  transform: scale(1.04);
+  box-shadow: 0 12px 18px rgba(15, 23, 42, 0.1);
+}
+
+.ministry-card-grid:hover .ministry-card-heading h4,
+.ministry-card-grid:hover .ministry-card-heading h5 {
+  color: color-mix(in srgb, var(--ministry-accent, #0f766e) 74%, #0f172a);
+}
+
+.ministry-card-grid .ministry-card-logo,
+.ministry-card-grid .ministry-card-heading h4,
+.ministry-card-grid .ministry-card-heading h5 {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease;
+}
+
+@keyframes ministry-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ministry-strip-track {
+    grid-auto-columns: 210px;
+  }
+
+  .ministry-card,
+  .ministry-card-shell {
+    min-height: 256px;
+  }
+
+  .ministry-card-shell {
+    padding: 12px 12px 0;
+  }
+
+  .ministry-card-heading h4 {
+    font-size: 30px;
+  }
+
+  .ministry-card-heading {
+    min-height: 66px;
+  }
+
+  .ministry-card-heading h5 {
+    font-size: 12px;
+  }
+
+  .ministry-card-logo {
+    width: 60px;
+    height: 60px;
+  }
+
+  .ministry-card-logo img {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+body[data-pc-theme="dark"] .ministry-strip-nav-btn {
+  border-color: #334155;
+  background: linear-gradient(180deg, #0f172a, #162233);
+  color: #e2e8f0;
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.3);
+}
+
+body[data-pc-theme="dark"] .ministry-card {
+  border-color: rgba(71, 85, 105, 0.42);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.1), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--ministry-accent, #22c55e) 34%, #0f172a) 0%, color-mix(in srgb, var(--ministry-accent, #22c55e) 28%, #0f172a) 72%, color-mix(in srgb, var(--ministry-accent, #22c55e) 10%, #0f172a) 72%, color-mix(in srgb, var(--ministry-accent, #22c55e) 10%, #0f172a) 100%);
+  color: #e2e8f0;
+  box-shadow: 0 22px 38px rgba(2, 6, 23, 0.36);
+}
+
+body[data-pc-theme="dark"] .ministry-card::before {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #ffffff 22%, transparent), color-mix(in srgb, var(--ministry-accent, #22c55e) 10%, transparent));
+}
+
+body[data-pc-theme="dark"] .ministry-card-indicators {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(71, 85, 105, 0.44);
+  color: #cbd5e1;
+}
+
+body[data-pc-theme="dark"] .ministry-card-logo {
+  background: rgba(248, 250, 252, 0.92);
+  border-color: rgba(71, 85, 105, 0.42);
+  color: #0f172a;
+}
+
+body[data-pc-theme="dark"] .ministry-card-heading h4 {
+  color: #f8fafc;
+}
+
+body[data-pc-theme="dark"] .ministry-card-heading h5 {
+  color: rgba(226, 232, 240, 0.84);
+}
+
+body[data-pc-theme="dark"] .ministry-card-score {
+  border-top-color: rgba(255, 255, 255, 0.16);
+}
+
+body[data-pc-theme="dark"] .ministry-card-score-panel {
+  color: #f8fafc;
+}
+
+body[data-pc-theme="dark"] .ministry-card-empty,
+body[data-pc-theme="dark"] .ministry-card-error {
+  border-color: #334155;
+  background: linear-gradient(180deg, #0f172a, #162233);
+}
+
+body[data-pc-theme="dark"] .ministry-card-skeleton {
+  background: linear-gradient(90deg, #17212f 25%, #223245 50%, #17212f 75%);
+  background-size: 200% 100%;
+}

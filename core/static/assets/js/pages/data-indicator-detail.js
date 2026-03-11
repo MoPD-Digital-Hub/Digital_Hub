@@ -1,4 +1,9 @@
 const mediaBaseUrl = "https://time-series.mopd.gov.et/";
+const INDICATOR_DOWNLOAD_OPTIONS = [
+  { key: "annual", label: "Annual" },
+  { key: "quarter", label: "Quarter" },
+  { key: "month", label: "Month" },
+];
 let indicatorChartInstance = null;
 let indicatorChartWindowSize = null;
 let indicatorChartContext = null;
@@ -39,6 +44,50 @@ function buildMediaUrl(path) {
   } catch (_error) {
     return path;
   }
+}
+
+function getIndicatorExportUrl(indicatorId, dataType) {
+  const params = new URLSearchParams({
+    data_type: dataType,
+    file_type: "excel",
+  });
+  return `/api/mobile/export-indicator-data/${encodeURIComponent(indicatorId)}/?${params.toString()}`;
+}
+
+function renderIndicatorDownloadMenu(indicatorId) {
+  return `
+    <div class="data-indicator-download-shell">
+      <button
+        type="button"
+        class="data-indicator-download-trigger"
+        data-indicator-download-trigger
+        data-indicator-id="${escapeHtml(indicatorId)}"
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        <i class="ti ti-file-spreadsheet"></i>
+        <span>Download Excel</span>
+      </button>
+      <div class="data-indicator-download-menu" data-indicator-download-menu hidden>
+        <div class="data-indicator-download-head">Select dataset</div>
+        <div class="data-indicator-download-list">
+          ${INDICATOR_DOWNLOAD_OPTIONS.map(
+            (option) => `
+              <button
+                type="button"
+                class="data-indicator-download-option"
+                data-indicator-download-option
+                data-download-type="${escapeHtml(option.key)}"
+              >
+                <span>${escapeHtml(option.label)}</span>
+                <i class="ti ti-file-spreadsheet"></i>
+              </button>
+            `
+          ).join("")}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function formatMetricValue(value) {
@@ -204,7 +253,10 @@ function renderHero(indicator) {
     <div class="data-indicator-hero">
       <div class="data-indicator-hero-shell">
         <div class="data-indicator-hero-top">
-          <a class="data-indicator-back" href="javascript:history.back()"><i class="ti ti-arrow-left"></i><span>Back</span></a>
+          <div class="data-indicator-hero-actions">
+            <a class="data-indicator-back" href="javascript:history.back()"><i class="ti ti-arrow-left"></i><span>Back</span></a>
+            ${renderIndicatorDownloadMenu(indicator?.id || "")}
+          </div>
           <span class="data-indicator-chip">${escapeHtml(indicator?.code || "Indicator")}</span>
         </div>
         <div class="data-indicator-hero-main">
@@ -709,6 +761,49 @@ function bindIndicatorInteractions(root, indicator, series, currentSeriesKey, cu
   mountChart(body.querySelector("[data-indicator-chart]"), activeSeries, activeChartType);
 }
 
+function bindIndicatorDownload(root, indicatorId) {
+  const shell = root.querySelector(".data-indicator-download-shell");
+  const trigger = root.querySelector("[data-indicator-download-trigger]");
+  const menu = root.querySelector("[data-indicator-download-menu]");
+  if (!shell || !trigger || !menu || !indicatorId) {
+    return;
+  }
+
+  const close = () => {
+    trigger.setAttribute("aria-expanded", "false");
+    menu.hidden = true;
+  };
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const isOpen = trigger.getAttribute("aria-expanded") === "true";
+    trigger.setAttribute("aria-expanded", isOpen ? "false" : "true");
+    menu.hidden = isOpen;
+  });
+
+  menu.querySelectorAll("[data-indicator-download-option]").forEach((option) => {
+    option.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      window.location.assign(getIndicatorExportUrl(indicatorId, option.dataset.downloadType || "annual"));
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!shell.contains(event.target)) {
+      close();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      close();
+    }
+  });
+}
+
 async function loadIndicatorDetail() {
   const root = document.querySelector("[data-indicator-detail]");
   if (!root) {
@@ -731,6 +826,7 @@ async function loadIndicatorDetail() {
     const activeSeries = getDefaultSeries(indicator, series);
 
     hero.innerHTML = renderHero(indicator);
+    bindIndicatorDownload(hero, indicatorId);
     body.innerHTML = renderBody(indicator, series, activeSeries?.key, getDefaultChartType(activeSeries));
     bindIndicatorInteractions(root, indicator, series, activeSeries?.key, getDefaultChartType(activeSeries));
   } catch (_error) {

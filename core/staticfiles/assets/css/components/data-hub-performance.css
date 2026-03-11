@@ -1,0 +1,179 @@
+:root {
+  --dh-lite-shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --dh-lite-shadow-md: 0 6px 16px rgba(15, 23, 42, 0.05);
+}
+
+html,
+body,
+.pc-container,
+.pc-content,
+.topic-strip-viewport,
+.ministry-strip-viewport,
+.project-strip-viewport,
+.ai-table-wrap,
+.kpi-history-track {
+  scroll-behavior: auto !important;
+}
+
+.pc-header,
+.pc-sidebar,
+.pc-sidebar .navbar-content,
+.pc-head-link,
+.pc-sidebar .pc-link,
+.pc-sidebar .pc-arrow,
+.pc-sidebar .pc-user-card,
+.pc-sidebar .dh-brand-mark,
+.topic-card-badge,
+.topic-card-chip,
+.ministry-card__logo,
+.ministry-card__score,
+.project-card__glass,
+.project-card__icon,
+.summary-panel__metric,
+.initiative-card__badge,
+.initiative-card__stat,
+.policy-area-rank,
+.policy-area-score,
+.goal-hero,
+.goal-kpi-drawer,
+.goal-kpi-drawer__icon,
+.data-topic-hero__badge,
+.data-topic-detail__hero-chip,
+.policy-area-hero__badge,
+.policy-area-goal-card__score,
+.admas-ai-page .glass,
+.admas-ai-page .ai-chip {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.pc-header {
+  background: var(--dh-header-bg) !important;
+  background-color: var(--dh-header-bg) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+  box-shadow: 0 1px 0 var(--dh-border) !important;
+  isolation: isolate;
+}
+
+.pc-header .header-wrapper {
+  background: var(--dh-header-bg) !important;
+  background-color: var(--dh-header-bg) !important;
+  background-image: none !important;
+  opacity: 1 !important;
+}
+
+.pc-sidebar,
+.pc-header,
+.pc-sidebar .pc-link,
+.pc-sidebar .pc-arrow,
+.pc-head-link,
+.pc-submenu,
+.pc-submenu .pc-link,
+.topic-strip-nav-btn,
+.ministry-strip-nav-btn,
+.project-strip-nav-btn,
+.policy-area-strip-nav-btn,
+.dh-segmented__btn,
+.dh-filterbar__select,
+.dh-filterbar__search,
+.goal-performance-card,
+.goal-indicator-card,
+.goal-kpi-tab,
+.policy-area-card,
+.topic-card,
+.ministry-card,
+.project-card,
+.initiative-card,
+.summary-panel,
+.hf-card {
+  transition-property: background-color, color, border-color, box-shadow, transform, opacity !important;
+  transition-duration: 0.14s !important;
+  transition-timing-function: ease !important;
+}
+
+.pc-sidebar *,
+.pc-header *,
+.pc-content .card *,
+.pc-content section *,
+.pc-content article * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+.pc-sidebar,
+.pc-header,
+.pc-user-card,
+.topic-card,
+.ministry-card,
+.project-card,
+.initiative-card,
+.summary-panel,
+.policy-area-card,
+.hf-card,
+.goal-panel,
+.goal-kra-card,
+.goal-indicator-card,
+.goal-kpi-section,
+.data-topic-card,
+.data-indicator-panel,
+.policy-area-goal-card {
+  box-shadow: var(--dh-lite-shadow-sm) !important;
+}
+
+.pc-sidebar .navbar-wrapper,
+.pc-sidebar .navbar-content,
+.pc-header,
+.pc-container,
+.pc-content,
+.home-dashboard-sections,
+.policy-area-list-page,
+.goal-detail,
+.policy-area-detail,
+.data-topic-detail,
+.data-indicator-detail {
+  will-change: auto;
+}
+
+.pc-sidebar .navbar-content,
+.pc-content {
+  contain: layout style;
+}
+
+.pc-content .card:hover,
+.pc-content .card:focus-within,
+.topic-card:hover,
+.ministry-card:hover,
+.project-card:hover,
+.initiative-card:hover,
+.policy-area-card:hover,
+.goal-indicator-card:hover,
+.goal-performance-card:hover,
+.policy-area-goal-card:hover,
+.hf-card:hover {
+  transform: none !important;
+  box-shadow: var(--dh-lite-shadow-sm) !important;
+}
+
+.pc-sidebar .pc-link:hover,
+.pc-sidebar .pc-link.active,
+.pc-sidebar .pc-item.active > .pc-link,
+.pc-head-link:hover,
+.dh-segmented__btn:hover,
+.topic-strip-nav-btn:hover,
+.ministry-strip-nav-btn:hover,
+.project-strip-nav-btn:hover,
+.policy-area-strip-nav-btn:hover {
+  transform: none !important;
+}
+
+.loader-bg {
+  display: none !important;
+}
+
+@media (max-width: 991.98px) {
+  .pc-sidebar,
+  .pc-header {
+    box-shadow: none !important;
+  }
+}
