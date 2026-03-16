@@ -102,6 +102,15 @@ def sample_dashboard(request):
 
 
 @login_required(login_url="/dashboard/login/")
+def about_dpmes_page(request):
+    context = {
+        "page_title": "About DPMES",
+        "subtitle": "Understand the national platform story, governance model, and result framework.",
+    }
+    return render(request, "data-hub/pages/about-dpmes.html", context)
+
+
+@login_required(login_url="/dashboard/login/")
 def edit_profile_page(request):
     if request.method == "POST":
         form = DashboardProfileForm(request.POST, request.FILES, instance=request.user)

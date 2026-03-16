@@ -76,11 +76,11 @@
 }
 
 .ai-chart-card {
-  border: 1px solid var(--dh-elevated-border);
-  border-radius: 14px;
-  background: var(--dh-surface-bg);
-  box-shadow: var(--dh-shadow);
-  padding: 12px 12px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 4px 0 0;
 }
 
 .ai-chart-title {
@@ -92,11 +92,12 @@
 
 .ai-chart-loading,
 .ai-chart-error {
-  border: 1px dashed var(--dh-border);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 0;
   font-size: 13px;
   color: var(--dh-text-muted);
+  background: transparent !important;
 }
 
 .ai-action-payload {

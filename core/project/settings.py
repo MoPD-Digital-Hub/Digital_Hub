@@ -350,6 +350,8 @@ LOGGING = {
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
 AI_MAX_RETRIEVAL_DOCS = config("AI_MAX_RETRIEVAL_DOCS", default=4, cast=int)
+AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
+AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
 
 # LOGGING = {
 #     'version': 1,

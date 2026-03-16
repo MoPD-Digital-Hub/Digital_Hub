@@ -3,6 +3,11 @@
   const sendBtn = document.getElementById("sendBtn");
   const chatOutput = document.getElementById("chatOutput");
   const micBtn = document.getElementById("micBtn");
+  const speechLangEnBtn = document.getElementById("speechLangEn");
+  const speechLangAmBtn = document.getElementById("speechLangAm");
+  const liveTranscript = document.getElementById("liveTranscript");
+  const liveTranscriptLabel = document.getElementById("liveTranscriptLabel");
+  const liveTranscriptText = document.getElementById("liveTranscriptText");
   const chatSearch = document.getElementById("chatSearch");
   const chatTitle = document.getElementById("chatTitle");
   const newInstanceBtn = document.getElementById("newInstanceBtn");
@@ -25,10 +30,61 @@
   let socket = null;
   let streamMessageElement = null;
   let streamHtmlBuffer = "";
+  let pendingStreamRender = false;
   let loadingElement = null;
   let chartCounter = 0;
   const sidebarStorageKey = "admas-ai-sidebar-collapsed";
+  const speechLanguageStorageKey = "admas-ai-speech-language";
   const aiAvatarSrc = "/static/assets/images/token-branded_ais.png";
+  // Reuse generated speech per response text so repeated playback stays instant.
+  const ttsAudioCache = new Map();
+  const ttsRequestCache = new Map();
+  const ttsWarmRequestCache = new Map();
+  const translationCache = new Map();
+  const translationSocketRequests = new Map();
+  let activeTtsAudio = null;
+  let activeTtsButton = null;
+  let activeTtsObjectUrl = null;
+  let activeTtsStreamSocket = null;
+  let activeTtsAudioContext = null;
+  let activeTtsNextTime = 0;
+  const STREAMING_TTS_ENABLED = false;
+  let currentSpeechLanguage = "en-US";
+  let isVoiceRecording = false;
+  let voiceTranscriptFinal = "";
+  let voiceTranscriptInterim = "";
+  let autoScrollPinned = true;
+  let lastTouchY = 0;
+
+  function buildAIMessageMarkup(contentHtml) {
+    return (
+      '<span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="' + aiAvatarSrc + '" alt=""></span>' +
+      '<div class="msg-bubble">' +
+      '<div class="ai-msg-head">' +
+      '<span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>' +
+      '<div class="ai-msg-actions">' +
+      '<button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">' +
+      '<i class="ti ti-language-hiragana" aria-hidden="true"></i><span>Amharic</span>' +
+      "</button>" +
+      '<button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">' +
+      '<i class="ti ti-player-play-filled" aria-hidden="true"></i><span>Listen</span>' +
+      "</button>" +
+      "</div>" +
+      "</div>" +
+      '<div class="ai-msg-content">' + contentHtml + "</div>" +
+      '<div class="ai-msg-status" hidden></div>' +
+      '<div class="ai-translation-panel" hidden>' +
+      '<div class="ai-translation-head">' +
+      '<div class="ai-translation-label">Amharic</div>' +
+      '<button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">' +
+      '<i class="ti ti-player-play-filled" aria-hidden="true"></i><span>Speak</span>' +
+      "</button>" +
+      "</div>" +
+      '<div class="ai-translation-content"></div>' +
+      "</div>" +
+      "</div>"
+    );
+  }
 
   function getThemeValue(name, fallback) {
     const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -69,6 +125,92 @@
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function getSpeechLanguageLabel(languageCode) {
+    return languageCode === "am-ET" ? "Amharic" : "English";
+  }
+
+  function syncSpeechLanguageButtons() {
+    if (speechLangEnBtn) {
+      speechLangEnBtn.classList.toggle("is-active", currentSpeechLanguage === "en-US");
+      speechLangEnBtn.setAttribute("aria-pressed", currentSpeechLanguage === "en-US" ? "true" : "false");
+    }
+    if (speechLangAmBtn) {
+      speechLangAmBtn.classList.toggle("is-active", currentSpeechLanguage === "am-ET");
+      speechLangAmBtn.setAttribute("aria-pressed", currentSpeechLanguage === "am-ET" ? "true" : "false");
+    }
+    if (micBtn) {
+      micBtn.title = "Voice input (" + getSpeechLanguageLabel(currentSpeechLanguage) + ")";
+    }
+    if (liveTranscriptLabel) {
+      liveTranscriptLabel.textContent = "Recording in " + getSpeechLanguageLabel(currentSpeechLanguage);
+    }
+  }
+
+  function setTranscriptState(isListening, transcriptText) {
+    const inputRow = chatInput ? chatInput.closest(".ai-input-row") : null;
+    if (inputRow) {
+      inputRow.classList.toggle("is-listening", Boolean(isListening));
+    }
+    if (!liveTranscript || !liveTranscriptText) {
+      return;
+    }
+    liveTranscript.hidden = !isListening;
+    liveTranscript.classList.toggle("is-active", Boolean(isListening));
+    liveTranscriptText.textContent = transcriptText || "Recording… press stop to transcribe.";
+  }
+
+  function setMicRecordingState(isRecording) {
+    isVoiceRecording = Boolean(isRecording);
+    if (!micBtn) {
+      return;
+    }
+    micBtn.classList.toggle("ai-mic-on", isVoiceRecording);
+    micBtn.setAttribute("aria-pressed", isVoiceRecording ? "true" : "false");
+    micBtn.title = isVoiceRecording
+      ? "Stop recording (" + getSpeechLanguageLabel(currentSpeechLanguage) + ")"
+      : "Voice input (" + getSpeechLanguageLabel(currentSpeechLanguage) + ")";
+    const icon = micBtn.querySelector("i");
+    const label = micBtn.querySelector(".ai-record-label");
+    if (icon) {
+      icon.className = isVoiceRecording ? "ti ti-player-stop-filled" : "ti ti-microphone";
+    }
+    if (label) {
+      label.textContent = isVoiceRecording ? "Stop" : "Record";
+    }
+  }
+
+  function commitVoiceTranscript() {
+    const text = (voiceTranscriptFinal || voiceTranscriptInterim || "").replace(/\s+/g, " ").trim();
+    if (text) {
+      chatInput.value = text;
+      chatInput.focus();
+    }
+    voiceTranscriptFinal = "";
+    voiceTranscriptInterim = "";
+  }
+
+  function setSpeechLanguage(languageCode) {
+    currentSpeechLanguage = languageCode === "am-ET" ? "am-ET" : "en-US";
+    syncSpeechLanguageButtons();
+    try {
+      window.localStorage.setItem(speechLanguageStorageKey, currentSpeechLanguage);
+    } catch (_error) {
+      // Ignore storage failures.
+    }
+  }
+
+  function restoreSpeechLanguage() {
+    try {
+      const stored = window.localStorage.getItem(speechLanguageStorageKey);
+      if (stored === "am-ET" || stored === "en-US") {
+        currentSpeechLanguage = stored;
+      }
+    } catch (_error) {
+      currentSpeechLanguage = "en-US";
+    }
+    syncSpeechLanguageButtons();
   }
 
   function shouldAllowSidebarCollapse() {
@@ -129,6 +271,17 @@
     scrollToBottom();
   }
 
+  function getDocumentScrollElement() {
+    return document.scrollingElement || document.documentElement;
+  }
+
+  function isViewportNearBottom() {
+    const scrollRoot = getDocumentScrollElement();
+    const currentOffset = scrollRoot.scrollTop + window.innerHeight;
+    const remaining = scrollRoot.scrollHeight - currentOffset;
+    return remaining < 180;
+  }
+
   function getCSRFToken() {
     const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
     if (m) {
@@ -154,12 +307,7 @@
     const el = document.createElement("div");
     el.className = "msg ai";
     const normalizedHtml = normalizeAIContent(html);
-    el.innerHTML =
-      '<span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="' + aiAvatarSrc + '" alt=""></span>' +
-      '<div class="msg-bubble">' +
-      '<div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>' +
-      '<div class="ai-msg-content">' + normalizedHtml + "</div>" +
-      "</div>";
+    el.innerHTML = buildAIMessageMarkup(normalizedHtml);
     chatOutput.appendChild(el);
     hydrateMessageNode(el);
     scrollToBottom();
@@ -175,7 +323,7 @@
       return;
     }
     loadingElement = appendAIMessageHtml(
-      '<div class="ai-loading"><span class="spinner-border" role="status" aria-hidden="true"></span><span>Generating response...</span></div>'
+      '<div class="ai-loading"><span class="spinner-border" role="status" aria-hidden="true"></span><div class="ai-loading-copy"><strong>Generating response</strong><span>Admas AI is preparing an answer. You can keep reading earlier messages.</span></div></div>'
     );
   }
 
@@ -193,29 +341,773 @@
     }
     streamHtmlBuffer = "";
     streamMessageElement = appendAIMessageHtml("");
+    streamMessageElement.classList.add("is-streaming");
     return streamMessageElement;
   }
 
-  function appendStreamChunk(chunkHtml) {
+  function renderStreamBuffer() {
     const box = ensureStreamMessage();
     const content = box.querySelector(".ai-msg-content");
     if (!content) {
       return;
     }
-
-    streamHtmlBuffer += chunkHtml || "";
     content.innerHTML = normalizeAIContent(streamHtmlBuffer);
-    hydrateMessageNode(box);
-    scrollToBottom();
+    if (autoScrollPinned) {
+      scrollToBottom();
+    }
+  }
+
+  function appendStreamChunk(chunkHtml) {
+    streamHtmlBuffer += chunkHtml || "";
+    if (pendingStreamRender) {
+      return;
+    }
+    pendingStreamRender = true;
+    requestAnimationFrame(function () {
+      pendingStreamRender = false;
+      renderStreamBuffer();
+    });
   }
 
   function hydrateMessageNode(node) {
     if (!node) {
       return;
     }
+    attachTtsControls(node);
     enhanceTables(node);
     renderCharts(node);
     renderActionButtons(node);
+  }
+
+  function getReadableMessageText(node) {
+    const content = node ? node.querySelector(".ai-msg-content") : null;
+    if (!content) {
+      return "";
+    }
+
+    const clone = content.cloneNode(true);
+    const nonSpeechSelectors = [
+      ".ai-chart-payload",
+      ".ai-chart-card",
+      ".ai-chart-title",
+      ".ai-chart-canvas",
+      ".ai-chart-loading",
+      ".ai-chart-error",
+      ".ai-bar-chart",
+      ".ai-table-wrap",
+      "table",
+      ".ai-action-payload",
+      ".ai-action-btn",
+      "button",
+      "svg",
+      "canvas",
+      "img"
+    ];
+
+    nonSpeechSelectors.forEach(function (selector) {
+      clone.querySelectorAll(selector).forEach(function (element) {
+        element.remove();
+      });
+    });
+
+    return String(clone.innerText || clone.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function buildTtsSourceText(node) {
+    const text = getReadableMessageText(node);
+    if (!text) {
+      return "";
+    }
+
+    const normalized = text.replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return "";
+    }
+
+    const sentenceMatches = normalized.match(/[^.!?]+[.!?]?/g) || [];
+    const summarySentences = [];
+    let length = 0;
+
+    for (let i = 0; i < sentenceMatches.length; i += 1) {
+      const sentence = sentenceMatches[i].trim();
+      if (!sentence) {
+        continue;
+      }
+      const projected = length + sentence.length + (summarySentences.length ? 1 : 0);
+      if (summarySentences.length >= 2 || projected > 320) {
+        break;
+      }
+      summarySentences.push(sentence);
+      length = projected;
+    }
+
+    if (summarySentences.length) {
+      return summarySentences.join(" ");
+    }
+
+    return normalized.slice(0, 320);
+  }
+
+  function buildShortSpeechText(text, options) {
+    const normalized = String(text || "").replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return "";
+    }
+
+    const settings = options || {};
+    const maxSentences = Number(settings.maxSentences) || 2;
+    const maxChars = Number(settings.maxChars) || 320;
+    const sentenceMatches = normalized.match(/[^.!?]+[.!?]?/g) || [];
+    const summarySentences = [];
+    let length = 0;
+
+    for (let i = 0; i < sentenceMatches.length; i += 1) {
+      const sentence = sentenceMatches[i].trim();
+      if (!sentence) {
+        continue;
+      }
+      const projected = length + sentence.length + (summarySentences.length ? 1 : 0);
+      if (summarySentences.length >= maxSentences || projected > maxChars) {
+        break;
+      }
+      summarySentences.push(sentence);
+      length = projected;
+    }
+
+    if (summarySentences.length) {
+      return summarySentences.join(" ");
+    }
+
+    return normalized.slice(0, maxChars);
+  }
+
+  function buildTranslationSourceText(node) {
+    const text = getReadableMessageText(node);
+    if (!text) {
+      return "";
+    }
+    return text.slice(0, 4000);
+  }
+
+  function setTtsButtonState(button, state) {
+    if (!button) {
+      return;
+    }
+    const icon = button.querySelector("i");
+    const label = button.querySelector("span");
+
+    button.classList.remove("is-loading", "is-playing");
+    button.disabled = false;
+
+    if (state === "loading") {
+      button.classList.add("is-loading");
+      button.disabled = true;
+      if (icon) {
+        icon.className = "ti ti-loader-2";
+      }
+      if (label) {
+        label.textContent = "Loading";
+      }
+      return;
+    }
+
+    if (state === "playing") {
+      button.classList.add("is-playing");
+      if (icon) {
+        icon.className = "ti ti-player-stop-filled";
+      }
+      if (label) {
+        label.textContent = "Stop";
+      }
+      return;
+    }
+
+    if (icon) {
+      icon.className = "ti ti-player-play-filled";
+    }
+    if (label) {
+      label.textContent = "Listen";
+    }
+  }
+
+  function setMessageStatus(message, text, tone) {
+    const status = message ? message.querySelector(".ai-msg-status") : null;
+    if (!status) {
+      return;
+    }
+    const normalized = String(text || "").trim();
+    if (!normalized) {
+      status.hidden = true;
+      status.textContent = "";
+      status.classList.remove("is-error", "is-success", "is-muted");
+      return;
+    }
+    status.hidden = false;
+    status.textContent = normalized;
+    status.classList.remove("is-error", "is-success", "is-muted");
+    status.classList.add(
+      tone === "error" ? "is-error" : tone === "success" ? "is-success" : "is-muted"
+    );
+  }
+
+  function setTranslateButtonState(button, state) {
+    if (!button) {
+      return;
+    }
+    const icon = button.querySelector("i");
+    const label = button.querySelector("span");
+
+    button.classList.remove("is-loading", "is-active");
+    button.disabled = false;
+
+    if (state === "loading") {
+      button.classList.add("is-loading");
+      button.disabled = true;
+      if (icon) {
+        icon.className = "ti ti-loader-2";
+      }
+      if (label) {
+        label.textContent = "Loading";
+      }
+      return;
+    }
+
+    if (state === "active") {
+      button.classList.add("is-active");
+      if (icon) {
+        icon.className = "ti ti-language-hiragana";
+      }
+      if (label) {
+        label.textContent = "Original";
+      }
+      return;
+    }
+
+    if (icon) {
+      icon.className = "ti ti-language-hiragana";
+    }
+    if (label) {
+      label.textContent = "Amharic";
+    }
+  }
+
+  function resetActiveTtsPlayback() {
+    if (activeTtsAudio) {
+      activeTtsAudio.pause();
+      activeTtsAudio.currentTime = 0;
+      activeTtsAudio = null;
+    }
+    if (activeTtsButton) {
+      setTtsButtonState(activeTtsButton, "idle");
+      activeTtsButton = null;
+    }
+    if (activeTtsObjectUrl) {
+      URL.revokeObjectURL(activeTtsObjectUrl);
+      activeTtsObjectUrl = null;
+    }
+    if (activeTtsStreamSocket) {
+      try {
+        activeTtsStreamSocket.close();
+      } catch (_error) {
+        // Ignore close failures.
+      }
+      activeTtsStreamSocket = null;
+    }
+    if (activeTtsAudioContext) {
+      try {
+        activeTtsAudioContext.close();
+      } catch (_error) {
+        // Ignore close failures.
+      }
+      activeTtsAudioContext = null;
+    }
+    activeTtsNextTime = 0;
+  }
+
+  function supportsStreamingTts() {
+    return STREAMING_TTS_ENABLED && Boolean(window.WebSocket && (window.AudioContext || window.webkitAudioContext));
+  }
+
+  function decodeBase64ToBytes(base64Value) {
+    const binary = window.atob(base64Value || "");
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  function pcm16ToFloat32(bytes) {
+    const sampleCount = Math.floor(bytes.length / 2);
+    const samples = new Float32Array(sampleCount);
+    for (let i = 0; i < sampleCount; i += 1) {
+      const low = bytes[i * 2];
+      const high = bytes[i * 2 + 1];
+      let value = (high << 8) | low;
+      if (value >= 0x8000) {
+        value -= 0x10000;
+      }
+      samples[i] = value / 0x8000;
+    }
+    return samples;
+  }
+
+  function schedulePcmChunk(base64Audio, sampleRate) {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+      throw new Error("Streaming audio is not supported in this browser.");
+    }
+
+    if (!activeTtsAudioContext) {
+      activeTtsAudioContext = new AudioContextCtor();
+      activeTtsNextTime = activeTtsAudioContext.currentTime;
+    }
+    if (activeTtsAudioContext.state === "suspended") {
+      activeTtsAudioContext.resume().catch(function () {
+        // Ignore resume failures and let playback fallback handle hard failures.
+      });
+    }
+
+    const bytes = decodeBase64ToBytes(base64Audio);
+    const float32 = pcm16ToFloat32(bytes);
+    const rate = Number(sampleRate) || 24000;
+    const buffer = activeTtsAudioContext.createBuffer(1, float32.length, rate);
+    buffer.copyToChannel(float32, 0);
+
+    const source = activeTtsAudioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(activeTtsAudioContext.destination);
+    const startAt = Math.max(activeTtsNextTime, activeTtsAudioContext.currentTime + 0.02);
+    source.start(startAt);
+    activeTtsNextTime = startAt + buffer.duration;
+  }
+
+  function streamTtsAudio(text, language, button, message) {
+    return new Promise(function (resolve, reject) {
+      if (!supportsStreamingTts()) {
+        reject(new Error("Streaming speech is not supported in this browser."));
+        return;
+      }
+
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const ws = new WebSocket(protocol + "://" + window.location.host + "/ws/tts-stream/");
+      let sessionStarted = false;
+      let receivedAudio = false;
+      let finished = false;
+
+      activeTtsStreamSocket = ws;
+
+      ws.onopen = function () {
+        ws.send(JSON.stringify({
+          action: "speak",
+          text: text,
+          language: language
+        }));
+      };
+
+      ws.onmessage = function (event) {
+        try {
+          const payload = JSON.parse(event.data || "{}");
+          if (payload.event === "start") {
+            sessionStarted = true;
+            setMessageStatus(message, "Streaming speech…", "muted");
+            return;
+          }
+          if (payload.event === "audio") {
+            receivedAudio = true;
+            schedulePcmChunk(payload.data || "", payload.sample_rate);
+            return;
+          }
+          if (payload.event === "complete") {
+            finished = true;
+            window.setTimeout(function () {
+              resetActiveTtsPlayback();
+              setMessageStatus(message, "", "");
+            }, Math.max(180, (activeTtsNextTime - (activeTtsAudioContext ? activeTtsAudioContext.currentTime : 0)) * 1000));
+            resolve(true);
+            return;
+          }
+          if (payload.event === "error") {
+            throw new Error(payload.message || "Streaming speech failed.");
+          }
+        } catch (error) {
+          if (!finished) {
+            reject(error);
+          }
+        }
+      };
+
+      ws.onerror = function () {
+        if (!finished) {
+          reject(new Error("Streaming speech failed."));
+        }
+      };
+
+      ws.onclose = function () {
+        if (finished) {
+          return;
+        }
+        if (receivedAudio) {
+          finished = true;
+          resolve(true);
+          return;
+        }
+        reject(new Error(sessionStarted ? "Streaming speech ended before audio arrived." : "Streaming speech failed."));
+      };
+    });
+  }
+
+  async function fetchTtsAudio(text, language) {
+    const normalizedLanguage = String(language || "English").trim() || "English";
+    const cacheKey = normalizedLanguage + "::" + text;
+    if (ttsAudioCache.has(cacheKey)) {
+      return ttsAudioCache.get(cacheKey);
+    }
+
+    if (ttsRequestCache.has(cacheKey)) {
+      return ttsRequestCache.get(cacheKey);
+    }
+
+    const request = fetch("/api/ai-chat/tts/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "*/*",
+        "X-CSRFToken": getCSRFToken()
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ text: text, language: normalizedLanguage })
+    })
+      .then(async function (response) {
+        if (!response.ok) {
+          let message = "Unable to generate speech for this response.";
+          try {
+            const payload = await response.json();
+            if (payload && payload.error && payload.error.message) {
+              message = payload.error.message;
+            }
+          } catch (_error) {
+            // Ignore non-JSON failure payloads.
+          }
+          throw new Error(message);
+        }
+
+        const blob = await response.blob();
+        ttsAudioCache.set(cacheKey, blob);
+        return blob;
+      })
+      .finally(function () {
+        ttsRequestCache.delete(cacheKey);
+      });
+
+    ttsRequestCache.set(cacheKey, request);
+    return request;
+  }
+
+  async function prefetchTtsAudio(text, language) {
+    const normalizedLanguage = String(language || "English").trim() || "English";
+    const cacheKey = normalizedLanguage + "::" + text;
+    if (!text || ttsAudioCache.has(cacheKey) || ttsRequestCache.has(cacheKey) || ttsWarmRequestCache.has(cacheKey)) {
+      return;
+    }
+
+    const request = fetch("/api/ai-chat/tts/prefetch/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({ text: text, language: normalizedLanguage })
+    })
+      .then(async function (response) {
+        const payload = await response.json().catch(function () { return null; });
+        if (!response.ok || !payload || payload.result !== "SUCCESS") {
+          const message = payload && payload.error && payload.error.message
+            ? payload.error.message
+            : "Unable to prepare speech.";
+          throw new Error(message);
+        }
+      })
+      .finally(function () {
+        ttsWarmRequestCache.delete(cacheKey);
+      });
+
+    ttsWarmRequestCache.set(cacheKey, request);
+    return request;
+  }
+
+  async function fetchAmharicTranslation(text) {
+    if (translationCache.has(text)) {
+      return translationCache.get(text);
+    }
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      const requestId = "translate-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+      const request = new Promise(function (resolve, reject) {
+        translationSocketRequests.set(requestId, { resolve: resolve, reject: reject });
+      });
+
+      translationCache.set(text, request);
+      socket.send(JSON.stringify({
+        action: "translate",
+        request_id: requestId,
+        text: text,
+        target_language: "Amharic"
+      }));
+
+      try {
+        const translatedFromSocket = await request;
+        translationCache.set(text, translatedFromSocket);
+        return translatedFromSocket;
+      } catch (_error) {
+        translationCache.delete(text);
+      }
+    }
+
+    const request = fetch("/api/ai-chat/translate/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRFToken": getCSRFToken()
+      },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        text: text,
+        target_language: "Amharic"
+      })
+    })
+      .then(async function (response) {
+        const payload = await response.json().catch(function () { return null; });
+        if (!response.ok || !payload || payload.result !== "SUCCESS") {
+          const message = payload && payload.error && payload.error.message
+            ? payload.error.message
+            : "Unable to translate this response.";
+          throw new Error(message);
+        }
+        const translated = payload.data && payload.data.translation ? String(payload.data.translation).trim() : "";
+        if (!translated) {
+          throw new Error("Translation response was empty.");
+        }
+        translationCache.set(text, translated);
+        return translated;
+      });
+
+    translationCache.set(text, request);
+    try {
+      return await request;
+    } catch (error) {
+      translationCache.delete(text);
+      throw error;
+    }
+  }
+
+  function prefetchTtsForMessage(node) {
+    const message = node && node.classList && node.classList.contains("msg") ? node : (node ? node.closest(".msg.ai") : null);
+    if (!message || message.dataset.ttsPrefetched === "1") {
+      return;
+    }
+
+    const text = buildTtsSourceText(message);
+    const cacheKey = "English::" + text;
+    if (!text || ttsAudioCache.has(cacheKey) || ttsRequestCache.has(cacheKey) || ttsWarmRequestCache.has(cacheKey)) {
+      if (text) {
+        message.dataset.ttsText = text;
+      }
+      message.dataset.ttsPrefetched = "1";
+      return;
+    }
+
+    message.dataset.ttsText = text;
+    message.dataset.ttsPrefetched = "1";
+
+    window.setTimeout(function () {
+      prefetchTtsAudio(text, "English").catch(function () {
+        message.dataset.ttsPrefetched = "";
+      });
+    }, 180);
+  }
+
+  async function handleTranslationToggle(button) {
+    const message = button ? button.closest(".msg.ai") : null;
+    const panel = message ? message.querySelector(".ai-translation-panel") : null;
+    const content = panel ? panel.querySelector(".ai-translation-content") : null;
+    if (!message || !panel || !content) {
+      return;
+    }
+    setMessageStatus(message, "", "");
+
+    if (!panel.hidden) {
+      panel.hidden = true;
+      setTranslateButtonState(button, "idle");
+      setMessageStatus(message, "", "");
+      return;
+    }
+
+    const text = buildTranslationSourceText(message);
+    if (!text) {
+      return;
+    }
+
+    setTranslateButtonState(button, "loading");
+    try {
+      const translated = await fetchAmharicTranslation(text);
+      content.textContent = translated;
+      panel.hidden = false;
+      setTranslateButtonState(button, "active");
+      setMessageStatus(message, "Amharic translation ready.", "success");
+    } catch (error) {
+      panel.hidden = true;
+      setTranslateButtonState(button, "idle");
+      setMessageStatus(
+        message,
+        error && error.message ? error.message : "Unable to translate this response.",
+        "error"
+      );
+    }
+  }
+
+  async function handleTtsPlayback(button) {
+    const message = button ? button.closest(".msg.ai") : null;
+    const text = (message && message.dataset.ttsText) || buildTtsSourceText(message);
+    if (!text) {
+      return;
+    }
+    setMessageStatus(message, "", "");
+
+    if (activeTtsButton === button) {
+      resetActiveTtsPlayback();
+      setMessageStatus(message, "", "");
+      return;
+    }
+
+    resetActiveTtsPlayback();
+    setTtsButtonState(button, "loading");
+    setMessageStatus(message, "Preparing speech…", "muted");
+
+    try {
+      activeTtsButton = button;
+      setTtsButtonState(button, "playing");
+      try {
+        await streamTtsAudio(text, "English", button, message);
+      } catch (_streamError) {
+        const blob = await fetchTtsAudio(text, "English");
+        activeTtsObjectUrl = URL.createObjectURL(blob);
+        const audio = new Audio(activeTtsObjectUrl);
+        activeTtsAudio = audio;
+
+        audio.addEventListener("ended", resetActiveTtsPlayback, { once: true });
+        audio.addEventListener("error", function () {
+          resetActiveTtsPlayback();
+          setMessageStatus(message, "Unable to play the generated speech.", "error");
+        }, { once: true });
+
+        await audio.play();
+        setMessageStatus(message, "", "");
+      }
+    } catch (error) {
+      resetActiveTtsPlayback();
+      setMessageStatus(
+        message,
+        error && error.message ? error.message : "Unable to generate speech for this response.",
+        "error"
+      );
+    }
+  }
+
+  function attachTtsControls(scope) {
+    const root = scope || document;
+    const buttons = root.querySelectorAll(".msg.ai .ai-tts-btn");
+    buttons.forEach(function (button) {
+      if (button.dataset.bound === "1") {
+        return;
+      }
+      button.dataset.bound = "1";
+      setTtsButtonState(button, "idle");
+      button.addEventListener("click", function () {
+        handleTtsPlayback(button);
+      });
+    });
+
+    root.querySelectorAll(".msg.ai").forEach(function (message) {
+      prefetchTtsForMessage(message);
+    });
+
+    const translateButtons = root.querySelectorAll(".msg.ai .ai-translate-btn");
+    translateButtons.forEach(function (button) {
+      if (button.dataset.bound === "1") {
+        return;
+      }
+      button.dataset.bound = "1";
+      setTranslateButtonState(button, "idle");
+      button.addEventListener("click", function () {
+        handleTranslationToggle(button);
+      });
+    });
+
+    const translationTtsButtons = root.querySelectorAll(".msg.ai .ai-translation-tts-btn");
+    translationTtsButtons.forEach(function (button) {
+      if (button.dataset.bound === "1") {
+        return;
+      }
+      button.dataset.bound = "1";
+      setTtsButtonState(button, "idle");
+      button.addEventListener("click", function () {
+        const panel = button.closest(".ai-translation-panel");
+        const message = button.closest(".msg.ai");
+        const content = panel ? panel.querySelector(".ai-translation-content") : null;
+        const fullText = String((content && (content.innerText || content.textContent)) || "")
+          .replace(/\s+/g, " ")
+          .trim();
+        const text = buildShortSpeechText(fullText, { maxSentences: 1, maxChars: 180 });
+        if (!text) {
+          return;
+        }
+
+        if (activeTtsButton === button) {
+          resetActiveTtsPlayback();
+          return;
+        }
+
+        resetActiveTtsPlayback();
+        setTtsButtonState(button, "loading");
+        setMessageStatus(message, "Preparing Amharic speech…", "muted");
+
+        activeTtsButton = button;
+        setTtsButtonState(button, "playing");
+
+        streamTtsAudio(text, "Amharic", button, message)
+          .catch(function () {
+            return fetchTtsAudio(text, "Amharic").then(function (blob) {
+              activeTtsObjectUrl = URL.createObjectURL(blob);
+              const audio = new Audio(activeTtsObjectUrl);
+              activeTtsAudio = audio;
+
+              audio.addEventListener("ended", resetActiveTtsPlayback, { once: true });
+              audio.addEventListener("error", function () {
+                resetActiveTtsPlayback();
+                setMessageStatus(message, "Unable to play the generated speech.", "error");
+              }, { once: true });
+
+              return audio.play().then(function () {
+                setMessageStatus(message, "", "");
+              });
+            });
+          })
+          .catch(function (error) {
+            resetActiveTtsPlayback();
+            setMessageStatus(
+              message,
+              error && error.message ? error.message : "Unable to generate speech for this response.",
+              "error"
+            );
+          });
+      });
+    });
   }
 
   function normalizeAIContent(value) {
@@ -812,12 +1704,21 @@
   }
 
   function finishStream() {
+    if (pendingStreamRender) {
+      pendingStreamRender = false;
+      renderStreamBuffer();
+    }
+    if (streamMessageElement) {
+      streamMessageElement.classList.remove("is-streaming");
+      hydrateMessageNode(streamMessageElement);
+    }
     streamMessageElement = null;
     streamHtmlBuffer = "";
     hideLoading();
   }
 
   function clearChatOutput() {
+    resetActiveTtsPlayback();
     chatOutput.innerHTML = "";
     streamMessageElement = null;
     streamHtmlBuffer = "";
@@ -848,8 +1749,10 @@
   }
 
   function scrollToBottom() {
+    if (!autoScrollPinned) {
+      return;
+    }
     requestAnimationFrame(function () {
-      chatOutput.scrollTop = chatOutput.scrollHeight;
       const lastMessage = chatOutput.lastElementChild;
       if (lastMessage && typeof lastMessage.scrollIntoView === "function") {
         lastMessage.scrollIntoView({ block: "end", behavior: "auto" });
@@ -890,13 +1793,13 @@
   }
 
   function createInstanceElement(instance) {
-    const title = (instance && instance.title) ? String(instance.title) : ("Chat " + instance.id);
+    const title = (instance && instance.title) ? String(instance.title) : ("History " + instance.id);
     const el = document.createElement("div");
     el.className = "ai-instance";
     el.dataset.room = String(instance.id);
     el.dataset.title = title;
     el.dataset.tags = "policy ministry indicator";
-    el.innerHTML = "<h6>" + escapeHtml(title) + "</h6><p>Instance #" + escapeHtml(instance.id) + "</p>";
+    el.innerHTML = "<h6>" + escapeHtml(title) + "</h6><p>History #" + escapeHtml(instance.id) + "</p>";
     attachInstanceClick(el);
     return el;
   }
@@ -948,6 +1851,22 @@
       try {
         const payload = JSON.parse(event.data || "{}");
 
+        if (payload.action === "translation_result") {
+          const pending = translationSocketRequests.get(payload.request_id || "");
+          if (pending) {
+            translationSocketRequests.delete(payload.request_id || "");
+            if (payload.ok) {
+              pending.resolve(String(payload.translation || "").trim());
+            } else {
+              const message = payload.error && payload.error.message
+                ? payload.error.message
+                : "Unable to translate this response.";
+              pending.reject(new Error(message));
+            }
+          }
+          return;
+        }
+
         if (payload.is_stream) {
           hideLoading();
           appendStreamChunk(payload.message || "");
@@ -977,6 +1896,10 @@
     };
 
     ws.onclose = function () {
+      translationSocketRequests.forEach(function (pending) {
+        pending.reject(new Error("Translation channel disconnected."));
+      });
+      translationSocketRequests.clear();
       if (currentRoom === room) {
         hideLoading();
         finishStream();
@@ -1085,6 +2008,7 @@
   });
 
   restoreSidebarState();
+  restoreSpeechLanguage();
   document.addEventListener("dashboard-theme-change", function () {
     rerenderAICharts();
   });
@@ -1115,8 +2039,8 @@
       if (!current || !instanceId) {
         return;
       }
-      const currentTitle = current.dataset.title || ("Chat " + instanceId);
-      const title = (window.prompt("Rename chat instance:", currentTitle) || "").trim();
+      const currentTitle = current.dataset.title || ("History " + instanceId);
+      const title = (window.prompt("Rename chat history:", currentTitle) || "").trim();
       if (!title) {
         return;
       }
@@ -1140,7 +2064,7 @@
       if (!current || !instanceId) {
         return;
       }
-      if (!window.confirm("Delete this chat instance?")) {
+      if (!window.confirm("Delete this chat history?")) {
         return;
       }
       const result = await apiRequest("/api/ai-chat/delete/" + encodeURIComponent(instanceId) + "/", "DELETE");
@@ -1154,7 +2078,7 @@
         instances[0].click();
       } else {
         chatOutput.innerHTML = "";
-        appendSystemAIMessage("No chat instances left. Use New to create one.");
+        appendSystemAIMessage("No chat history left. Use New to create one.");
         chatTitle.textContent = "Admas AI Chat";
         updateInstanceControlsState();
       }
@@ -1165,27 +2089,88 @@
   if (!SpeechRecognition) {
     micBtn.disabled = true;
     micBtn.title = "Voice input is not supported in this browser";
+    if (speechLangEnBtn) {
+      speechLangEnBtn.disabled = true;
+    }
+    if (speechLangAmBtn) {
+      speechLangAmBtn.disabled = true;
+    }
   } else {
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
+    recognition.lang = currentSpeechLanguage;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
     recognition.onstart = function () {
-      micBtn.classList.add("ai-mic-on");
+      voiceTranscriptFinal = "";
+      voiceTranscriptInterim = "";
+      setMicRecordingState(true);
+      setTranscriptState(true, "Recording… press stop to transcribe.");
     };
 
     recognition.onend = function () {
-      micBtn.classList.remove("ai-mic-on");
+      const shouldCommit = isVoiceRecording;
+      setMicRecordingState(false);
+      setTranscriptState(false, "");
+      if (shouldCommit) {
+        commitVoiceTranscript();
+      }
     };
 
     recognition.onresult = function (event) {
-      const spoken = event.results[0][0].transcript || "";
-      chatInput.value = spoken;
-      chatInput.focus();
+      let finalText = voiceTranscriptFinal;
+      let interimText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        const transcript = result && result[0] ? result[0].transcript || "" : "";
+        if (!transcript) {
+          continue;
+        }
+        if (result.isFinal) {
+          finalText += transcript + " ";
+        } else {
+          interimText += transcript + " ";
+        }
+      }
+
+      voiceTranscriptFinal = finalText;
+      voiceTranscriptInterim = interimText;
+      setTranscriptState(true, "Recording… press stop to transcribe.");
     };
+
+    recognition.onerror = function () {
+      setMicRecordingState(false);
+      setTranscriptState(false, "");
+    };
+
+    function updateRecognitionLanguage(languageCode) {
+      if (isVoiceRecording) {
+        return;
+      }
+      recognition.lang = languageCode;
+      setSpeechLanguage(languageCode);
+    }
+
+    if (speechLangEnBtn) {
+      speechLangEnBtn.addEventListener("click", function () {
+        updateRecognitionLanguage("en-US");
+      });
+    }
+
+    if (speechLangAmBtn) {
+      speechLangAmBtn.addEventListener("click", function () {
+        updateRecognitionLanguage("am-ET");
+      });
+    }
 
     micBtn.addEventListener("click", function () {
       try {
+        if (isVoiceRecording) {
+          recognition.stop();
+          return;
+        }
+        recognition.lang = currentSpeechLanguage;
         recognition.start();
       } catch (e) {
         // Browser may throw if start is called while already running.
@@ -1195,6 +2180,53 @@
 
   if (currentRoom) {
     connectSocket(currentRoom);
+  }
+
+  window.addEventListener("scroll", function () {
+    autoScrollPinned = isViewportNearBottom();
+    const jumpBtn = document.getElementById("jumpToLatestBtn");
+    if (jumpBtn) {
+      jumpBtn.hidden = autoScrollPinned;
+    }
+  }, { passive: true });
+
+  window.addEventListener("wheel", function (event) {
+    if (event.deltaY < 0) {
+      autoScrollPinned = false;
+      const jumpBtn = document.getElementById("jumpToLatestBtn");
+      if (jumpBtn) {
+        jumpBtn.hidden = false;
+      }
+    }
+  }, { passive: true });
+
+  window.addEventListener("touchstart", function (event) {
+    const touch = event.touches && event.touches[0];
+    lastTouchY = touch ? touch.clientY : 0;
+  }, { passive: true });
+
+  window.addEventListener("touchmove", function (event) {
+    const touch = event.touches && event.touches[0];
+    if (!touch) {
+      return;
+    }
+    if (touch.clientY > lastTouchY + 6) {
+      autoScrollPinned = false;
+      const jumpBtn = document.getElementById("jumpToLatestBtn");
+      if (jumpBtn) {
+        jumpBtn.hidden = false;
+      }
+    }
+    lastTouchY = touch.clientY;
+  }, { passive: true });
+
+  const jumpToLatestBtn = document.getElementById("jumpToLatestBtn");
+  if (jumpToLatestBtn) {
+    jumpToLatestBtn.addEventListener("click", function () {
+      autoScrollPinned = true;
+      jumpToLatestBtn.hidden = true;
+      scrollToBottom();
+    });
   }
 
   // Apply table enhancement to server-rendered history on first load.

@@ -1,0 +1,777 @@
+{% extends "data-hub/base.html" %}
+{% load static %}
+
+{% block title %}About DPMES | Data Hub{% endblock %}
+
+{% block style %}
+<link rel="stylesheet" href="{% static 'assets/css/components/dashboard-story.css' %}?v=20260312d">
+{% endblock %}
+
+{% block content %}
+<div class="story-dashboard">
+  <section class="story-hero story-reveal story-reveal-hero">
+    <div class="story-hero-grid">
+      <div class="story-hero-copy">
+        <span class="story-kicker">About DPMES</span>
+        <h1>One national platform that connects planning, delivery, monitoring, evaluation, and reporting.</h1>
+        <p>
+          DPMES is the executive coordination layer for turning plans into measurable public results. It links policy
+          intent, implementation structures, time-series evidence, institutional accountability, and strategic reporting
+          into one operating view for leadership, technical teams, and partners.
+        </p>
+        <div class="story-hero-actions">
+          <a class="story-btn story-btn-primary" href="#story-overview">Start the story</a>
+          <a class="story-btn story-btn-secondary" href="#story-analytics-links">Open live modules</a>
+        </div>
+        <div class="story-data-ribbon" aria-label="Illustrative platform data signals">
+          <span class="story-data-pill">Planning directives</span>
+          <span class="story-data-pill">Institutional submissions</span>
+          <span class="story-data-pill">Validation checkpoints</span>
+          <span class="story-data-pill">Approved indicators</span>
+          <span class="story-data-pill">Executive reporting</span>
+        </div>
+      </div>
+      <div class="story-hero-panel story-data-stage">
+        <div class="story-hero-panel-head">
+          <span class="story-panel-label">Platform Narrative</span>
+          <strong>Why DPMES exists</strong>
+        </div>
+        <div class="story-hero-points">
+          <article class="story-inline-card">
+            <span class="story-inline-card-icon"><i class="ti ti-target-arrow"></i></span>
+            <div>
+              <h3>Align strategy with execution</h3>
+              <p>Connect national plans to policy areas, goals, outputs, and operational indicators.</p>
+            </div>
+          </article>
+          <article class="story-inline-card">
+            <span class="story-inline-card-icon"><i class="ti ti-binary-tree-2"></i></span>
+            <div>
+              <h3>Make accountability visible</h3>
+              <p>Show who owns, submits, validates, approves, and uses evidence across the delivery chain.</p>
+            </div>
+          </article>
+          <article class="story-inline-card">
+            <span class="story-inline-card-icon"><i class="ti ti-chart-line"></i></span>
+            <div>
+              <h3>Turn time into insight</h3>
+              <p>Track baseline, target, trend, and current performance with a consistent time-series language.</p>
+            </div>
+          </article>
+        </div>
+        <div class="story-signal-board">
+          <div class="story-signal-track" aria-hidden="true">
+            <span class="story-signal-node"></span>
+            <span class="story-signal-node"></span>
+            <span class="story-signal-node"></span>
+            <span class="story-signal-node"></span>
+            <span class="story-signal-node"></span>
+          </div>
+          <div class="story-signal-metrics">
+            <div><span>Planning</span><strong>Structured</strong></div>
+            <div><span>Monitoring</span><strong>Continuous</strong></div>
+            <div><span>Evaluation</span><strong>Traceable</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="story-hero-metrics">
+      <article class="story-metric-card story-reveal">
+        <span class="story-metric-label">Core mission</span>
+        <strong>Evidence-based execution</strong>
+        <p>Help national leadership move from fragmented reporting to one shared results view.</p>
+        <div class="story-metric-stat"><span data-countup="18">18</span><small>governed workflow stages</small></div>
+      </article>
+      <article class="story-metric-card story-reveal">
+        <span class="story-metric-label">Governance posture</span>
+        <strong>Traceable and role-based</strong>
+        <p>Every submission, validation, approval, and revision fits into a governed workflow.</p>
+        <div class="story-metric-stat"><span data-countup="5">5</span><small>core accountability roles</small></div>
+      </article>
+      <article class="story-metric-card story-reveal">
+        <span class="story-metric-label">Delivery model</span>
+        <strong>Integrated modules</strong>
+        <p>DPMES, time-series analytics, AI, SDG, Mesob, Digital ID, projects, and initiatives work as one story.</p>
+        <div class="story-metric-stat"><span data-countup="8">8</span><small>connected platform pillars</small></div>
+      </article>
+    </div>
+  </section>
+
+  <nav class="story-nav" aria-label="About DPMES sections" data-story-nav>
+    <a href="#story-overview" data-story-nav-link>Overview</a>
+    <a href="#story-framework" data-story-nav-link>Result Framework</a>
+    <a href="#story-flow" data-story-nav-link>Collection Flow</a>
+    <a href="#story-governance" data-story-nav-link>Governance</a>
+    <a href="#story-lifecycle" data-story-nav-link>Lifecycle</a>
+    <a href="#story-rollout" data-story-nav-link>Rollout</a>
+    <a href="#story-timeseries" data-story-nav-link>Time-Series</a>
+    <a href="#story-integrations" data-story-nav-link>Integrations</a>
+  </nav>
+
+  <section class="story-opener story-reveal" id="story-opener">
+    <div class="story-opener-copy">
+      <span class="story-kicker">Opener</span>
+      <h2>DPMES is the national delivery memory of the state.</h2>
+      <p>
+        It captures what government intends to do, how institutions are expected to perform, how evidence is generated,
+        and how the country can explain progress over time. The sections below unpack that story in sequence.
+      </p>
+    </div>
+    <div class="story-opener-grid">
+      <article class="story-opener-card">
+        <strong>Strategy</strong>
+        <span>Plans and policy logic are translated into a measurable result framework.</span>
+      </article>
+      <article class="story-opener-card">
+        <strong>Governance</strong>
+        <span>Roles, review, approval, and traceability make performance evidence trustworthy.</span>
+      </article>
+      <article class="story-opener-card">
+        <strong>Insight</strong>
+        <span>Time-series, AI, scorecards, and integrations turn operational signals into decisions.</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-overview">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Overview Storyline</span>
+        <h2>What DPMES is, why it matters, and the problem it solves</h2>
+      </div>
+      <p>
+        DPMES exists to replace disconnected plans, spreadsheets, submissions, and reporting cycles with one national
+        delivery architecture. It gives ministries and leadership a shared language for progress, risk, ownership, and
+        evidence.
+      </p>
+    </div>
+    <div class="story-grid story-grid-3">
+      <article class="story-card story-reveal">
+        <span class="story-card-tag">Planning</span>
+        <h3>From plan to measurable architecture</h3>
+        <p>Plans become policy areas, strategic goals, outcomes, outputs, and indicators that can be governed and tracked.</p>
+      </article>
+      <article class="story-card story-reveal">
+        <span class="story-card-tag">Coordination</span>
+        <h3>One execution language across institutions</h3>
+        <p>Institutions can align submissions, weights, targets, and reviews inside the same performance model.</p>
+      </article>
+      <article class="story-card story-reveal">
+        <span class="story-card-tag">Reporting</span>
+        <h3>From evidence to executive decisions</h3>
+        <p>Leadership sees current status, movement over time, governance accountability, and strategic interventions in one place.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-framework" data-framework-story>
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Result Framework</span>
+        <h2>How the performance hierarchy connects policy intent to measurable evidence</h2>
+      </div>
+      <p>
+        The result framework makes the chain of accountability explicit: national plans cascade into policy structures,
+        execution objects, and measurable signals that can be compared against baselines and targets.
+      </p>
+    </div>
+    <div class="framework-story">
+      <div class="framework-story-rail">
+        <button type="button" class="framework-step is-active" data-framework-step="plan">
+          <span class="framework-step-order">01</span>
+          <span class="framework-step-copy"><strong>Plan</strong><small>National direction and priorities</small></span>
+        </button>
+        <button type="button" class="framework-step" data-framework-step="policy">
+          <span class="framework-step-order">02</span>
+          <span class="framework-step-copy"><strong>Policy Area</strong><small>Strategic thematic structure</small></span>
+        </button>
+        <button type="button" class="framework-step" data-framework-step="goal">
+          <span class="framework-step-order">03</span>
+          <span class="framework-step-copy"><strong>Strategic Goal</strong><small>Desired high-level change</small></span>
+        </button>
+        <button type="button" class="framework-step" data-framework-step="outcome">
+          <span class="framework-step-order">04</span>
+          <span class="framework-step-copy"><strong>Outcome</strong><small>Observable medium-term effect</small></span>
+        </button>
+        <button type="button" class="framework-step" data-framework-step="output">
+          <span class="framework-step-order">05</span>
+          <span class="framework-step-copy"><strong>Output</strong><small>Delivery commitments and actions</small></span>
+        </button>
+        <button type="button" class="framework-step" data-framework-step="indicator">
+          <span class="framework-step-order">06</span>
+          <span class="framework-step-copy"><strong>Indicator and KPI</strong><small>Measurement logic and time-series evidence</small></span>
+        </button>
+      </div>
+      <div class="framework-story-panel">
+        <div class="framework-diagram-shell">
+          <svg class="framework-diagram" viewBox="0 0 980 260" role="img" aria-label="DPMES result framework hierarchy">
+            <defs>
+              <linearGradient id="frameworkPathGradient" x1="0%" x2="100%">
+                <stop offset="0%" stop-color="rgba(15,118,110,0.16)"></stop>
+                <stop offset="100%" stop-color="rgba(15,118,110,0.6)"></stop>
+              </linearGradient>
+            </defs>
+            <path class="framework-diagram-link" d="M90 132 H220"></path>
+            <path class="framework-diagram-link" d="M274 132 H405"></path>
+            <path class="framework-diagram-link" d="M459 132 H588"></path>
+            <path class="framework-diagram-link" d="M642 132 H770"></path>
+            <path class="framework-diagram-link" d="M825 132 H904"></path>
+            <g class="framework-diagram-node framework-node-plan" transform="translate(18 82)">
+              <rect width="72" height="96" rx="24"></rect>
+              <text x="36" y="44">Plan</text>
+              <text x="36" y="66">Direction</text>
+            </g>
+            <g class="framework-diagram-node framework-node-policy" transform="translate(220 82)">
+              <rect width="54" height="96" rx="22"></rect>
+              <text x="27" y="44">Policy</text>
+              <text x="27" y="66">Area</text>
+            </g>
+            <g class="framework-diagram-node framework-node-goal" transform="translate(405 82)">
+              <rect width="54" height="96" rx="22"></rect>
+              <text x="27" y="44">Goal</text>
+              <text x="27" y="66">Result</text>
+            </g>
+            <g class="framework-diagram-node framework-node-outcome" transform="translate(588 82)">
+              <rect width="54" height="96" rx="22"></rect>
+              <text x="27" y="44">Outcome</text>
+              <text x="27" y="66">Change</text>
+            </g>
+            <g class="framework-diagram-node framework-node-output" transform="translate(770 82)">
+              <rect width="54" height="96" rx="22"></rect>
+              <text x="27" y="44">Output</text>
+              <text x="27" y="66">Delivery</text>
+            </g>
+            <g class="framework-diagram-node framework-node-metric" transform="translate(904 58)">
+              <rect width="58" height="64" rx="20"></rect>
+              <text x="29" y="38">KPI</text>
+            </g>
+            <g class="framework-diagram-node framework-node-metric framework-node-metric-secondary" transform="translate(904 138)">
+              <rect width="58" height="64" rx="20"></rect>
+              <text x="29" y="30">Weight</text>
+              <text x="29" y="48">Target</text>
+            </g>
+          </svg>
+        </div>
+        <div class="framework-visual">
+          <div class="framework-node framework-node-plan">Plan</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-policy">Policy Area</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-goal">Strategic Goal</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-outcome">Outcome</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-output">Output</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-indicator">Indicator</div>
+          <div class="framework-connector"></div>
+          <div class="framework-node framework-node-metric">KPI and Weight</div>
+        </div>
+        <div class="framework-explainer">
+          <article class="framework-explainer-panel is-active" data-framework-panel="plan">
+            <h3>Plan sets the national ambition</h3>
+            <p>DPMES begins with an approved plan that defines the development direction, strategic intent, and expected public value.</p>
+            <div class="framework-meta-grid">
+              <div><span>Purpose</span><strong>Direction-setting</strong></div>
+              <div><span>Owner</span><strong>National leadership</strong></div>
+              <div><span>Evidence link</span><strong>Framework design</strong></div>
+            </div>
+          </article>
+          <article class="framework-explainer-panel" data-framework-panel="policy">
+            <h3>Policy areas organize the agenda</h3>
+            <p>Policy areas cluster strategic issues into governable thematic spaces so ministries and delivery institutions work from a common structure.</p>
+            <div class="framework-meta-grid">
+              <div><span>Purpose</span><strong>Thematic coordination</strong></div>
+              <div><span>Owner</span><strong>Sector leadership</strong></div>
+              <div><span>Evidence link</span><strong>Portfolio scorecards</strong></div>
+            </div>
+          </article>
+          <article class="framework-explainer-panel" data-framework-panel="goal">
+            <h3>Strategic goals define the result to achieve</h3>
+            <p>Each goal clarifies the change the policy area seeks, giving institutions a common performance destination and reporting anchor.</p>
+            <div class="framework-meta-grid">
+              <div><span>Purpose</span><strong>Result ownership</strong></div>
+              <div><span>Owner</span><strong>Goal custodians</strong></div>
+              <div><span>Evidence link</span><strong>Goal detail views</strong></div>
+            </div>
+          </article>
+          <article class="framework-explainer-panel" data-framework-panel="outcome">
+            <h3>Outcomes describe change in the real world</h3>
+            <p>Outcomes make the system legible for leadership by translating work into changes that matter for people, services, and institutions.</p>
+            <div class="framework-meta-grid">
+              <div><span>Purpose</span><strong>Impact translation</strong></div>
+              <div><span>Owner</span><strong>Program stewards</strong></div>
+              <div><span>Evidence link</span><strong>Outcome indicators</strong></div>
+            </div>
+          </article>
+          <article class="framework-explainer-panel" data-framework-panel="output">
+            <h3>Outputs capture the delivery commitments</h3>
+            <p>Outputs connect operational delivery to strategy so implementation activities can be weighed, monitored, and reviewed over time.</p>
+            <div class="framework-meta-grid">
+              <div><span>Purpose</span><strong>Execution control</strong></div>
+              <div><span>Owner</span><strong>Implementing teams</strong></div>
+              <div><span>Evidence link</span><strong>Operational KPI groups</strong></div>
+            </div>
+          </article>
+          <article class="framework-explainer-panel" data-framework-panel="indicator">
+            <h3>Indicators, KPIs, weights, baselines, targets, and current performance complete the chain</h3>
+            <p>Measurement turns the framework into a governed performance engine. Baseline shows where the journey started, target defines intent, current performance shows present status, and weight clarifies strategic importance.</p>
+            <div class="framework-measure-strip">
+              <div><span>Baseline</span><strong>Starting point</strong></div>
+              <div><span>Target</span><strong>Expected destination</strong></div>
+              <div><span>Current</span><strong>Observed status</strong></div>
+              <div><span>Weight</span><strong>Relative importance</strong></div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-flow">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Data Collection Flow</span>
+        <h2>How operational data moves from source systems and institutions into the national dashboard</h2>
+      </div>
+      <p>
+        DPMES is not only a dashboard. It is a coordination architecture for moving validated evidence from operational
+        environments into decision-ready national views.
+      </p>
+    </div>
+    <div class="flow-stage-grid">
+      <article class="flow-stage-card story-reveal">
+        <span class="flow-stage-index">01</span>
+        <h3>Source systems and field operations</h3>
+        <p>Facility systems, administrative records, project systems, manual registers, and partner datasets generate the raw evidence.</p>
+      </article>
+      <article class="flow-stage-card story-reveal">
+        <span class="flow-stage-index">02</span>
+        <h3>Institutional submission</h3>
+        <p>Departments, bureaus, projects, and ministry units submit structured performance data through manual or automated channels.</p>
+      </article>
+      <article class="flow-stage-card story-reveal">
+        <span class="flow-stage-index">03</span>
+        <h3>Validation checkpoints</h3>
+        <p>Business rules, metadata checks, completeness reviews, and stewardship review protect data quality before approval.</p>
+      </article>
+      <article class="flow-stage-card story-reveal">
+        <span class="flow-stage-index">04</span>
+        <h3>Synchronization and aggregation</h3>
+        <p>Approved values roll into category, goal, policy area, institution, and national aggregates with full traceability.</p>
+      </article>
+    </div>
+    <div class="collection-pipeline-shell">
+      <svg class="collection-pipeline" viewBox="0 0 1160 260" role="img" aria-label="Data collection and synchronization pipeline">
+        <defs>
+          <linearGradient id="pipelineGradient" x1="0%" x2="100%">
+            <stop offset="0%" stop-color="rgba(15,118,110,0.12)"></stop>
+            <stop offset="100%" stop-color="rgba(15,118,110,0.55)"></stop>
+          </linearGradient>
+        </defs>
+        <path class="collection-pipeline-path" d="M120 130 H1040"></path>
+        <circle class="collection-pipeline-pulse" cx="120" cy="130" r="10"></circle>
+        <g class="collection-stage" transform="translate(40 78)">
+          <rect width="150" height="104" rx="26"></rect>
+          <text x="75" y="42">Source</text>
+          <text x="75" y="64">systems</text>
+        </g>
+        <g class="collection-stage" transform="translate(260 78)">
+          <rect width="150" height="104" rx="26"></rect>
+          <text x="75" y="42">Institution</text>
+          <text x="75" y="64">submission</text>
+        </g>
+        <g class="collection-stage" transform="translate(480 78)">
+          <rect width="150" height="104" rx="26"></rect>
+          <text x="75" y="42">Validation</text>
+          <text x="75" y="64">checkpoint</text>
+        </g>
+        <g class="collection-stage" transform="translate(700 78)">
+          <rect width="150" height="104" rx="26"></rect>
+          <text x="75" y="42">Approval and</text>
+          <text x="75" y="64">aggregation</text>
+        </g>
+        <g class="collection-stage" transform="translate(920 78)">
+          <rect width="150" height="104" rx="26"></rect>
+          <text x="75" y="42">Executive</text>
+          <text x="75" y="64">dashboard</text>
+        </g>
+      </svg>
+    </div>
+    <div class="architecture-board architecture-board-animated">
+      <div class="architecture-column">
+        <h3>Operational layer</h3>
+        <div class="architecture-chip-list">
+          <span>Facilities</span>
+          <span>Projects</span>
+          <span>Regional bureaus</span>
+          <span>Institutional systems</span>
+          <span>Manual collection</span>
+        </div>
+      </div>
+      <div class="architecture-arrow"><i class="ti ti-arrow-right"></i></div>
+      <div class="architecture-column">
+        <h3>Validation layer</h3>
+        <div class="architecture-chip-list">
+          <span>Metadata rules</span>
+          <span>Frequency checks</span>
+          <span>Approver workflow</span>
+          <span>Revision history</span>
+          <span>Trace logs</span>
+        </div>
+      </div>
+      <div class="architecture-arrow"><i class="ti ti-arrow-right"></i></div>
+      <div class="architecture-column">
+        <h3>Executive insight layer</h3>
+        <div class="architecture-chip-list">
+          <span>Policy scorecards</span>
+          <span>Public body performance</span>
+          <span>Time-series explorer</span>
+          <span>AI assistance</span>
+          <span>Strategic reporting</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-governance">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Data Governance</span>
+        <h2>Who owns, submits, validates, approves, consumes, and governs the evidence</h2>
+      </div>
+      <p>
+        Governance in DPMES is a role map. It clarifies accountability and keeps every metric connected to ownership,
+        review, approval, and public-sector responsibility.
+      </p>
+    </div>
+    <div class="governance-network-shell">
+      <svg class="governance-network" viewBox="0 0 1080 360" role="img" aria-label="Data governance role network">
+        <path class="governance-network-link" d="M540 60 L250 150"></path>
+        <path class="governance-network-link" d="M540 60 L830 150"></path>
+        <path class="governance-network-link" d="M250 150 L250 286"></path>
+        <path class="governance-network-link" d="M830 150 L830 286"></path>
+        <path class="governance-network-link" d="M250 286 L540 320"></path>
+        <path class="governance-network-link" d="M830 286 L540 320"></path>
+        <g class="governance-network-node governance-network-node-core" transform="translate(450 18)">
+          <circle cx="90" cy="48" r="48"></circle>
+          <text x="90" y="44">Data</text>
+          <text x="90" y="66">Owner</text>
+        </g>
+        <g class="governance-network-node" transform="translate(170 100)">
+          <circle cx="80" cy="50" r="50"></circle>
+          <text x="80" y="46">Submit</text>
+          <text x="80" y="68">Data</text>
+        </g>
+        <g class="governance-network-node" transform="translate(750 100)">
+          <circle cx="80" cy="50" r="50"></circle>
+          <text x="80" y="46">Validate</text>
+          <text x="80" y="68">Rules</text>
+        </g>
+        <g class="governance-network-node" transform="translate(170 236)">
+          <circle cx="80" cy="50" r="50"></circle>
+          <text x="80" y="46">Approve</text>
+          <text x="80" y="68">Official</text>
+        </g>
+        <g class="governance-network-node" transform="translate(750 236)">
+          <circle cx="80" cy="50" r="50"></circle>
+          <text x="80" y="46">Consume</text>
+          <text x="80" y="68">Insights</text>
+        </g>
+        <g class="governance-network-node governance-network-node-core" transform="translate(450 258)">
+          <circle cx="90" cy="48" r="48"></circle>
+          <text x="90" y="44">Trace</text>
+          <text x="90" y="66">and audit</text>
+        </g>
+      </svg>
+    </div>
+    <div class="governance-map">
+      <article class="governance-role-card story-reveal">
+        <span class="governance-role-icon"><i class="ti ti-shield-check"></i></span>
+        <h3>Data owner</h3>
+        <p>Defines what the indicator means, who is accountable, and which institution is responsible for stewardship.</p>
+      </article>
+      <article class="governance-role-card story-reveal">
+        <span class="governance-role-icon"><i class="ti ti-upload"></i></span>
+        <h3>Data submitter</h3>
+        <p>Provides the reporting value, metadata, evidence trail, and reporting comments on the defined schedule.</p>
+      </article>
+      <article class="governance-role-card story-reveal">
+        <span class="governance-role-icon"><i class="ti ti-clipboard-check"></i></span>
+        <h3>Validator</h3>
+        <p>Checks consistency, completeness, methodology, and compliance before the data moves forward.</p>
+      </article>
+      <article class="governance-role-card story-reveal">
+        <span class="governance-role-icon"><i class="ti ti-stamp"></i></span>
+        <h3>Approver</h3>
+        <p>Confirms official acceptance so the value becomes part of institution, policy, and national performance views.</p>
+      </article>
+      <article class="governance-role-card story-reveal">
+        <span class="governance-role-icon"><i class="ti ti-users-group"></i></span>
+        <h3>Consumer</h3>
+        <p>Leadership, analysts, planners, partners, and oversight teams use the evidence for decisions and reporting.</p>
+      </article>
+    </div>
+    <div class="story-grid story-grid-2">
+      <article class="story-card story-card-tone">
+        <h3>Governance rules</h3>
+        <ul class="story-list">
+          <li>Every metric has metadata, frequency, unit, and owner.</li>
+          <li>Every submission has a review and approval path.</li>
+          <li>Every revision remains visible through audit and traceability.</li>
+        </ul>
+      </article>
+      <article class="story-card story-card-tone">
+        <h3>Governance outcomes</h3>
+        <ul class="story-list">
+          <li>Leadership sees trusted performance instead of uncontrolled reporting.</li>
+          <li>Institutions understand role-based accountability.</li>
+          <li>Partners and technical teams can distinguish draft, reviewed, and approved evidence.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-lifecycle">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Data Lifecycle</span>
+        <h2>The end-to-end lifecycle from definition to feedback and revision</h2>
+      </div>
+      <p>
+        DPMES treats data as a managed lifecycle. Each stage improves quality, clarifies ownership, and strengthens the
+        link between operational reporting and executive insight.
+      </p>
+    </div>
+    <div class="lifecycle-track" data-lifecycle-track>
+      <article class="lifecycle-step is-active" data-lifecycle-step tabindex="0"><strong>Planning</strong><span>Set priorities, result logic, and reporting scope.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Definition</strong><span>Define indicators, units, frequencies, and metadata.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Collection</strong><span>Capture operational and institutional data inputs.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Submission</strong><span>Submit evidence through structured workflows and integrations.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Validation</strong><span>Check quality, completeness, and consistency.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Approval</strong><span>Confirm official acceptance for downstream use.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Aggregation</strong><span>Roll values into program, institution, and national views.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Analysis</strong><span>Interpret trends, variance, and performance movement.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Reporting</strong><span>Translate evidence into dashboards, scorecards, and narratives.</span></article>
+      <article class="lifecycle-step" data-lifecycle-step tabindex="0"><strong>Feedback</strong><span>Revise data, methods, or ownership where issues are identified.</span></article>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-rollout">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Rollout Story</span>
+        <h2>How the platform expands across institutions, users, and geographies</h2>
+      </div>
+      <p>
+        Rollout in DPMES is not only software deployment. It is institutional onboarding, role activation, adoption
+        support, and expansion of performance governance across national and regional actors.
+      </p>
+    </div>
+    <div class="story-grid story-grid-2">
+      <div class="rollout-line-shell">
+        <svg class="rollout-line" viewBox="0 0 720 160" role="img" aria-label="Rollout timeline with milestones">
+          <path class="rollout-line-path" d="M50 98 C130 92, 180 68, 250 68 C330 68, 360 106, 430 106 C520 106, 540 48, 640 48"></path>
+          <g class="rollout-line-point" transform="translate(48 98)">
+            <circle r="10"></circle>
+            <text x="0" y="-20">Core</text>
+          </g>
+          <g class="rollout-line-point" transform="translate(250 68)">
+            <circle r="10"></circle>
+            <text x="0" y="-20">Onboarding</text>
+          </g>
+          <g class="rollout-line-point" transform="translate(430 106)">
+            <circle r="10"></circle>
+            <text x="0" y="34">Regional scale</text>
+          </g>
+          <g class="rollout-line-point" transform="translate(640 48)">
+            <circle r="10"></circle>
+            <text x="0" y="-20">Advanced adoption</text>
+          </g>
+        </svg>
+      </div>
+      <div class="rollout-timeline">
+        <article class="rollout-phase">
+          <span class="rollout-phase-tag">Phase 1</span>
+          <h3>Core platform activation</h3>
+          <p>Establish the result framework, governance roles, baseline scorecards, and priority institutions.</p>
+        </article>
+        <article class="rollout-phase">
+          <span class="rollout-phase-tag">Phase 2</span>
+          <h3>Institutional onboarding</h3>
+          <p>Bring ministries, sector teams, and key reporting units into the workflow with training and role setup.</p>
+        </article>
+        <article class="rollout-phase">
+          <span class="rollout-phase-tag">Phase 3</span>
+          <h3>Regional and operational expansion</h3>
+          <p>Extend the reporting chain downward and outward, connect more source systems, and expand coverage.</p>
+        </article>
+        <article class="rollout-phase">
+          <span class="rollout-phase-tag">Phase 4</span>
+          <h3>Advanced intelligence and adoption</h3>
+          <p>Operationalize AI, cross-platform integrations, strategic storytelling, and mature executive reporting.</p>
+        </article>
+      </div>
+      <div class="rollout-progress-board">
+        <article class="rollout-progress-card">
+          <span>Institution onboarding</span>
+          <div class="rollout-progress-meter"><span style="width: 72%;"></span></div>
+          <strong>72% of priority institutions onboarded</strong>
+        </article>
+        <article class="rollout-progress-card">
+          <span>User enablement</span>
+          <div class="rollout-progress-meter"><span style="width: 64%;"></span></div>
+          <strong>64% of target user groups activated</strong>
+        </article>
+        <article class="rollout-progress-card">
+          <span>Regional expansion</span>
+          <div class="rollout-progress-meter"><span style="width: 58%;"></span></div>
+          <strong>58% of intended regional coverage reached</strong>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-timeseries">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Time-Series Story</span>
+        <h2>Why time matters in performance monitoring and how to interpret change</h2>
+      </div>
+      <p>
+        Time-series data tells the story of movement, not just status. DPMES uses time to show whether performance is
+        stable, improving, deteriorating, seasonal, delayed, or accelerating against strategic expectations.
+      </p>
+    </div>
+    <div class="story-grid story-grid-2">
+      <article class="story-card story-chart-card story-reveal">
+        <div class="story-card-head">
+          <span class="story-card-tag">Illustrative trend</span>
+          <h3>How patterns become executive insight</h3>
+        </div>
+        <svg class="story-timeseries-chart" viewBox="0 0 620 280" role="img" aria-label="Illustrative time series trend">
+          <defs>
+            <linearGradient id="storyTrendFillAbout" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="rgba(15,118,110,0.28)"></stop>
+              <stop offset="100%" stop-color="rgba(15,118,110,0.03)"></stop>
+            </linearGradient>
+          </defs>
+          <path class="story-chart-grid" d="M60 40H580 M60 95H580 M60 150H580 M60 205H580"></path>
+          <path fill="url(#storyTrendFillAbout)" d="M60 210 L130 178 L200 160 L270 124 L340 142 L410 112 L480 86 L550 66 L550 240 L60 240 Z"></path>
+          <path class="story-chart-line" d="M60 210 L130 178 L200 160 L270 124 L340 142 L410 112 L480 86 L550 66"></path>
+          <g class="story-chart-milestone">
+            <circle cx="60" cy="210" r="5"></circle>
+            <text x="52" y="196">Baseline</text>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="130" cy="178" r="5"></circle>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="200" cy="160" r="5"></circle>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="270" cy="124" r="5"></circle>
+            <text x="246" y="108">Policy push</text>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="340" cy="142" r="5"></circle>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="410" cy="112" r="5"></circle>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="480" cy="86" r="5"></circle>
+          </g>
+          <g class="story-chart-milestone">
+            <circle cx="550" cy="66" r="5"></circle>
+            <text x="510" y="48">Current</text>
+          </g>
+          <text x="60" y="260">Y1</text>
+          <text x="160" y="260">Y2</text>
+          <text x="260" y="260">Y3</text>
+          <text x="360" y="260">Y4</text>
+          <text x="460" y="260">Y5</text>
+          <text x="540" y="260">Y6</text>
+        </svg>
+      </article>
+      <div class="story-column">
+        <article class="story-card">
+          <h3>What time-series means here</h3>
+          <p>It means every indicator is not just a value, but a sequence of evidence points shaped by reporting frequency and institutional process.</p>
+        </article>
+        <article class="story-card">
+          <h3>What leaders should look for</h3>
+          <ul class="story-list">
+            <li>Trend direction against target</li>
+            <li>Volatility or sudden breaks</li>
+            <li>Seasonal effects and reporting cycles</li>
+            <li>Lag between intervention and visible result</li>
+          </ul>
+        </article>
+        <article class="story-card">
+          <h3>Why it matters</h3>
+          <p>Time-series evidence helps distinguish one-off reporting spikes from durable progress and supports earlier decision-making.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="story-section story-reveal" id="story-integrations">
+    <div class="story-section-head">
+      <div>
+        <span class="story-kicker">Strategic Modules and Integrations</span>
+        <h2>How the wider platform ecosystem supports the DPMES mission</h2>
+      </div>
+      <p>
+        The dashboard story extends beyond one module. Integrations and strategic products turn DPMES into a broader
+        national intelligence platform.
+      </p>
+    </div>
+    <div class="story-grid story-grid-3" id="story-analytics-links">
+      <div class="ecosystem-map-shell">
+        <svg class="ecosystem-map" viewBox="0 0 1080 260" role="img" aria-label="DPMES ecosystem module connections">
+          <path class="ecosystem-link" d="M540 130 L230 62"></path>
+          <path class="ecosystem-link" d="M540 130 L230 198"></path>
+          <path class="ecosystem-link" d="M540 130 L540 40"></path>
+          <path class="ecosystem-link" d="M540 130 L540 220"></path>
+          <path class="ecosystem-link" d="M540 130 L850 62"></path>
+          <path class="ecosystem-link" d="M540 130 L850 198"></path>
+          <g class="ecosystem-node ecosystem-node-core" transform="translate(456 70)">
+            <rect width="168" height="120" rx="34"></rect>
+            <text x="84" y="56">DPMES</text>
+            <text x="84" y="84">Core platform</text>
+          </g>
+          <g class="ecosystem-node" transform="translate(140 18)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">Admas AI</text><text x="70" y="62">Insight layer</text></g>
+          <g class="ecosystem-node" transform="translate(140 154)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">SDG</text><text x="70" y="62">Framework view</text></g>
+          <g class="ecosystem-node" transform="translate(470 -2)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">Time-series</text><text x="70" y="62">Evidence trend</text></g>
+          <g class="ecosystem-node" transform="translate(470 174)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">Projects</text><text x="70" y="62">Delivery stories</text></g>
+          <g class="ecosystem-node" transform="translate(800 18)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">Mesob</text><text x="70" y="62">Service signals</text></g>
+          <g class="ecosystem-node" transform="translate(800 154)"><rect width="140" height="88" rx="28"></rect><text x="70" y="40">Digital ID</text><text x="70" y="62">Identity link</text></g>
+        </svg>
+      </div>
+      <article class="story-card story-link-card">
+        <span class="story-card-tag">AI</span>
+        <h3>Admas AI</h3>
+        <p>Use natural language to interrogate indicators, build strategic answers, and shorten the distance between data and interpretation.</p>
+        <a href="{% url 'dashboard_admas_ai' %}">Open Admas AI</a>
+      </article>
+      <article class="story-card story-link-card">
+        <span class="story-card-tag">Framework</span>
+        <h3>SDG Explorer</h3>
+        <p>Connect national reporting to the global development language and show target-level coverage, data, and evidence stories.</p>
+        <a href="{% url 'sdg_list' %}">Open SDG Explorer</a>
+      </article>
+      <article class="story-card story-link-card">
+        <span class="story-card-tag">Operational</span>
+        <h3>Analytics modules</h3>
+        <p>Use the main dashboard for live scorecards, time-series analytics, projects, initiatives, Mesob, and Digital ID summaries.</p>
+        <a href="{% url 'dashboard_home' %}">Open Home Dashboard</a>
+      </article>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="module" src="{% static 'assets/js/pages/dashboard-story.js' %}?v=20260312e"></script>
+{% endblock %}

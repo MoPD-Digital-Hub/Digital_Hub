@@ -143,6 +143,27 @@ class AIAPITests(TestCase):
         self.assertEqual(response.data["result"], "SUCCESS")
         self.assertEqual(response.data["data"]["answer"], "ok")
 
+    @patch("AI.api.api.synthesize_gemini_tts", return_value=(b"RIFFfake", "audio/wav"))
+    def test_tts_prefetch_warms_cache(self, _mock_tts):
+        response = self.client.post(
+            "/api/ai-chat/tts/prefetch/",
+            data={"text": "hello", "language": "English"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["result"], "SUCCESS")
+
+    @patch("AI.api.api.translate_text_with_gemini", return_value="ሰላም")
+    def test_translate_returns_text(self, _mock_translate):
+        response = self.client.post(
+            "/api/ai-chat/translate/",
+            data={"text": "hello", "target_language": "Amharic"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["result"], "SUCCESS")
+        self.assertEqual(response.data["data"]["translation"], "ሰላም")
+
     def test_dependency_health_endpoint(self):
         response = self.client.get("/api/ai-chat/health/dependencies/")
         self.assertEqual(response.status_code, 200)

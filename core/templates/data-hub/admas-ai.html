@@ -300,6 +300,27 @@
     background: transparent;
     overflow: visible;
   }
+  .ai-chat-stream-tools {
+    position: sticky;
+    bottom: 96px;
+    z-index: 3;
+    display: flex;
+    justify-content: flex-end;
+    pointer-events: none;
+    margin-top: -4px;
+  }
+  .ai-jump-latest {
+    pointer-events: auto;
+    min-height: 38px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 16%, var(--ai-border) 84%);
+    background: color-mix(in srgb, var(--dh-body-bg) 94%, var(--dh-surface-bg) 6%);
+    color: var(--ai-text);
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 12px 22px rgba(var(--ai-accent-rgb), 0.12);
+  }
   .msg {
     max-width: min(960px, 92%);
     display: grid;
@@ -360,17 +381,145 @@
     background-color: transparent !important;
     color: var(--ai-text);
   }
+  .msg.ai.is-streaming .msg-bubble {
+    position: relative;
+    border-color: color-mix(in srgb, var(--ai-accent) 24%, var(--ai-border) 76%);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--dh-surface-bg) 90%, rgba(var(--ai-accent-rgb), 0.1) 10%) 0%, color-mix(in srgb, var(--dh-surface-bg) 96%, transparent) 100%) !important;
+  }
+  .msg.ai.is-streaming .msg-bubble::after {
+    content: "";
+    position: absolute;
+    inset: auto 14px -1px 14px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(var(--ai-accent-rgb), 0.12) 0%, rgba(var(--ai-accent-rgb), 0.72) 48%, rgba(var(--ai-accent-rgb), 0.12) 100%);
+    animation: ai-stream-progress 1.6s ease-in-out infinite;
+  }
   .msg.ai .ai-msg-head {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 6px;
+  }
+  .msg.ai .ai-msg-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
     font-weight: 700;
     color: var(--ai-accent);
+    min-width: 0;
+  }
+  .msg.ai .ai-msg-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .msg.ai .ai-translate-btn,
+  .msg.ai .ai-tts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 18%, var(--ai-border) 82%);
+    background: color-mix(in srgb, rgba(var(--ai-accent-rgb), 0.08) 75%, var(--dh-surface-bg) 25%);
+    color: var(--ai-accent);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+  .msg.ai .ai-translate-btn:hover,
+  .msg.ai .ai-translate-btn:focus,
+  .msg.ai .ai-tts-btn:hover,
+  .msg.ai .ai-tts-btn:focus {
+    transform: translateY(-1px);
+    border-color: var(--ai-accent);
+    background: rgba(var(--ai-accent-rgb), 0.16);
+    color: var(--ai-accent-strong);
+  }
+  .msg.ai .ai-translate-btn.is-active,
+  .msg.ai .ai-tts-btn.is-playing {
+    border-color: var(--ai-accent-strong);
+    background: linear-gradient(135deg, rgba(var(--ai-accent-rgb), 0.24), rgba(var(--ai-accent-rgb), 0.14));
+    color: var(--ai-accent-strong);
+  }
+  .msg.ai .ai-translate-btn.is-loading,
+  .msg.ai .ai-tts-btn.is-loading {
+    opacity: 0.72;
+    cursor: wait;
+  }
+  .msg.ai .ai-translate-btn.is-loading i,
+  .msg.ai .ai-tts-btn.is-loading i {
+    animation: ai-tts-spin 0.9s linear infinite;
+  }
+  .msg.ai .ai-translation-panel {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 16%, var(--ai-border) 84%);
+    background: color-mix(in srgb, rgba(var(--ai-accent-rgb), 0.08) 72%, var(--dh-surface-bg) 28%);
+  }
+  .msg.ai .ai-translation-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .msg.ai .ai-translation-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ai-accent);
+  }
+  .msg.ai .ai-translation-tts-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 18%, var(--ai-border) 82%);
+    background: color-mix(in srgb, rgba(var(--ai-accent-rgb), 0.08) 75%, var(--dh-surface-bg) 25%);
+    color: var(--ai-accent);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+  .msg.ai .ai-translation-tts-btn:hover,
+  .msg.ai .ai-translation-tts-btn:focus {
+    transform: translateY(-1px);
+    border-color: var(--ai-accent);
+    background: rgba(var(--ai-accent-rgb), 0.16);
+    color: var(--ai-accent-strong);
+  }
+  .msg.ai .ai-translation-tts-btn.is-playing {
+    border-color: var(--ai-accent-strong);
+    background: linear-gradient(135deg, rgba(var(--ai-accent-rgb), 0.24), rgba(var(--ai-accent-rgb), 0.14));
+    color: var(--ai-accent-strong);
+  }
+  .msg.ai .ai-translation-tts-btn.is-loading {
+    opacity: 0.72;
+    cursor: wait;
+  }
+  .msg.ai .ai-translation-tts-btn.is-loading i {
+    animation: ai-tts-spin 0.9s linear infinite;
+  }
+  .msg.ai .ai-translation-content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ai-text);
   }
   .msg.ai .ai-msg-content {
     font-size: 14px;
+    min-height: 28px;
   }
   .msg.ai .ai-msg-content p {
     margin: 0 0 8px;
@@ -388,6 +537,21 @@
   .msg.ai .ai-msg-content li:last-child {
     margin-bottom: 0;
   }
+  .msg.ai .ai-msg-status {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--ai-text-muted);
+  }
+  .msg.ai .ai-msg-status.is-error {
+    color: #b42318;
+  }
+  .msg.ai .ai-msg-status.is-success {
+    color: #0f766e;
+  }
+  .msg.ai .ai-msg-status.is-muted {
+    color: var(--ai-text-muted);
+  }
   .ai-composer {
     border-top: 1px solid var(--ai-border);
     padding: 14px 0 8px;
@@ -403,11 +567,20 @@
     grid-template-columns: 1fr auto;
     gap: 12px;
     align-items: center;
-    padding: 10px 12px 10px 16px;
-    border: 1px solid var(--ai-strong-border);
-    border-radius: 28px;
-    background: color-mix(in srgb, var(--dh-body-bg) 94%, var(--dh-surface-bg) 6%);
-    box-shadow: var(--ai-shadow);
+    padding: 12px 14px 12px 18px;
+    border: 1px solid color-mix(in srgb, var(--ai-strong-border) 85%, transparent);
+    border-radius: 30px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--dh-body-bg) 96%, var(--dh-surface-bg) 4%) 0%, color-mix(in srgb, var(--dh-body-bg) 91%, var(--dh-surface-bg) 9%) 100%);
+    box-shadow: 0 16px 30px rgba(var(--ai-accent-rgb), 0.08);
+  }
+  .ai-input-row.is-listening {
+    border-color: rgba(239, 68, 68, 0.34);
+    box-shadow: 0 22px 40px rgba(239, 68, 68, 0.12);
+  }
+  .ai-input-stack {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
   }
   .ai-input {
     min-height: 44px;
@@ -420,18 +593,143 @@
   .ai-input:focus {
     background: transparent;
   }
+  .ai-live-transcript {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 4px 0 2px;
+    color: var(--ai-text);
+  }
+  .ai-live-transcript.is-active {
+    display: flex;
+  }
+  .ai-live-transcript-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #ef4444;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42);
+    animation: ai-listening-pulse 1.2s ease-out infinite;
+    flex-shrink: 0;
+  }
+  .ai-live-transcript-body {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+  .ai-live-transcript-wave {
+    display: inline-flex;
+    align-items: end;
+    gap: 4px;
+    height: 18px;
+  }
+  .ai-live-transcript-wave span {
+    width: 3px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.72);
+    animation: ai-wave-bounce 1s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  .ai-live-transcript-wave span:nth-child(2) {
+    animation-delay: 0.12s;
+    height: 12px;
+  }
+  .ai-live-transcript-wave span:nth-child(3) {
+    animation-delay: 0.24s;
+    height: 16px;
+  }
+  .ai-live-transcript-wave span:nth-child(4) {
+    animation-delay: 0.36s;
+    height: 10px;
+  }
+  .ai-live-transcript-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ef4444;
+  }
+  .ai-live-transcript-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ai-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .ai-input-actions {
     display: inline-flex;
     align-items: center;
     gap: 8px;
   }
-  .ai-icon-btn {
-    height: 40px;
-    width: 40px;
+  .ai-speech-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
     border-radius: 999px;
+    border: 1px solid var(--ai-border);
+    background: color-mix(in srgb, var(--dh-body-bg) 94%, var(--dh-surface-bg) 6%);
+  }
+  .ai-speech-lang {
+    min-width: 42px;
+    height: 32px;
+    padding: 0 10px;
     border: 0;
+    border-radius: 999px;
     background: transparent;
     color: var(--ai-text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+  .ai-speech-lang:hover,
+  .ai-speech-lang:focus {
+    color: var(--ai-text);
+    background: rgba(var(--ai-accent-rgb), 0.08);
+  }
+  .ai-speech-lang.is-active {
+    background: linear-gradient(135deg, rgba(var(--ai-accent-rgb), 0.2), rgba(var(--ai-accent-rgb), 0.12));
+    color: var(--ai-accent-strong);
+    box-shadow: inset 0 0 0 1px rgba(var(--ai-accent-rgb), 0.14);
+  }
+  .ai-icon-btn {
+    min-height: 42px;
+    min-width: 42px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--ai-text-muted);
+  }
+  .ai-record-btn {
+    min-width: 110px;
+    padding: 0 14px;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    border-color: color-mix(in srgb, var(--ai-accent) 16%, var(--ai-border) 84%);
+    background: color-mix(in srgb, rgba(var(--ai-accent-rgb), 0.08) 74%, var(--dh-surface-bg) 26%);
+    color: var(--ai-text);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  }
+  .ai-record-btn:hover,
+  .ai-record-btn:focus {
+    transform: translateY(-1px);
+    border-color: rgba(var(--ai-accent-rgb), 0.28);
+    box-shadow: 0 10px 20px rgba(var(--ai-accent-rgb), 0.14);
+    color: var(--ai-accent-strong);
+  }
+  .ai-record-btn i {
+    font-size: 16px;
+  }
+  .ai-record-btn .ai-record-label {
+    line-height: 1;
   }
   .ai-send-btn {
     min-height: 42px;
@@ -464,22 +762,78 @@
     color: var(--ai-text);
   }
   .ai-mic-on {
-    background: rgba(239, 68, 68, 0.14) !important;
-    border-color: #ef4444 !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.12)) !important;
+    border-color: rgba(239, 68, 68, 0.42) !important;
     color: #ef4444 !important;
+    box-shadow: 0 14px 26px rgba(239, 68, 68, 0.18) !important;
   }
   .ai-loading {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     color: var(--ai-text-muted);
     font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid color-mix(in srgb, var(--ai-accent) 14%, var(--ai-border) 86%);
+    background: color-mix(in srgb, var(--dh-surface-bg) 92%, rgba(var(--ai-accent-rgb), 0.08) 8%);
   }
   .ai-loading .spinner-border {
     width: 0.9rem;
     height: 0.9rem;
     border-width: 0.12em;
     animation: spinner-border 0.75s linear infinite !important;
+  }
+  .ai-loading-copy {
+    display: grid;
+    gap: 2px;
+  }
+  .ai-loading-copy strong {
+    color: var(--ai-text);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .ai-loading-copy span {
+    font-size: 12px;
+    color: var(--ai-text-muted);
+  }
+  @keyframes ai-tts-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes ai-listening-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+  }
+  @keyframes ai-wave-bounce {
+    0%, 100% {
+      transform: scaleY(0.55);
+      opacity: 0.55;
+    }
+    50% {
+      transform: scaleY(1.05);
+      opacity: 1;
+    }
+  }
+  @keyframes ai-stream-progress {
+    0%, 100% {
+      opacity: 0.45;
+      transform: scaleX(0.78);
+      transform-origin: center;
+    }
+    50% {
+      opacity: 1;
+      transform: scaleX(1);
+      transform-origin: center;
+    }
   }
   @media (max-width: 1199.98px) {
     :root {
@@ -561,7 +915,7 @@
               <h4>{{ page_title }}</h4>
               <p>{{ subtitle }}</p>
             </div>
-            <button id="sidebarCollapseBtn" class="ai-sidebar-toggle" type="button" aria-label="Collapse chat instances">
+            <button id="sidebarCollapseBtn" class="ai-sidebar-toggle" type="button" aria-label="Collapse chat history">
               <i class="ti ti-layout-sidebar-left-collapse"></i>
             </button>
           </div>
@@ -578,11 +932,11 @@
           <div
             class="ai-instance {% if instance.id == active_instance.id %}active{% endif %}"
             data-room="{{ instance.id }}"
-            data-title="{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}"
+            data-title="{% if instance.title %}{{ instance.title }}{% else %}History {{ instance.id }}{% endif %}"
             data-tags="policy ministry indicator"
           >
-            <h6>{% if instance.title %}{{ instance.title }}{% else %}Chat {{ instance.id }}{% endif %}</h6>
-            <p>Instance #{{ instance.id }}</p>
+            <h6>{% if instance.title %}{{ instance.title }}{% else %}History {{ instance.id }}{% endif %}</h6>
+            <p>History #{{ instance.id }}</p>
           </div>
           {% endfor %}
         </div>
@@ -594,10 +948,10 @@
         <div class="ai-main-head-main">
           <button id="sidebarExpandBtn" class="ai-main-expand" type="button" aria-label="Show chat instances">
             <i class="ti ti-layout-sidebar-left-expand"></i>
-            <span>Instances</span>
+            <span>History</span>
           </button>
           <div>
-            <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}Chat {{ active_instance.id }}{% endif %}</h5>
+            <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}History {{ active_instance.id }}{% endif %}</h5>
             <p>Admas AI assistant for policy and indicator analytics.</p>
           </div>
         </div>
@@ -617,8 +971,31 @@
             <div class="msg ai">
               <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
               <div class="msg-bubble">
-                <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+                <div class="ai-msg-head">
+                  <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
+                  <div class="ai-msg-actions">
+                    <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
+                      <i class="ti ti-language-hiragana" aria-hidden="true"></i>
+                      <span>Amharic</span>
+                    </button>
+                    <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
+                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+                      <span>Listen</span>
+                    </button>
+                  </div>
+                </div>
                 <div class="ai-msg-content">{{ item.response|safe }}</div>
+                <div class="ai-msg-status" hidden></div>
+                <div class="ai-translation-panel" hidden>
+                  <div class="ai-translation-head">
+                    <div class="ai-translation-label">Amharic</div>
+                    <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
+                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+                      <span>Speak</span>
+                    </button>
+                  </div>
+                  <div class="ai-translation-content"></div>
+                </div>
               </div>
             </div>
             {% endif %}
@@ -627,13 +1004,42 @@
         <div class="msg ai">
           <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
           <div class="msg-bubble">
-            <div class="ai-msg-head"><i class="ti ti-sparkles"></i><span>Admas AI</span></div>
+            <div class="ai-msg-head">
+              <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
+              <div class="ai-msg-actions">
+                <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
+                  <i class="ti ti-language-hiragana" aria-hidden="true"></i>
+                  <span>Amharic</span>
+                </button>
+                <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
+                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+                  <span>Listen</span>
+                </button>
+              </div>
+            </div>
             <div class="ai-msg-content">
               <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+            </div>
+            <div class="ai-msg-status" hidden></div>
+            <div class="ai-translation-panel" hidden>
+              <div class="ai-translation-head">
+                <div class="ai-translation-label">Amharic</div>
+                <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
+                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
+                  <span>Speak</span>
+                </button>
+              </div>
+              <div class="ai-translation-content"></div>
             </div>
           </div>
         </div>
         {% endif %}
+      </div>
+      <div class="ai-chat-stream-tools">
+        <button id="jumpToLatestBtn" class="ai-jump-latest" type="button" hidden>
+          <i class="ti ti-arrow-down"></i>
+          <span>Jump to latest</span>
+        </button>
       </div>
 
       <div class="ai-composer">
@@ -645,10 +1051,27 @@
           <button type="button" class="ai-quick-tag" data-prompt="GDP Growth">GDP Growth</button>
         </div>
         <div class="ai-input-row">
-          <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
+          <div class="ai-input-stack">
+            <div id="liveTranscript" class="ai-live-transcript" aria-live="polite" hidden>
+              <span class="ai-live-transcript-dot" aria-hidden="true"></span>
+              <span class="ai-live-transcript-wave" aria-hidden="true">
+                <span></span><span></span><span></span><span></span>
+              </span>
+              <div class="ai-live-transcript-body">
+                <span id="liveTranscriptLabel" class="ai-live-transcript-label">Recording in English</span>
+                <span id="liveTranscriptText" class="ai-live-transcript-text">Recording… press stop to transcribe.</span>
+              </div>
+            </div>
+            <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
+          </div>
           <div class="ai-input-actions">
-            <button id="micBtn" class="btn ai-icon-btn" type="button" title="Voice input">
+            <div class="ai-speech-toggle" role="group" aria-label="Speech recognition language">
+              <button id="speechLangEn" class="ai-speech-lang is-active" type="button" data-lang="en-US" title="English speech recognition">EN</button>
+              <button id="speechLangAm" class="ai-speech-lang" type="button" data-lang="am-ET" title="Amharic speech recognition">አማ</button>
+            </div>
+            <button id="micBtn" class="btn ai-icon-btn ai-record-btn" type="button" title="Voice input">
               <i class="ti ti-microphone"></i>
+              <span class="ai-record-label">Record</span>
             </button>
             <button id="sendBtn" class="btn btn-primary ai-send-btn" type="button">
               <i class="ti ti-arrow-up"></i>
@@ -663,5 +1086,5 @@
 
 {% block script %}
 <script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
-<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260309d"></script>
+<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260313r"></script>
 {% endblock %}

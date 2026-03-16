@@ -1,6 +1,7 @@
 {% load static %}
 {% load i18n %}
 {% url 'dashboard_home' as dashboard_home_url %}
+{% url 'dashboard_about' as dashboard_about_url %}
 {% url 'dashboard_admas_ai' as admas_ai_url %}
 {% url 'data_categories' as data_categories_url %}
 {% url 'policy_area_list' as policy_area_list_url %}
@@ -148,6 +149,13 @@
                     <a class="pc-link {% if request.path == dashboard_home_url %}active{% endif %}" href="{{ dashboard_home_url|default:'#' }}">
                         <span class="pc-micon"><i class="ti ti-home"></i></span>
                         <span class="pc-mtext">{% trans "Home" %}</span>
+                    </a>
+                </li>
+
+                <li class="pc-item {% if request.path == dashboard_about_url %}active{% endif %}">
+                    <a class="pc-link {% if request.path == dashboard_about_url %}active{% endif %}" href="{{ dashboard_about_url|default:'#' }}">
+                        <span class="pc-micon"><i class="ti ti-info-circle"></i></span>
+                        <span class="pc-mtext">{% trans "About" %}</span>
                     </a>
                 </li>
 
