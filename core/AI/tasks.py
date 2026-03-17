@@ -3,7 +3,7 @@ from .models import Document as doc
 from AI.shared import process_document
 from celery import shared_task
 from AI.models import ChatInstance
-from AI.services import generate_answer
+from AI.application import generate_answer
 
 
 
@@ -38,7 +38,7 @@ def generate_answer_task(self, chat_instance_id, question, request_id=None):
             "chat_instance_id": chat_instance_id,
             "question": question,
             "answer": result.answer,
-            "intent": result.intent,
+            "route": result.route,
             "token_usage": result.token_usage,
         },
         "error": result.error,

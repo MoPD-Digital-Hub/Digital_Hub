@@ -1,5 +1,5 @@
 from django.urls import path, include
-from AI.api.api import (
+from AI.endpoints.api import (
     answer,
     chat,
     delete_chat_instance,

@@ -7,11 +7,55 @@ from asgiref.sync import sync_to_async
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from AI.platform.observability import increment, set_last_ingestion_report, timed
+from AI.runtime.observability import increment, set_last_ingestion_report, timed
 
 from .constants import REQUIRED_METADATA_KEYS_ANY
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=160)
+
+
+def _normalize_text(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _normalize_token(value):
+    return "".join(ch for ch in _normalize_text(value) if ch.isalnum())
+
+
+def _enrich_metadata(metadata):
+    meta = dict(metadata or {})
+    for key in ("indicator_code", "responsible_ministry_id", "responsible_ministry_code"):
+        if meta.get(key):
+            meta[f"{key}_normalized"] = _normalize_text(meta.get(key))
+
+    for key in (
+        "responsible_ministry_eng",
+        "indicator_eng",
+        "topic_name",
+        "category_name",
+        "source",
+        "policy_area_eng",
+        "policy_area_name",
+        "sector_name",
+        "goal_name",
+        "goal_eng",
+        "strategic_goal",
+        "target_name",
+        "goal_code",
+    ):
+        if meta.get(key):
+            meta[f"{key}_normalized"] = _normalize_text(meta.get(key))
+            meta[f"{key}_tokenized"] = _normalize_token(meta.get(key))
+
+    for key in ("year", "reference_year", "reporting_year"):
+        if meta.get(key) is not None:
+            meta[key] = str(meta.get(key)).strip()
+
+    for key in ("quarter", "reporting_period", "period"):
+        if meta.get(key):
+            meta[key] = _normalize_text(meta.get(key))
+
+    return meta
 
 
 def split_json(file_path):
@@ -53,7 +97,8 @@ async def process_document(to_be_loaded_doc, vector_store) -> bool:
         }
 
         for idx, document in enumerate(documents):
-            meta = getattr(document, "metadata", {}) or {}
+            meta = _enrich_metadata(getattr(document, "metadata", {}) or {})
+            document.metadata = meta
             if not any(k in meta and meta.get(k) for k in REQUIRED_METADATA_KEYS_ANY):
                 report["skipped"] += 1
                 report["details"].append(

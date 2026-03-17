@@ -1,0 +1,101 @@
+{
+  "time_series_terms": [
+    "gdp",
+    "inflation",
+    "export",
+    "exports",
+    "import",
+    "imports",
+    "unemployment",
+    "exchange rate",
+    "revenue",
+    "growth",
+    "trend",
+    "historical",
+    "history",
+    "time series",
+    "over time",
+    "yearly",
+    "annual",
+    "quarterly",
+    "monthly",
+    "indicator trend",
+    "series"
+  ],
+  "performance_terms": {
+    "on_track": [
+      "on track",
+      "good",
+      "success",
+      "achieved",
+      "excellent",
+      "best",
+      "meeting targets",
+      "strong"
+    ],
+    "in_progress": [
+      "in progress",
+      "average",
+      "satisfactory",
+      "moving",
+      "developing",
+      "mid range",
+      "mid-range"
+    ],
+    "weak_performance": [
+      "weak",
+      "bad",
+      "poor",
+      "critical",
+      "failing",
+      "behind",
+      "low score",
+      "low scores",
+      "lagging"
+    ],
+    "no_data": [
+      "missing",
+      "not reported",
+      "unknown",
+      "blank",
+      "unsubmitted",
+      "no data",
+      "without data"
+    ]
+  },
+  "quarter_patterns": {
+    "3month": [
+      "q1",
+      "1st quarter",
+      "first quarter",
+      "3 month",
+      "3month"
+    ],
+    "6month": [
+      "q2",
+      "2nd quarter",
+      "second quarter",
+      "6 month",
+      "6month",
+      "half year",
+      "semi annual",
+      "semi-annual"
+    ],
+    "9month": [
+      "q3",
+      "3rd quarter",
+      "third quarter",
+      "9 month",
+      "9month"
+    ],
+    "12month": [
+      "q4",
+      "4th quarter",
+      "fourth quarter",
+      "12 month",
+      "12month",
+      "annual",
+      "full year"
+    ]
+  }
+}

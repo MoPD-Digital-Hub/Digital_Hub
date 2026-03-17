@@ -22,9 +22,6 @@ from .context import (
 )
 from .ingestion import process_document, split_json, text_splitter
 from .upstream import (
-    fetch_indicator_time_series,
-    fetch_ministry_performance,
-    fetch_ministry_score,
     format_ministry_performance,
     format_ministry_score,
     format_time_series_response,
@@ -49,9 +46,6 @@ __all__ = [
     "build_ministry_score_context_from_docs",
     "build_ministry_performance_context_from_docs",
     "format_docs",
-    "fetch_indicator_time_series",
-    "fetch_ministry_score",
-    "fetch_ministry_performance",
     "format_time_series_response",
     "format_ministry_score",
     "format_ministry_performance",

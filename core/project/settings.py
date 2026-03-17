@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import Csv, config
-from AI.platform.config import validate_ai_config
+from AI.runtime.config import validate_ai_config
 # import logging
 # import logging.handlers
 
@@ -117,7 +117,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=90),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": False,
@@ -324,6 +324,10 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
+        "plain": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
         "json": {
             "()": "project.logging_utils.JsonFormatter",
         },
@@ -331,7 +335,7 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "json",
+            "formatter": "plain" if DEBUG else "json",
         },
     },
     "root": {

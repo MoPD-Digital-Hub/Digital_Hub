@@ -2,10 +2,11 @@ import os
 import logging
 from urllib.parse import urlparse
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from openai import APIConnectionError, APITimeoutError
+from openai import APIConnectionError, APITimeoutError, AsyncOpenAI
 
 _llm_cache = None
 _embeddings_cache = None
+_stream_client_cache = None
 LOGGER = logging.getLogger(__name__)
 
 def _normalize_openai_base_url(url: str, fallback: str) -> str:
@@ -63,6 +64,45 @@ def get_llm_instance():
     
     return None
 
+
+def get_streaming_client_config():
+    default_llm_url = "http://localhost:8000/v1"
+    api_base = _normalize_openai_base_url(
+        os.getenv("VLLM_API_BASE", default_llm_url),
+        fallback=default_llm_url,
+    )
+    model = os.getenv("VLLM_MODEL", "openai/gpt-oss-20b")
+    api_key = os.getenv("VLLM_API_KEY", "EMPTY")
+    request_timeout = int(os.getenv("AI_REQUEST_TIMEOUT", "60"))
+    max_retries = int(os.getenv("AI_MAX_RETRIES", "3"))
+
+    return {
+        "base_url": api_base,
+        "model": model,
+        "api_key": api_key,
+        "timeout": request_timeout,
+        "max_retries": max_retries,
+    }
+
+
+def get_streaming_client():
+    global _stream_client_cache
+    if _stream_client_cache is not None:
+        return _stream_client_cache
+
+    config = get_streaming_client_config()
+    try:
+        _stream_client_cache = AsyncOpenAI(
+            base_url=config["base_url"],
+            api_key=config["api_key"],
+            timeout=config["timeout"],
+            max_retries=config["max_retries"],
+        )
+        return _stream_client_cache
+    except Exception as exc:
+        LOGGER.exception("Failed to initialize AsyncOpenAI streaming client: %s", str(exc))
+        return None
+
 def get_remote_embeddings():
     global _embeddings_cache
     if _embeddings_cache is not None:
@@ -94,6 +134,7 @@ def get_remote_embeddings():
 
 
 def clear_provider_caches():
-    global _llm_cache, _embeddings_cache
+    global _llm_cache, _embeddings_cache, _stream_client_cache
     _llm_cache = None
     _embeddings_cache = None
+    _stream_client_cache = None

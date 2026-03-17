@@ -3,6 +3,8 @@ import os
 import json
 import logging
 import ssl
+import re
+from html import unescape
 
 import aiohttp
 import certifi
@@ -10,14 +12,13 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 
-from AI.domain import INTENTS
-from AI.platform.exceptions import AIServiceError
-from AI.platform.observability import increment
+from AI.runtime.exceptions import AIServiceError
+from AI.runtime.exceptions import ERROR_RETRIEVAL_EMPTY
+from AI.runtime.observability import increment
 from AI.infrastructure import get_llm_instance
 from AI.infrastructure.translation import translate_text_with_gemini
-from AI.selectors import build_context_for_intent, resolve_intent
-from AI.services import format_history_records_for_llm, retrieve_docs
-from AI.shared import run_chain_stream
+from AI.application import format_history_records_for_llm, prepare_answer
+from AI.shared import invoke_chat_once, run_chain_stream
 
 LOGGER = logging.getLogger("AI.consumers")
 WS_SEMAPHORE = asyncio.Semaphore(max(1, getattr(settings, "AI_WS_MAX_CONCURRENCY", 20)))
@@ -25,6 +26,49 @@ GEMINI_LIVE_API_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.gene
 
 NO_DOCS_MESSAGE = "No relevant indicator found in the knowledge base for this query."
 SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+
+
+def _coerce_stream_text(chunk):
+    if chunk is None:
+        return ""
+
+    if isinstance(chunk, str):
+        return chunk
+
+    if isinstance(chunk, list):
+        parts = [_coerce_stream_text(item) for item in chunk]
+        return "".join(part for part in parts if part)
+
+    if isinstance(chunk, dict):
+        if "text" in chunk:
+            return _coerce_stream_text(chunk.get("text"))
+        if "content" in chunk:
+            return _coerce_stream_text(chunk.get("content"))
+        parts = [_coerce_stream_text(value) for value in chunk.values()]
+        return "".join(part for part in parts if part)
+
+    content = getattr(chunk, "content", None)
+    if content is not None and content is not chunk:
+        return _coerce_stream_text(content)
+
+    text = getattr(chunk, "text", None)
+    if text is not None and text is not chunk:
+        return _coerce_stream_text(text)
+
+    return str(chunk)
+
+
+def _build_stream_preview(text):
+    cleaned = str(text or "")
+    if not cleaned:
+        return ""
+
+    cleaned = re.sub(r"<chart-data[\s\S]*?</chart-data>", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"```[\s\S]*?```", " ", cleaned)
+    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
+    cleaned = unescape(cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
 
 
 class BaseAIConsumer(AsyncWebsocketConsumer):
@@ -64,38 +108,63 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
             if not question_text:
                 return
 
+            history = await self.get_history(self.instance_id)
+            retrieval_history = [entry for entry in history if entry.get("response")]
             await self.save_question(self.instance_id, question_text)
 
             llm = get_llm_instance()
             try:
-                docs = retrieve_docs(question_text)
-            except AIServiceError:
+                prepared = prepare_answer(question_text, llm, history_records=retrieval_history)
+            except AIServiceError as exc:
+                if exc.code == ERROR_RETRIEVAL_EMPTY:
+                    increment("ws_retrieval_empty")
+                    await self._finalize_answer(NO_DOCS_MESSAGE, route="get_general_context")
+                    return
                 await self._finalize_answer(
                     "<p>Retriever dependency is unavailable. Please try again later.</p>",
-                    intent=INTENTS["UNKNOWN"],
+                    route="get_general_context",
                 )
                 return
-
-            if not docs:
-                increment("ws_retrieval_empty")
-                await self._finalize_answer(NO_DOCS_MESSAGE, intent=INTENTS["UNKNOWN"])
-                return
-
-            intent = resolve_intent(llm, question_text, docs)
-            context = build_context_for_intent(intent, llm, question_text, docs)
+            route = prepared.route
+            context = prepared.context
 
             history = await self.get_history(self.instance_id)
-            conversation_list = format_history_records_for_llm(history)
+            answered_history = [entry for entry in history if entry.get("response")]
+            conversation_list = (
+                []
+                if prepared.response_language == "Amharic"
+                else format_history_records_for_llm(answered_history)
+            )
+
+            if prepared.response_language == "Amharic":
+                try:
+                    ai_response = await asyncio.to_thread(
+                        invoke_chat_once,
+                        llm,
+                        conversation_list,
+                        context,
+                        prepared.normalized_question,
+                        route,
+                    )
+                    answer = getattr(ai_response, "content", str(ai_response))
+                    answer = await asyncio.to_thread(translate_text_with_gemini, answer, "Amharic")
+                except Exception:
+                    answer = "<p>Unable to generate a response right now. Please try again.</p>"
+                await self._finalize_answer(answer, route=route)
+                return
 
             chunks = []
-            async for chunk in run_chain_stream(llm, conversation_list, context, question_text, intent):
-                if not chunk:
+            async for chunk in run_chain_stream(llm, conversation_list, context, prepared.normalized_question, route):
+                normalized_chunk = _coerce_stream_text(chunk)
+                if not normalized_chunk:
                     continue
-                chunks.append(chunk)
+                chunks.append(normalized_chunk)
+                answer_so_far = "".join(chunks)
                 await self.send(
                     text_data=json.dumps(
                         {
-                            "message": chunk,
+                            "message": normalized_chunk,
+                            "preview": _build_stream_preview(answer_so_far),
                             "is_stream": True,
                         }
                     )
@@ -103,7 +172,7 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
                 await asyncio.sleep(0)
 
             answer = "".join(chunks).strip() or "<p>Unable to generate a response right now. Please try again.</p>"
-            await self._finalize_answer(answer, intent=intent)
+            await self._finalize_answer(answer, route=route)
 
     async def _handle_translation(self, payload):
         text = str(payload.get("text", "")).strip()
@@ -152,15 +221,15 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
                 )
             )
 
-    async def _finalize_answer(self, answer, intent):
+    async def _finalize_answer(self, answer, route):
         await self.save_response(self.instance_id, answer)
         await self.send(
             text_data=json.dumps(
                 {
-                    "message": "",
+                    "message": answer,
                     "is_stream": False,
                     "is_final": True,
-                    "intent": intent,
+                    "route": route,
                 }
             )
         )

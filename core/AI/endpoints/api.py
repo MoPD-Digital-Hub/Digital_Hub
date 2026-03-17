@@ -10,8 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from AI.models import QuestionHistory, ChatInstance
 from .serializer import ChatInstanceSerializer, QuestionHistorySerializer
-from AI.services import generate_answer
-from AI.platform.observability import get_last_ingestion_report, snapshot_metrics
+from AI.application import generate_answer
+from AI.runtime.observability import get_last_ingestion_report, snapshot_metrics
 from AI.infrastructure import get_vector_store, run_dependency_checks
 from AI.infrastructure.translation import translate_text_with_gemini
 from AI.infrastructure.tts import synthesize_gemini_tts
@@ -20,7 +20,7 @@ from project.celery import app as celery_app
 from django.conf import settings
 from AI.tasks import generate_answer_task
 
-LOGGER = logging.getLogger("AI.api")
+LOGGER = logging.getLogger("AI.endpoints")
 
 
 def _request_id(request):
@@ -184,7 +184,7 @@ def answer(request, chat_instance_id):
             "chat_instance_id": chat_instance.id,
             "question": question,
             "answer": result.answer,
-            "intent": result.intent,
+            "route": result.route,
             "token_usage": result.token_usage,
         },
         message=result.message,

@@ -1,9 +1,11 @@
 import re
 
-from .upstream import (
+from AI.infrastructure.clients import (
     fetch_indicator_time_series,
     fetch_ministry_performance,
     fetch_ministry_score,
+)
+from .upstream import (
     format_ministry_performance,
     format_ministry_score,
     format_time_series_response,

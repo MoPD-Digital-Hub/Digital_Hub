@@ -16,6 +16,7 @@
   const chatShell = document.getElementById("aiChatShell");
   const sidebarCollapseBtn = document.getElementById("sidebarCollapseBtn");
   const sidebarExpandBtn = document.getElementById("sidebarExpandBtn");
+  const composer = document.querySelector(".ai-composer");
 
   if (!chatInput || !sendBtn || !chatOutput || !micBtn || !chatTitle) {
     return;
@@ -31,6 +32,10 @@
   let streamMessageElement = null;
   let streamHtmlBuffer = "";
   let pendingStreamRender = false;
+  let streamRenderTimer = null;
+  let streamViewAnchored = false;
+  let streamPreviewText = "";
+  let awaitingAssistantResponse = false;
   let loadingElement = null;
   let chartCounter = 0;
   const sidebarStorageKey = "admas-ai-sidebar-collapsed";
@@ -54,6 +59,7 @@
   let voiceTranscriptFinal = "";
   let voiceTranscriptInterim = "";
   let autoScrollPinned = true;
+  let suppressNextScrollEventsUntil = 0;
   let lastTouchY = 0;
 
   function buildAIMessageMarkup(contentHtml) {
@@ -81,6 +87,18 @@
       "</button>" +
       "</div>" +
       '<div class="ai-translation-content"></div>' +
+      "</div>" +
+      "</div>"
+    );
+  }
+
+  function buildAIStreamingMessageMarkup() {
+    return (
+      '<span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="' + aiAvatarSrc + '" alt=""></span>' +
+      '<div class="msg-bubble ai-stream-bubble">' +
+      '<div class="ai-stream-draft">' +
+      '<div class="ai-stream-draft-label">Admas AI is writing</div>' +
+      '<div class="ai-stream-draft-text"></div>' +
       "</div>" +
       "</div>"
     );
@@ -271,6 +289,25 @@
     scrollToBottom();
   }
 
+  function setJumpButtonVisibility() {
+    const jumpBtn = document.getElementById("jumpToLatestBtn");
+    if (jumpBtn) {
+      jumpBtn.hidden = autoScrollPinned;
+    }
+  }
+
+  function markProgrammaticScroll(durationMs) {
+    suppressNextScrollEventsUntil = Date.now() + (durationMs || 180);
+  }
+
+  function syncComposerSpace() {
+    if (!composer) {
+      return;
+    }
+    const composerHeight = Math.ceil(composer.getBoundingClientRect().height || 0);
+    document.documentElement.style.setProperty("--ai-composer-space", Math.max(96, composerHeight + 20) + "px");
+  }
+
   function getDocumentScrollElement() {
     return document.scrollingElement || document.documentElement;
   }
@@ -340,33 +377,98 @@
       return streamMessageElement;
     }
     streamHtmlBuffer = "";
-    streamMessageElement = appendAIMessageHtml("");
+    streamPreviewText = "";
+    if (chatOutput) {
+      chatOutput.classList.add("is-generating");
+    }
+    const el = document.createElement("div");
+    el.className = "msg ai is-streaming";
+    el.innerHTML = buildAIStreamingMessageMarkup();
+    chatOutput.appendChild(el);
+    streamMessageElement = el;
     streamMessageElement.classList.add("is-streaming");
+    streamViewAnchored = false;
+    if (autoScrollPinned) {
+      scrollToBottom();
+    }
     return streamMessageElement;
   }
 
+  function decodeEntities(value) {
+    const parser = document.createElement("textarea");
+    parser.innerHTML = String(value || "");
+    return parser.value;
+  }
+
+  function extractStreamingPreviewText(value) {
+    const text = String(value || "");
+    if (!text) {
+      return "";
+    }
+
+    const cleaned = text
+      .replace(/<chart-data[\s\S]*?<\/chart-data>/gi, " ")
+      .replace(/```[\s\S]*?```/g, " ");
+
+    const container = document.createElement("div");
+    container.innerHTML = cleaned;
+
+    return decodeEntities(container.textContent || container.innerText || "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function renderStreamBuffer() {
+    if (!streamMessageElement && !String(streamHtmlBuffer || "").trim()) {
+      return;
+    }
     const box = ensureStreamMessage();
-    const content = box.querySelector(".ai-msg-content");
+    const content = box.querySelector(".ai-stream-draft-text");
     if (!content) {
       return;
     }
-    content.innerHTML = normalizeAIContent(streamHtmlBuffer);
+    const derivedPreview = extractStreamingPreviewText(streamHtmlBuffer);
+    const livePreview = String(streamPreviewText || "").trim() || derivedPreview;
+    streamPreviewText = livePreview;
+    content.textContent = livePreview || "Thinking...";
+
     if (autoScrollPinned) {
       scrollToBottom();
     }
   }
 
-  function appendStreamChunk(chunkHtml) {
-    streamHtmlBuffer += chunkHtml || "";
-    if (pendingStreamRender) {
+  function appendStreamChunk(chunkHtml, previewText) {
+    if (!awaitingAssistantResponse) {
       return;
     }
-    pendingStreamRender = true;
-    requestAnimationFrame(function () {
-      pendingStreamRender = false;
-      renderStreamBuffer();
-    });
+    streamHtmlBuffer += chunkHtml || "";
+    if (previewText !== undefined && previewText !== null) {
+      streamPreviewText = String(previewText || "").trim();
+    }
+    if (pendingStreamRender || streamRenderTimer) {
+      return;
+    }
+
+    streamRenderTimer = window.setTimeout(function () {
+      streamRenderTimer = null;
+      pendingStreamRender = true;
+      requestAnimationFrame(function () {
+        pendingStreamRender = false;
+        renderStreamBuffer();
+      });
+    }, 48);
+  }
+
+  function flushStreamRender() {
+    if (streamRenderTimer) {
+      window.clearTimeout(streamRenderTimer);
+      streamRenderTimer = null;
+    }
+    pendingStreamRender = false;
+    if (!streamMessageElement && !String(streamHtmlBuffer || "").trim()) {
+      return;
+    }
+    renderStreamBuffer();
   }
 
   function hydrateMessageNode(node) {
@@ -425,29 +527,8 @@
     if (!normalized) {
       return "";
     }
-
-    const sentenceMatches = normalized.match(/[^.!?]+[.!?]?/g) || [];
-    const summarySentences = [];
-    let length = 0;
-
-    for (let i = 0; i < sentenceMatches.length; i += 1) {
-      const sentence = sentenceMatches[i].trim();
-      if (!sentence) {
-        continue;
-      }
-      const projected = length + sentence.length + (summarySentences.length ? 1 : 0);
-      if (summarySentences.length >= 2 || projected > 320) {
-        break;
-      }
-      summarySentences.push(sentence);
-      length = projected;
-    }
-
-    if (summarySentences.length) {
-      return summarySentences.join(" ");
-    }
-
-    return normalized.slice(0, 320);
+    // English speech uses the full cleaned narrative (tables/charts already removed).
+    return normalized.slice(0, 2400);
   }
 
   function buildShortSpeechText(text, options) {
@@ -1019,94 +1100,63 @@
     }
   }
 
+  function handleTranslationTtsPlayback(button) {
+    const panel = button.closest(".ai-translation-panel");
+    const message = button.closest(".msg.ai");
+    const content = panel ? panel.querySelector(".ai-translation-content") : null;
+    const fullText = String((content && (content.innerText || content.textContent)) || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    const text = buildShortSpeechText(fullText, { maxSentences: 1, maxChars: 180 });
+    if (!text) {
+      return;
+    }
+
+    if (activeTtsButton === button) {
+      resetActiveTtsPlayback();
+      return;
+    }
+
+    resetActiveTtsPlayback();
+    setTtsButtonState(button, "loading");
+    setMessageStatus(message, "Preparing Amharic speech…", "muted");
+
+    activeTtsButton = button;
+    setTtsButtonState(button, "playing");
+
+    streamTtsAudio(text, "Amharic", button, message)
+      .catch(function () {
+        return fetchTtsAudio(text, "Amharic").then(function (blob) {
+          activeTtsObjectUrl = URL.createObjectURL(blob);
+          const audio = new Audio(activeTtsObjectUrl);
+          activeTtsAudio = audio;
+
+          audio.addEventListener("ended", resetActiveTtsPlayback, { once: true });
+          audio.addEventListener("error", function () {
+            resetActiveTtsPlayback();
+            setMessageStatus(message, "Unable to play the generated speech.", "error");
+          }, { once: true });
+
+          return audio.play().then(function () {
+            setMessageStatus(message, "", "");
+          });
+        });
+      })
+      .catch(function (error) {
+        resetActiveTtsPlayback();
+        setMessageStatus(
+          message,
+          error && error.message ? error.message : "Unable to generate speech for this response.",
+          "error"
+        );
+      });
+  }
+
   function attachTtsControls(scope) {
     const root = scope || document;
-    const buttons = root.querySelectorAll(".msg.ai .ai-tts-btn");
-    buttons.forEach(function (button) {
-      if (button.dataset.bound === "1") {
-        return;
-      }
-      button.dataset.bound = "1";
-      setTtsButtonState(button, "idle");
-      button.addEventListener("click", function () {
-        handleTtsPlayback(button);
-      });
-    });
-
+    // Prefetch spoken audio only once per AI message to keep replay fast.
     root.querySelectorAll(".msg.ai").forEach(function (message) {
       prefetchTtsForMessage(message);
-    });
-
-    const translateButtons = root.querySelectorAll(".msg.ai .ai-translate-btn");
-    translateButtons.forEach(function (button) {
-      if (button.dataset.bound === "1") {
-        return;
-      }
-      button.dataset.bound = "1";
-      setTranslateButtonState(button, "idle");
-      button.addEventListener("click", function () {
-        handleTranslationToggle(button);
-      });
-    });
-
-    const translationTtsButtons = root.querySelectorAll(".msg.ai .ai-translation-tts-btn");
-    translationTtsButtons.forEach(function (button) {
-      if (button.dataset.bound === "1") {
-        return;
-      }
-      button.dataset.bound = "1";
-      setTtsButtonState(button, "idle");
-      button.addEventListener("click", function () {
-        const panel = button.closest(".ai-translation-panel");
-        const message = button.closest(".msg.ai");
-        const content = panel ? panel.querySelector(".ai-translation-content") : null;
-        const fullText = String((content && (content.innerText || content.textContent)) || "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const text = buildShortSpeechText(fullText, { maxSentences: 1, maxChars: 180 });
-        if (!text) {
-          return;
-        }
-
-        if (activeTtsButton === button) {
-          resetActiveTtsPlayback();
-          return;
-        }
-
-        resetActiveTtsPlayback();
-        setTtsButtonState(button, "loading");
-        setMessageStatus(message, "Preparing Amharic speech…", "muted");
-
-        activeTtsButton = button;
-        setTtsButtonState(button, "playing");
-
-        streamTtsAudio(text, "Amharic", button, message)
-          .catch(function () {
-            return fetchTtsAudio(text, "Amharic").then(function (blob) {
-              activeTtsObjectUrl = URL.createObjectURL(blob);
-              const audio = new Audio(activeTtsObjectUrl);
-              activeTtsAudio = audio;
-
-              audio.addEventListener("ended", resetActiveTtsPlayback, { once: true });
-              audio.addEventListener("error", function () {
-                resetActiveTtsPlayback();
-                setMessageStatus(message, "Unable to play the generated speech.", "error");
-              }, { once: true });
-
-              return audio.play().then(function () {
-                setMessageStatus(message, "", "");
-              });
-            });
-          })
-          .catch(function (error) {
-            resetActiveTtsPlayback();
-            setMessageStatus(
-              message,
-              error && error.message ? error.message : "Unable to generate speech for this response.",
-              "error"
-            );
-          });
-      });
     });
   }
 
@@ -1121,8 +1171,31 @@
     }
 
     text = convertMarkdownTablesToHtml(text);
+    text = injectChartDataTagPlaceholders(text);
     text = injectStructuredPayloadPlaceholders(text);
     return text;
+  }
+
+  function injectChartDataTagPlaceholders(text) {
+    if (!text || text.indexOf("chart-data") < 0) {
+      return text;
+    }
+
+    const pattern = /<chart-data[^>]*>([\s\S]*?)<\/chart-data>/gi;
+    return String(text).replace(pattern, function (_match, body) {
+      const payload = parseStructuredPayload(String(body || "").trim());
+      if (!payload || payload.kind !== "chart") {
+        return "";
+      }
+      const encoded = encodeURIComponent(JSON.stringify(payload));
+      return (
+        '<div class="ai-chart-payload" data-chart="' +
+        encoded +
+        '">' +
+        '<div class="ai-chart-loading">Preparing chart...</div>' +
+        "</div>"
+      );
+    });
   }
 
   function injectStructuredPayloadPlaceholders(text) {
@@ -1228,25 +1301,78 @@
   }
 
   function parseStructuredPayload(raw) {
-    if (!raw || raw.indexOf("type") < 0) {
+    if (!raw) {
       return null;
     }
 
-    const cleaned = String(raw)
+    const decoded = String(raw)
+      .replace(/&quot;/g, '"')
+      .replace(/&#34;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&")
+      .trim();
+
+    const withoutTags = decoded
+      .replace(/<chart-data[^>]*>/gi, "")
+      .replace(/<\/chart-data>/gi, "")
+      .trim();
+
+    const withoutFence = withoutTags
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    const candidates = [];
+    const baseCandidate = withoutFence
       .replace(/[“”]/g, '"')
       .replace(/[‘’]/g, "'")
-      .replace(/,\s*([}\]])/g, "$1");
+      .replace(/,\s*([}\]])/g, "$1")
+      .trim();
+
+    if (baseCandidate) {
+      candidates.push(baseCandidate);
+      if (!baseCandidate.includes('"') && baseCandidate.includes("'")) {
+        candidates.push(baseCandidate.replace(/'/g, '"'));
+      }
+      if (baseCandidate.includes('\\"')) {
+        candidates.push(baseCandidate.replace(/\\"/g, '"'));
+      }
+    }
 
     let obj = null;
-    try {
-      obj = JSON.parse(cleaned);
-    } catch (e) {
+    for (let i = 0; i < candidates.length; i += 1) {
+      const candidate = candidates[i];
+      try {
+        obj = JSON.parse(candidate);
+      } catch (_parseError) {
+        continue;
+      }
+      if (typeof obj === "string") {
+        try {
+          obj = JSON.parse(obj);
+        } catch (_nestedParseError) {
+          // Keep raw string object if nested parse fails.
+        }
+      }
+      if (obj && typeof obj === "object") {
+        break;
+      }
+      obj = null;
+    }
+
+    if (!obj || typeof obj !== "object") {
       return null;
     }
 
-    if (!obj || typeof obj !== "object" || !obj.type) return null;
+    if (obj.chart && typeof obj.chart === "object") {
+      obj = obj.chart;
+    }
 
-    const type = String(obj.type).trim().toLowerCase();
+    const typeRaw = obj.type || obj.chart_type || obj.chartType || obj.kind || "";
+    const type = String(typeRaw).trim().toLowerCase();
     if (type === "button") {
       return {
         kind: "button",
@@ -1259,8 +1385,37 @@
 
     if (!["bar", "line", "area", "pie"].includes(type)) return null;
 
-    const labelsRaw = Array.isArray(obj.labels) ? obj.labels : [obj.labels];
-    const dataRaw = Array.isArray(obj.data) ? obj.data : [obj.data];
+    const labelsSource = obj.labels || obj.categories || obj.x || [];
+    const dataSource = obj.data || obj.values || obj.y || [];
+    const labelsRaw = Array.isArray(labelsSource) ? labelsSource : [labelsSource];
+    let dataRaw = Array.isArray(dataSource) ? dataSource : [dataSource];
+
+    if (!dataRaw.length && Array.isArray(obj.series) && obj.series.length) {
+      const primarySeries = obj.series[0];
+      if (Array.isArray(primarySeries)) {
+        dataRaw = primarySeries;
+      } else if (primarySeries && typeof primarySeries === "object") {
+        dataRaw = Array.isArray(primarySeries.data) ? primarySeries.data : [];
+      }
+    }
+
+    if (dataRaw.length && typeof dataRaw[0] === "object" && dataRaw[0] !== null) {
+      const points = dataRaw.filter(function (point) {
+        return point && typeof point === "object";
+      });
+      if (points.length) {
+        dataRaw = points.map(function (point) {
+          return point.y !== undefined ? point.y : point.value;
+        });
+        if (!labelsRaw.length || String(labelsRaw[0] || "").trim() === "") {
+          labelsRaw.splice(0, labelsRaw.length);
+          points.forEach(function (point, index) {
+            labelsRaw.push(point.x !== undefined ? point.x : point.label !== undefined ? point.label : String(index + 1));
+          });
+        }
+      }
+    }
+
     const labels = labelsRaw
       .filter(function (x) {
         return x !== null && x !== undefined && String(x).trim() !== "";
@@ -1277,10 +1432,12 @@
         return x !== null;
       });
 
-    const pointCount = Math.min(labels.length, data.length);
+    const pointCount = data.length;
     if (!pointCount) return null;
 
-    const normalizedLabels = labels.slice(0, pointCount);
+    const normalizedLabels = (labels.length ? labels : data.map(function (_value, index) {
+      return String(index + 1);
+    })).slice(0, pointCount);
     const normalizedData = data.slice(0, pointCount);
 
     return {
@@ -1399,10 +1556,8 @@
       }
 
       holder.innerHTML =
-        '<div class="ai-chart-card">' +
         '<div class="ai-chart-title">' + escapeHtml(payload.label || "AI Chart") + "</div>" +
-        '<div class="ai-chart-canvas" id="aiChart' + (chartCounter += 1) + '"></div>' +
-        "</div>";
+        '<div class="ai-chart-canvas" id="aiChart' + (chartCounter += 1) + '"></div>';
 
       const chartEl = holder.querySelector(".ai-chart-canvas");
       const theme = getAIChartTheme();
@@ -1421,6 +1576,7 @@
         chart: {
           type: payload.type,
           height: 280,
+          background: "transparent",
           toolbar: { show: false },
           animations: { enabled: true }
         },
@@ -1582,10 +1738,8 @@
     });
 
     holder.innerHTML =
-      '<div class="ai-chart-card ai-bar-chart-card">' +
       '<div class="ai-chart-title">' + escapeHtml(payload.label || "AI Chart") + "</div>" +
-      '<div class="ai-bar-chart">' + bars + "</div>" +
-      "</div>";
+      '<div class="ai-bar-chart">' + bars + "</div>";
   }
 
   function rerenderAICharts() {
@@ -1645,13 +1799,18 @@
 
   function hydrateExistingAIResponses(root) {
     const container = root || document;
-    const blocks = container.querySelectorAll(".msg.ai .ai-msg-content");
-    blocks.forEach(function (block) {
-      if (block.dataset.hydrated === "1") {
+    const messages = container.querySelectorAll(".msg.ai");
+    messages.forEach(function (message) {
+      if (message.dataset.hydrated === "1") {
+        return;
+      }
+      const block = message.querySelector(".ai-msg-content");
+      if (!block) {
         return;
       }
       block.innerHTML = normalizeAIContent(block.innerHTML);
-      block.dataset.hydrated = "1";
+      hydrateMessageNode(message);
+      message.dataset.hydrated = "1";
     });
   }
 
@@ -1703,25 +1862,42 @@
     });
   }
 
-  function finishStream() {
-    if (pendingStreamRender) {
-      pendingStreamRender = false;
-      renderStreamBuffer();
+  function finishStream(finalMessageHtml) {
+    awaitingAssistantResponse = false;
+    const hasFinalHtml = Boolean(String(finalMessageHtml || "").trim());
+    if (hasFinalHtml) {
+      streamHtmlBuffer = String(finalMessageHtml || "");
     }
+
+    flushStreamRender();
+
     if (streamMessageElement) {
       streamMessageElement.classList.remove("is-streaming");
+      streamMessageElement.innerHTML = buildAIMessageMarkup(normalizeAIContent(streamHtmlBuffer));
       hydrateMessageNode(streamMessageElement);
+    } else if (hasFinalHtml) {
+      appendAIMessageHtml(finalMessageHtml);
+    }
+
+    if (chatOutput) {
+      chatOutput.classList.remove("is-generating");
     }
     streamMessageElement = null;
     streamHtmlBuffer = "";
+    streamViewAnchored = false;
+    streamPreviewText = "";
     hideLoading();
   }
 
   function clearChatOutput() {
     resetActiveTtsPlayback();
     chatOutput.innerHTML = "";
+    chatOutput.classList.remove("is-generating");
     streamMessageElement = null;
     streamHtmlBuffer = "";
+    streamViewAnchored = false;
+    streamPreviewText = "";
+    awaitingAssistantResponse = false;
     loadingElement = null;
   }
 
@@ -1753,12 +1929,10 @@
       return;
     }
     requestAnimationFrame(function () {
-      const lastMessage = chatOutput.lastElementChild;
-      if (lastMessage && typeof lastMessage.scrollIntoView === "function") {
-        lastMessage.scrollIntoView({ block: "end", behavior: "auto" });
-      } else {
-        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" });
-      }
+      markProgrammaticScroll(220);
+      const scrollRoot = getDocumentScrollElement();
+      const targetTop = Math.max(0, scrollRoot.scrollHeight - window.innerHeight);
+      window.scrollTo({ top: targetTop, behavior: "auto" });
     });
   }
 
@@ -1868,17 +2042,22 @@
         }
 
         if (payload.is_stream) {
+          if (!awaitingAssistantResponse) {
+            return;
+          }
           hideLoading();
-          appendStreamChunk(payload.message || "");
+          appendStreamChunk(payload.message || "", payload.preview);
           return;
         }
 
         if (payload.is_final) {
-          finishStream();
+          awaitingAssistantResponse = false;
+          finishStream(payload.message || "");
           return;
         }
 
         if (payload.message) {
+          awaitingAssistantResponse = false;
           hideLoading();
           appendAIMessageHtml(payload.message);
         }
@@ -1889,6 +2068,7 @@
     };
 
     ws.onerror = function () {
+      awaitingAssistantResponse = false;
       if (currentRoom === room) {
         hideLoading();
         appendSystemAIMessage("Chat service error. Please try again.");
@@ -1896,6 +2076,7 @@
     };
 
     ws.onclose = function () {
+      awaitingAssistantResponse = false;
       translationSocketRequests.forEach(function (pending) {
         pending.reject(new Error("Translation channel disconnected."));
       });
@@ -1924,6 +2105,8 @@
     const value = (chatInput.value || "").trim();
     if (!value) return;
 
+    autoScrollPinned = true;
+    setJumpButtonVisibility();
     appendUserMessage(value);
     chatInput.value = "";
 
@@ -1933,8 +2116,11 @@
     }
 
     showLoading();
+    awaitingAssistantResponse = true;
     streamMessageElement = null;
     streamHtmlBuffer = "";
+    streamPreviewText = "";
+    streamViewAnchored = false;
     socket.send(JSON.stringify({ message: value }));
   }
 
@@ -1945,6 +2131,27 @@
       sendMessage();
     }
   });
+
+  if (chatOutput) {
+    chatOutput.addEventListener("click", function (event) {
+      const ttsButton = event.target.closest(".ai-tts-btn");
+      if (ttsButton && chatOutput.contains(ttsButton)) {
+        handleTtsPlayback(ttsButton);
+        return;
+      }
+
+      const translateButton = event.target.closest(".ai-translate-btn");
+      if (translateButton && chatOutput.contains(translateButton)) {
+        handleTranslationToggle(translateButton);
+        return;
+      }
+
+      const translationTtsButton = event.target.closest(".ai-translation-tts-btn");
+      if (translationTtsButton && chatOutput.contains(translationTtsButton)) {
+        handleTranslationTtsPlayback(translationTtsButton);
+      }
+    });
+  }
 
   instances.forEach(attachInstanceClick);
 
@@ -1961,6 +2168,7 @@
   }
 
   window.addEventListener("resize", function () {
+    syncComposerSpace();
     if (!shouldAllowSidebarCollapse()) {
       if (chatShell) {
         chatShell.classList.remove("is-collapsed");
@@ -2183,20 +2391,18 @@
   }
 
   window.addEventListener("scroll", function () {
-    autoScrollPinned = isViewportNearBottom();
-    const jumpBtn = document.getElementById("jumpToLatestBtn");
-    if (jumpBtn) {
-      jumpBtn.hidden = autoScrollPinned;
+    if (Date.now() < suppressNextScrollEventsUntil) {
+      setJumpButtonVisibility();
+      return;
     }
+    autoScrollPinned = isViewportNearBottom();
+    setJumpButtonVisibility();
   }, { passive: true });
 
   window.addEventListener("wheel", function (event) {
     if (event.deltaY < 0) {
       autoScrollPinned = false;
-      const jumpBtn = document.getElementById("jumpToLatestBtn");
-      if (jumpBtn) {
-        jumpBtn.hidden = false;
-      }
+      setJumpButtonVisibility();
     }
   }, { passive: true });
 
@@ -2212,10 +2418,7 @@
     }
     if (touch.clientY > lastTouchY + 6) {
       autoScrollPinned = false;
-      const jumpBtn = document.getElementById("jumpToLatestBtn");
-      if (jumpBtn) {
-        jumpBtn.hidden = false;
-      }
+      setJumpButtonVisibility();
     }
     lastTouchY = touch.clientY;
   }, { passive: true });
@@ -2229,9 +2432,9 @@
     });
   }
 
+  syncComposerSpace();
   // Apply table enhancement to server-rendered history on first load.
   hydrateExistingAIResponses(chatOutput);
-  hydrateMessageNode(chatOutput);
   updateInstanceControlsState();
   scrollToBottom();
 })();
