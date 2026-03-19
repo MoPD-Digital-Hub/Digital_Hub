@@ -2,8 +2,8 @@ from .serializer import AppSerializer , SettingSerializer , FAQSerializer , Cont
 from mobile.models import App , Setting , FAQ , ContactUs,AppVersion
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from Videos.models import Video
 from Videos.api.serializer import VideoSerializer
 from collections import defaultdict
@@ -60,6 +60,8 @@ def contact_us(request):
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def check_update(request):
     user_version = request.query_params.get('version')
 
@@ -104,4 +106,3 @@ def check_update(request):
         {"result": "SUCCESS", "message": "SUCCESS", "data": data},
         status=status.HTTP_200_OK
     )
-
