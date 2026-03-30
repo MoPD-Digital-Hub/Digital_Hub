@@ -1,32 +1,93 @@
-# AI Module Architecture
+# AI App
 
-## Folders
-- `endpoints/`: DRF endpoints for chat, answer generation, health checks, retriever debug.
-- `application/`: orchestration for answer generation and persistence.
-- `mcp_tools.py`: thin FastMCP entrypoint and compatibility facade.
-- `tools/`: MCP runtime pieces split into `runtime`, `planner`, `handlers`, and helper utilities.
-- `parsing/`: question parsing helpers for tool fallback, year/quarter extraction, and performance filtering.
-- `infrastructure/`: external integrations (LLM, embeddings, Milvus, dependency health checks).
-- `shared/`: reusable utilities split by concern:
-  - `chat.py` prompt message construction and LLM invocation helpers
-  - `context.py` retrieval context builders
-  - `upstream.py` upstream response formatting helpers
-  - `ingestion.py` ingestion pipeline helpers
-  - `constants.py` shared constants
-- `prompts/`: AI system rules and other stable prompt text artifacts.
-- `runtime/`: cross-cutting concerns (config validation, observability, resilience, error types).
+## Overview
 
-## Runtime flow
-1. API/consumer receives a question.
-2. `application.generate_answer` retrieves documents from Milvus.
-3. `tools.planner.resolve_mcp_tool_plan` selects the best tool and `execute_mcp_tool_plan` builds the context.
-4. `shared.chat.invoke_chat_once` or `run_chain_stream` calls the configured LLM provider with the selected route.
-5. Structured success/failure payload is returned with request ID.
+This AI app is a Gemini-first, intent-aware assistant service.
 
-## Health endpoints
-- `GET /api/ai-chat/health/`
-- `GET /api/ai-chat/health/dependencies/`
-- `GET /api/ai-chat/health/dependencies/<dependency_name>/`
+Current scope:
+- intent-aware chat routing
+- direct English and Amharic generation
+- Milvus-backed retrieval for grounded answers
+- time-series aware analysis
+- dashboard generation tool integration
+- HTTP and WebSocket chat flows
+- persistent chat history in Django models
 
-Dependency names:
-- `llm`, `embeddings`, `milvus`, `time_series_api`, `dpmes_score_api`, `dpmes_performance_api`
+Removed from the active design:
+- vLLM/OpenAI-compatible generation path
+- translation-driven final response flow
+- TTS and voice-specific AI endpoints
+- legacy planner/runtime/provider abstractions
+
+## Architecture
+
+- `orchestration/classifier.py`: rule-based intent detection
+- `orchestration/service.py`: central request router and dispatcher
+- `orchestration/dashboard.py`: dashboard creation API integration
+- `orchestration/time_series.py`: structured time-series query service
+- `orchestration/formatter.py`: same-language tool response formatting
+- `gemini/config.py`: environment-based Gemini settings and validation
+- `gemini/language.py`: dominant-language detection for English vs Amharic
+- `gemini/prompting.py`: prompt builder with same-language enforcement
+- `gemini/client.py`: thin Gemini REST client
+- `gemini/service.py`: Gemini text generation service
+- `retrieval/config.py`: Milvus and embeddings settings
+- `retrieval/embeddings.py`: embeddings client for Milvus queries
+- `retrieval/service.py`: Milvus retrieval and context formatting
+- `api.py`: thin HTTP controllers
+- `consumers.py`: WebSocket chat controller
+- `serializers.py`: API serializers
+- `responses.py`: consistent API response helpers
+
+## Same-Language Behavior
+
+The system detects the dominant script in the user's message:
+- Amharic script leads to Amharic output
+- Latin script leads to English output
+
+The prompt builder also repeats the required output language in the system prompt, so the model is instructed to answer directly in that language instead of translating afterward.
+
+## Retrieval
+
+Before text generation, the service retrieves supporting documents from Milvus and formats them into trusted context for Gemini. The generated answer is still in the user's language, but the factual grounding comes from the Milvus collection.
+
+For documents that include an `indicator_code`, the retrieval layer also calls the time-series API and injects annual, quarterly, and monthly values into the trusted context. That enrichment is limited to a small number of indicators per request to control latency.
+
+## Intent Routing
+
+The request path now detects one of these intents before execution:
+- `text_generation`
+- `time_series_query`
+- `dashboard_generation`
+
+Routing behavior:
+- normal explanatory questions go to Gemini text generation
+- time-series questions go through the structured time-series tool path
+- dashboard requests call the external dashboard creation API and return a same-language confirmation message
+
+## Configuration
+
+Required:
+- `GEMINI_API_KEY`
+- `MILVUS_URI`
+- `MILVUS_COLLECTION_NAME`
+- `EMBEDDING_API_BASE`
+
+Optional:
+- `GEMINI_TEXT_MODEL`
+- `GEMINI_TIMEOUT_SECONDS`
+- `GEMINI_TEMPERATURE`
+- `GEMINI_TOP_P`
+- `GEMINI_MAX_OUTPUT_TOKENS`
+- `MAX_HISTORY_QUESTIONS`
+- `GEMINI_HISTORY_TURNS`
+- `GEMINI_STREAM_CHUNK_CHARS`
+- `DASHBOARD_CREATE_API_URL`
+- `DASHBOARD_TIMEOUT_SECONDS`
+- `MILVUS_RETRIEVAL_K`
+- `MILVUS_RETRIEVAL_FETCH_K`
+- `MILVUS_TIMEOUT_SECONDS`
+- `TIME_SERIES_API_BASE`
+- `TIME_SERIES_INDICATOR_LIMIT`
+- `EMBEDDING_MODEL`
+- `EMBEDDING_API_KEY`

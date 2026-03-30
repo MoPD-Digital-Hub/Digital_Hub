@@ -1,460 +1,221 @@
 import asyncio
-import os
 import json
 import logging
-import ssl
 import re
-from html import unescape
 
-import aiohttp
-import certifi
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
-from django.conf import settings
 
-from AI.runtime.exceptions import AIServiceError
-from AI.runtime.exceptions import ERROR_RETRIEVAL_EMPTY
-from AI.runtime.observability import increment
-from AI.infrastructure import get_llm_instance
-from AI.infrastructure.translation import translate_text_with_gemini
-from AI.application import format_history_records_for_llm, prepare_answer
-from AI.shared import invoke_chat_once, run_chain_stream
+from AI.models import ChatInstance, QuestionHistory
+from AI.orchestration import AIOrchestrator, OrchestrationError
 
-LOGGER = logging.getLogger("AI.consumers")
-WS_SEMAPHORE = asyncio.Semaphore(max(1, getattr(settings, "AI_WS_MAX_CONCURRENCY", 20)))
-GEMINI_LIVE_API_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
-
-NO_DOCS_MESSAGE = "No relevant indicator found in the knowledge base for this query."
-SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+LOGGER = logging.getLogger("AI.websocket")
+GENERIC_INSTANCE_TITLES = {"", "new chat", "new instance"}
 
 
-def _coerce_stream_text(chunk):
-    if chunk is None:
-        return ""
-
-    if isinstance(chunk, str):
-        return chunk
-
-    if isinstance(chunk, list):
-        parts = [_coerce_stream_text(item) for item in chunk]
-        return "".join(part for part in parts if part)
-
-    if isinstance(chunk, dict):
-        if "text" in chunk:
-            return _coerce_stream_text(chunk.get("text"))
-        if "content" in chunk:
-            return _coerce_stream_text(chunk.get("content"))
-        parts = [_coerce_stream_text(value) for value in chunk.values()]
-        return "".join(part for part in parts if part)
-
-    content = getattr(chunk, "content", None)
-    if content is not None and content is not chunk:
-        return _coerce_stream_text(content)
-
-    text = getattr(chunk, "text", None)
-    if text is not None and text is not chunk:
-        return _coerce_stream_text(text)
-
-    return str(chunk)
+def _looks_generic_title(title: str) -> bool:
+    return str(title or "").strip().lower() in GENERIC_INSTANCE_TITLES
 
 
-def _build_stream_preview(text):
-    cleaned = str(text or "")
-    if not cleaned:
-        return ""
-
-    cleaned = re.sub(r"<chart-data[\s\S]*?</chart-data>", " ", cleaned, flags=re.IGNORECASE)
-    cleaned = re.sub(r"```[\s\S]*?```", " ", cleaned)
-    cleaned = re.sub(r"<[^>]+>", " ", cleaned)
-    cleaned = unescape(cleaned)
-    cleaned = re.sub(r"\s+", " ", cleaned).strip()
-    return cleaned
+def _build_instance_title(question: str) -> str:
+    text = re.sub(r"\s+", " ", str(question or "").strip())
+    if not text:
+        return "General Chat"
+    text = re.sub(r"[?.!]+$", "", text).strip()
+    if len(text) <= 60:
+        return text
+    shortened = text[:57].rsplit(" ", 1)[0].strip()
+    return (shortened or text[:57].strip()) + "..."
 
 
-class BaseAIConsumer(AsyncWebsocketConsumer):
+class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
-        self.room_group_name = f"chat_{self.room_name}"
-        self.instance_id = await self.get_instance_id(self.room_name)
-
-        if not self.instance_id:
+        self.instance = await self._get_instance(self.room_name)
+        user = self.scope.get("user")
+        if self.instance is None or user is None or not user.is_authenticated:
             await self.close()
             return
-
-        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        if self.instance.user_id != user.id:
+            await self.close()
+            return
         await self.accept()
-        await self.after_accept()
 
-    async def after_accept(self):
-        """Hook for subclasses."""
-        return
+    async def receive(self, text_data=None, bytes_data=None):
+        try:
+            payload = json.loads(text_data or "{}")
+        except json.JSONDecodeError:
+            await self._send_error("INVALID_PAYLOAD", "Invalid WebSocket payload.")
+            return
 
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+        question = str(payload.get("message") or "").strip()
+        if not question:
+            await self._send_error("QUESTION_REQUIRED", "message is required.")
+            return
 
-    async def receive(self, text_data):
-        async with WS_SEMAPHORE:
-            try:
-                payload = json.loads(text_data)
-            except json.JSONDecodeError:
-                return
+        history = await self._get_history(self.instance.id)
+        record_id = await self._create_question(self.instance.id, question)
+        orchestrator = AIOrchestrator()
+        chunks = []
+        latest_usage = None
+        response_language = None
+        latest_charts = []
+        latest_intent = "general_query"
+        latest_response_type = ""
+        latest_secondary_intents = []
+        latest_tool_data = {}
+        latest_tool_state = {}
+        latest_sources = []
+        latest_context_found = False
 
-            action = str(payload.get("action", "")).strip().lower()
-            if action == "translate":
-                await self._handle_translation(payload)
-                return
-
-            question_text = str(payload.get("message", "")).strip()
-            if not question_text:
-                return
-
-            history = await self.get_history(self.instance_id)
-            retrieval_history = [entry for entry in history if entry.get("response")]
-            await self.save_question(self.instance_id, question_text)
-
-            llm = get_llm_instance()
-            try:
-                prepared = prepare_answer(question_text, llm, history_records=retrieval_history)
-            except AIServiceError as exc:
-                if exc.code == ERROR_RETRIEVAL_EMPTY:
-                    increment("ws_retrieval_empty")
-                    await self._finalize_answer(NO_DOCS_MESSAGE, route="get_general_context")
-                    return
-                await self._finalize_answer(
-                    "<p>Retriever dependency is unavailable. Please try again later.</p>",
-                    route="get_general_context",
-                )
-                return
-            route = prepared.route
-            context = prepared.context
-
-            history = await self.get_history(self.instance_id)
-            answered_history = [entry for entry in history if entry.get("response")]
-            conversation_list = (
-                []
-                if prepared.response_language == "Amharic"
-                else format_history_records_for_llm(answered_history)
-            )
-
-            if prepared.response_language == "Amharic":
-                try:
-                    ai_response = await asyncio.to_thread(
-                        invoke_chat_once,
-                        llm,
-                        conversation_list,
-                        context,
-                        prepared.normalized_question,
-                        route,
-                    )
-                    answer = getattr(ai_response, "content", str(ai_response))
-                    answer = await asyncio.to_thread(translate_text_with_gemini, answer, "Amharic")
-                except Exception:
-                    answer = "<p>Unable to generate a response right now. Please try again.</p>"
-                await self._finalize_answer(answer, route=route)
-                return
-
-            chunks = []
-            async for chunk in run_chain_stream(llm, conversation_list, context, prepared.normalized_question, route):
-                normalized_chunk = _coerce_stream_text(chunk)
-                if not normalized_chunk:
+        try:
+            async for event in orchestrator.stream(question=question, history_records=history):
+                chunk = event.get("text") or ""
+                latest_charts = event.get("charts") or latest_charts
+                latest_intent = event.get("intent") or latest_intent
+                latest_response_type = event.get("response_type") or latest_response_type
+                latest_secondary_intents = event.get("secondary_intents") or latest_secondary_intents
+                latest_tool_data = event.get("data") or latest_tool_data
+                latest_tool_state = event.get("tool_state") or latest_tool_state
+                latest_sources = event.get("sources") or latest_sources
+                latest_context_found = event.get("context_found", latest_context_found)
+                if not chunk:
                     continue
-                chunks.append(normalized_chunk)
-                answer_so_far = "".join(chunks)
+                chunks.append(chunk)
+                latest_usage = event.get("usage") or latest_usage
+                response_language = event.get("language") or response_language
                 await self.send(
                     text_data=json.dumps(
                         {
-                            "message": normalized_chunk,
-                            "preview": _build_stream_preview(answer_so_far),
+                            "message": chunk,
                             "is_stream": True,
+                            "is_final": False,
+                            "language": event.get("language"),
                         }
                     )
                 )
                 await asyncio.sleep(0)
-
-            answer = "".join(chunks).strip() or "<p>Unable to generate a response right now. Please try again.</p>"
-            await self._finalize_answer(answer, route=route)
-
-    async def _handle_translation(self, payload):
-        text = str(payload.get("text", "")).strip()
-        request_id = str(payload.get("request_id", "")).strip()
-        target_language = str(payload.get("target_language", "Amharic")).strip() or "Amharic"
-
-        if not text:
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "action": "translation_result",
-                        "request_id": request_id,
-                        "ok": False,
-                        "error": {"message": "Text is required for translation."},
-                    }
-                )
-            )
+        except OrchestrationError as exc:
+            await self._save_response(record_id, exc.message)
+            await self._send_error(exc.code, exc.message)
             return
 
-        try:
-            translated = await asyncio.to_thread(
-                translate_text_with_gemini,
-                text,
-                target_language,
-            )
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "action": "translation_result",
-                        "request_id": request_id,
-                        "ok": True,
-                        "translation": translated,
-                        "target_language": target_language,
-                    }
-                )
-            )
-        except Exception as exc:
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "action": "translation_result",
-                        "request_id": request_id,
-                        "ok": False,
-                        "error": {"message": str(exc)},
-                    }
-                )
-            )
-
-    async def _finalize_answer(self, answer, route):
-        await self.save_response(self.instance_id, answer)
+        answer = "".join(chunks).strip()
+        if not answer:
+            answer = "<p>No response was generated.</p>"
+        persisted_tool_data = self._merge_tool_state(
+            latest_tool_state,
+            payload=latest_tool_data,
+            sources=latest_sources,
+            charts=latest_charts,
+            context_found=latest_context_found,
+            language=response_language,
+            intent=latest_intent,
+            secondary_intents=latest_secondary_intents,
+            usage=latest_usage,
+        )
+        chat_title = await self._save_response(
+            record_id,
+            answer,
+            question=question,
+            retrieval_charts=latest_charts,
+            tool_data=persisted_tool_data,
+        )
         await self.send(
             text_data=json.dumps(
                 {
+                    "intent": latest_intent,
+                    "response_type": latest_response_type,
+                    "secondary_intents": latest_secondary_intents,
                     "message": answer,
                     "is_stream": False,
                     "is_final": True,
-                    "route": route,
+                    "language": response_language,
+                    "usage": latest_usage,
+                    "charts": latest_charts,
+                    "tool_data": persisted_tool_data,
+                    "response_data": latest_tool_data,
+                    "sources": latest_sources,
+                    "context_found": latest_context_found,
+                    "chat_title": chat_title,
                 }
             )
         )
 
-    async def chat_message(self, event):
+    async def _send_error(self, code, detail):
         await self.send(
             text_data=json.dumps(
                 {
-                    "message": event["message"],
-                    "is_stream": event.get("is_stream", False),
-                    "is_final": event.get("is_final", False),
+                    "error": {
+                        "code": code,
+                        "message": detail,
+                    },
+                    "is_final": True,
                 }
             )
         )
 
     @database_sync_to_async
-    def get_instance_id(self, room_name):
-        from .models import ChatInstance
-
-        instance = ChatInstance.objects.filter(id=room_name, is_deleted=False).first()
-        return instance.id if instance else None
+    def _get_instance(self, room_name):
+        return ChatInstance.objects.filter(id=room_name, is_deleted=False).first()
 
     @database_sync_to_async
-    def get_history(self, instance_id):
-        from .models import QuestionHistory
-
+    def _get_history(self, instance_id):
         return list(
             QuestionHistory.objects.filter(instance_id=instance_id)
+            .exclude(response__isnull=True)
+            .exclude(response="")
             .order_by("created_at")
-            .values("question", "response")
+            .values("question", "response", "tool_data", "chart_data")
         )
 
     @database_sync_to_async
-    def save_question(self, instance_id, question):
-        from .models import QuestionHistory
-
-        return QuestionHistory.objects.create(instance_id=instance_id, question=question)
+    def _create_question(self, instance_id, question):
+        record = QuestionHistory.objects.create(instance_id=instance_id, question=question)
+        return record.id
 
     @database_sync_to_async
-    def save_response(self, instance_id, response):
-        from .models import QuestionHistory
-
-        last = QuestionHistory.objects.filter(instance_id=instance_id).order_by("-created_at").first()
-        if last:
-            last.response = response
-            last.save(update_fields=["response"])
-
-
-class ChatConsumer(BaseAIConsumer):
-    pass
-
-
-class ChatWebConsumer(BaseAIConsumer):
-    async def after_accept(self):
-        history = await self.get_history(self.instance_id)
-        for entry in history:
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "question": entry.get("question"),
-                        "response": entry.get("response"),
-                    }
-                )
-            )
-            await asyncio.sleep(0.05)
-
-
-class TTSStreamConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        await self.accept()
-
-    async def receive(self, text_data):
-        try:
-            payload = json.loads(text_data or "{}")
-        except json.JSONDecodeError:
-            await self._send_error("Invalid streaming payload.")
-            return
-
-        action = str(payload.get("action", "")).strip().lower()
-        if action != "speak":
-            await self._send_error("Unsupported action.")
-            return
-
-        text = str(payload.get("text", "")).strip()
-        if not text:
-            await self._send_error("Text is required for streaming speech.")
-            return
-
-        language = str(payload.get("language", "English")).strip() or "English"
-        voice = str(payload.get("voice") or os.getenv("GEMINI_TTS_VOICE", "Charon")).strip() or "Charon"
-
-        try:
-            await self._stream_tts(text=text, language=language, voice=voice)
-        except Exception as exc:
-            LOGGER.exception("Gemini Live TTS streaming failed")
-            await self._send_error(str(exc) or "Streaming speech failed.")
-
-    async def _send_error(self, message):
-        await self.send(text_data=json.dumps({"event": "error", "message": message}))
-
-    async def _send_complete(self):
-        await self.send(text_data=json.dumps({"event": "complete"}))
-
-    async def _stream_tts(self, text, language, voice):
-        api_key = os.getenv("GEMINI_API_KEY", "").strip()
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY is not configured.")
-
-        model = os.getenv("GEMINI_LIVE_TTS_MODEL", "models/gemini-2.5-flash-preview-native-audio-dialog").strip()
-        if not model.startswith("models/"):
-            model = "models/" + model
-
-        prompt = "Speak the following text naturally in {language}. Text: {text}".format(
-            language=language,
-            text=text,
+    def _save_response(self, record_id, answer, question="", retrieval_charts=None, tool_data=None):
+        QuestionHistory.objects.filter(id=record_id).update(
+            response=answer,
+            chart_data=list(retrieval_charts or []),
+            tool_data=dict(tool_data or {}),
         )
+        record = QuestionHistory.objects.select_related("instance").filter(id=record_id).first()
+        if record and record.instance and _looks_generic_title(record.instance.title):
+            record.instance.title = _build_instance_title(question)
+            record.instance.save(update_fields=["title"])
+        return record.instance.title if record and record.instance else ""
 
-        async with aiohttp.ClientSession() as session:
-            async with session.ws_connect(
-                GEMINI_LIVE_API_URL,
-                headers={"x-goog-api-key": api_key},
-                heartbeat=30,
-                receive_timeout=int(os.getenv("AI_REQUEST_TIMEOUT", "60")),
-                ssl=SSL_CONTEXT,
-            ) as ws:
-                await ws.send_json(
-                    {
-                        "setup": {
-                            "model": model,
-                            "generationConfig": {
-                                "responseModalities": ["AUDIO"],
-                                "speechConfig": {
-                                    "voiceConfig": {
-                                        "prebuiltVoiceConfig": {
-                                            "voiceName": voice,
-                                        }
-                                    }
-                                },
-                            },
-                        }
-                    }
-                )
-
-                await self.send(text_data=json.dumps({"event": "start"}))
-                setup_complete = False
-
-                async for message in ws:
-                    if message.type == aiohttp.WSMsgType.TEXT:
-                        data = json.loads(message.data)
-
-                        if data.get("setupComplete") is not None:
-                            setup_complete = True
-                            await ws.send_json(
-                                {
-                                    "clientContent": {
-                                        "turns": [
-                                            {
-                                                "role": "user",
-                                                "parts": [{"text": prompt}],
-                                            }
-                                        ],
-                                        "turnComplete": True,
-                                    }
-                                }
-                            )
-                            continue
-
-                        if not setup_complete:
-                            continue
-
-                        for chunk in _extract_audio_chunks(data):
-                            await self.send(
-                                text_data=json.dumps(
-                                    {
-                                        "event": "audio",
-                                        "data": chunk["data"],
-                                        "mime_type": chunk["mime_type"],
-                                        "sample_rate": chunk["sample_rate"],
-                                    }
-                                )
-                            )
-
-                        server_content = data.get("serverContent") or {}
-                        if server_content.get("turnComplete") or server_content.get("generationComplete"):
-                            await self._send_complete()
-                            await ws.close()
-                            return
-
-                        if data.get("goAway"):
-                            raise RuntimeError("Gemini Live API closed the session.")
-
-                    elif message.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSED):
-                        break
-                    elif message.type == aiohttp.WSMsgType.ERROR:
-                        raise RuntimeError("Gemini Live API websocket error.")
-
-        await self._send_complete()
-
-
-def _extract_audio_chunks(payload):
-    server_content = payload.get("serverContent") or {}
-    model_turn = server_content.get("modelTurn") or {}
-    parts = model_turn.get("parts") or []
-    chunks = []
-    for part in parts:
-        inline = part.get("inlineData") or {}
-        encoded_data = inline.get("data")
-        if not encoded_data:
-            continue
-        mime_type = inline.get("mimeType") or "audio/L16;rate=24000"
-        chunks.append(
-            {
-                "data": encoded_data,
-                "mime_type": mime_type,
-                "sample_rate": _extract_sample_rate(mime_type),
-            }
-        )
-    return chunks
-
-
-def _extract_sample_rate(mime_type):
-    try:
-        marker = "rate="
-        if marker not in mime_type:
-            return 24000
-        return int(str(mime_type).split(marker, 1)[1].split(";", 1)[0])
-    except (TypeError, ValueError, IndexError):
-        return 24000
+    def _merge_tool_state(self, tool_state, *, payload=None, sources=None, charts=None, context_found=False, language=None, intent=None, secondary_intents=None, usage=None):
+        merged = dict(tool_state or {})
+        if payload:
+            merged["payload"] = dict(payload)
+            if isinstance(payload, dict):
+                if "data" in payload:
+                    merged["response_payload"] = dict(payload)
+                    merged["primary_data"] = dict(payload.get("data") or {})
+                    merged["supporting_context"] = dict((payload.get("data") or {}).get("supporting_context") or {})
+                if "primary_data" in payload:
+                    merged["primary_data"] = dict(payload.get("primary_data") or {})
+                if "supporting_context" in payload:
+                    merged["supporting_context"] = dict(payload.get("supporting_context") or {})
+                if "response_type" in payload:
+                    merged["response_type"] = payload.get("response_type")
+        last_tool_result = dict(merged.get("last_tool_result") or {})
+        if sources:
+            last_tool_result["sources"] = list(sources)
+        if charts:
+            last_tool_result["charts"] = list(charts)
+        last_tool_result["context_found"] = bool(context_found)
+        if usage:
+            last_tool_result["usage"] = dict(usage)
+        if last_tool_result:
+            merged["last_tool_result"] = last_tool_result
+        if language:
+            merged["language"] = language
+        if intent:
+            merged["intent"] = intent
+        if secondary_intents:
+            merged["secondary_intents"] = list(secondary_intents)
+        return merged

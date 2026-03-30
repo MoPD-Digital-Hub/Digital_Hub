@@ -5,7 +5,9 @@ from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import Csv, config
-from AI.runtime.config import validate_ai_config
+from AI.gemini.config import validate_gemini_settings
+from AI.orchestration.config import validate_orchestration_settings
+from AI.retrieval.config import validate_retrieval_settings
 # import logging
 # import logging.handlers
 
@@ -47,7 +49,9 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 DEBUG = config('DEBUG', default=False, cast=bool)
 APPEND_SLASH=False
 
-validate_ai_config(DEBUG)
+validate_gemini_settings(DEBUG)
+validate_retrieval_settings(DEBUG)
+validate_orchestration_settings(DEBUG)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
@@ -351,11 +355,7 @@ LOGGING = {
     },
 }
 
-AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
-AI_MAX_RETRIEVAL_DOCS = config("AI_MAX_RETRIEVAL_DOCS", default=4, cast=int)
-AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
-AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
 
 # LOGGING = {
 #     'version': 1,

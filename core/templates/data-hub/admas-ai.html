@@ -5,8 +5,148 @@
 {% block body_attrs %}class="admas-ai-body" data-pc-preset="preset-7" data-pc-sidebar-caption="true" data-pc-layout="vertical" data-pc-direction="ltr" data-pc-theme_contrast="true" data-pc-theme="light"{% endblock %}
 
 {% block style %}
-<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20260316u">
-<link rel="stylesheet" href="{% static 'assets/css/components/admas-ai-modern.css' %}?v=20260316u">
+<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20260326a">
+<link rel="stylesheet" href="{% static 'assets/css/components/admas-ai-modern.css' %}?v=20260326a">
+<style>
+  .ai-msg-charts {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .ai-chart-card {
+    padding-top: 6px;
+  }
+
+  .ai-chart-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #24313d;
+    margin-bottom: 6px;
+  }
+
+  .ai-chart-canvas {
+    min-height: 260px;
+    position: relative;
+  }
+
+  .ai-chart-svg {
+    display: block;
+    width: 100%;
+    height: 260px;
+    overflow: visible;
+  }
+
+  .ai-chart-tooltip {
+    position: absolute;
+    z-index: 2;
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+    background: rgba(20, 27, 34, 0.92);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+  }
+
+  .ai-msg-status {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    background: transparent;
+    color: #607182;
+    font-size: 0.83rem;
+    font-weight: 600;
+  }
+
+  .ai-msg-status-text {
+    line-height: 1;
+  }
+
+  .ai-msg-status-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 24px;
+  }
+
+  .ai-msg-status-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.28;
+    animation: aiTypingDot 1s ease-in-out infinite;
+  }
+
+  .ai-msg-status-dots span:nth-child(1) {
+    animation-delay: 0s;
+  }
+
+  .ai-msg-status-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .ai-msg-status-dots span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes aiTypingDot {
+    0%, 100% {
+      transform: translateY(0);
+      opacity: 0.28;
+    }
+    50% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
+  }
+
+  .msg.ai.ai-bubble-enter {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+
+  .msg.ai.ai-bubble-enter.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .msg.ai.is-streaming .msg-bubble {
+    position: relative;
+  }
+
+  .ai-msg-content-streaming {
+    position: relative;
+  }
+
+  .ai-msg-content-streaming::after {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 1em;
+    margin-left: 6px;
+    vertical-align: -2px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.75;
+    animation: aiCaretBlink 0.9s steps(1) infinite;
+  }
+
+  @keyframes aiCaretBlink {
+    0%, 45% {
+      opacity: 0.15;
+    }
+    46%, 100% {
+      opacity: 0.85;
+    }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -64,11 +204,11 @@
           </button>
           <div>
             <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}History {{ active_instance.id }}{% endif %}</h5>
-            <p>Ask policy and indicator questions, then use translation and voice actions directly in each response.</p>
+            <p>Ask policy and indicator questions in English or Amharic. Admas AI responds in the same language.</p>
           </div>
         </div>
         <div class="ai-main-head-actions">
-          <span class="badge text-bg-primary">AI</span>
+          <span class="badge text-bg-primary">Admas AI</span>
         </div>
       </div>
 
@@ -85,29 +225,10 @@
               <div class="msg-bubble">
                 <div class="ai-msg-head">
                   <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
-                  <div class="ai-msg-actions">
-                    <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
-                      <i class="ti ti-language-hiragana" aria-hidden="true"></i>
-                      <span>Amharic</span>
-                    </button>
-                    <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
-                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                      <span>Listen</span>
-                    </button>
-                  </div>
                 </div>
                 <div class="ai-msg-content">{{ item.response|safe }}</div>
+                <div class="ai-msg-charts"></div>
                 <div class="ai-msg-status" hidden></div>
-                <div class="ai-translation-panel" hidden>
-                  <div class="ai-translation-head">
-                    <div class="ai-translation-label">Amharic</div>
-                    <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
-                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                      <span>Speak</span>
-                    </button>
-                  </div>
-                  <div class="ai-translation-content"></div>
-                </div>
               </div>
             </div>
             {% endif %}
@@ -118,31 +239,12 @@
           <div class="msg-bubble">
             <div class="ai-msg-head">
               <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
-              <div class="ai-msg-actions">
-                <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
-                  <i class="ti ti-language-hiragana" aria-hidden="true"></i>
-                  <span>Amharic</span>
-                </button>
-                <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                  <span>Listen</span>
-                </button>
-              </div>
             </div>
             <div class="ai-msg-content">
-              <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
+              <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators in English or Amharic.</p>
             </div>
+            <div class="ai-msg-charts"></div>
             <div class="ai-msg-status" hidden></div>
-            <div class="ai-translation-panel" hidden>
-              <div class="ai-translation-head">
-                <div class="ai-translation-label">Amharic</div>
-                <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                  <span>Speak</span>
-                </button>
-              </div>
-              <div class="ai-translation-content"></div>
-            </div>
           </div>
         </div>
         {% endif %}
@@ -158,24 +260,9 @@
       <div class="ai-composer">
         <div class="ai-input-row">
           <div class="ai-input-stack">
-            <div id="liveTranscript" class="ai-live-transcript" aria-live="polite" hidden>
-              <span class="ai-live-transcript-dot" aria-hidden="true"></span>
-              <div class="ai-live-transcript-body">
-                <span id="liveTranscriptLabel" class="ai-live-transcript-label">Recording in English</span>
-                <span id="liveTranscriptText" class="ai-live-transcript-text">Recording... press stop to transcribe.</span>
-              </div>
-            </div>
             <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
           </div>
           <div class="ai-input-actions">
-            <div class="ai-speech-toggle" role="group" aria-label="Speech recognition language">
-              <button id="speechLangEn" class="ai-speech-lang is-active" type="button" data-lang="en-US" title="English speech recognition">EN</button>
-              <button id="speechLangAm" class="ai-speech-lang" type="button" data-lang="am-ET" title="Amharic speech recognition">አማ</button>
-            </div>
-            <button id="micBtn" class="btn ai-icon-btn ai-record-btn" type="button" title="Voice input">
-              <i class="ti ti-microphone"></i>
-              <span class="ai-record-label">Record</span>
-            </button>
             <button id="sendBtn" class="btn btn-primary ai-send-btn" type="button">
               <i class="ti ti-arrow-up"></i>
             </button>
@@ -189,5 +276,5 @@
 
 {% block script %}
 <script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
-<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260316u"></script>
+<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260326a"></script>
 {% endblock %}
