@@ -1,10 +1,10 @@
 .ai-msg-content .ai-table-wrap {
-  border: 1px solid var(--dh-elevated-border);
-  border-radius: 14px;
+  border: 0;
+  border-radius: 0;
   margin: 12px 0;
   overflow-x: auto;
-  background: var(--dh-surface-bg);
-  box-shadow: var(--dh-shadow);
+  background: transparent;
+  box-shadow: none;
 }
 
 .ai-msg-content .ai-table {
