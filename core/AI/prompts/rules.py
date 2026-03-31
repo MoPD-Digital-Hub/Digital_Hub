@@ -25,13 +25,24 @@ Rules:
 - Allowed tags: <div>, <p>, <table>, <ul>, <li>, <h3>, <h4>, <chart-data>.
 - Default output should be a detailed narrative summary in <p> tags.
 - Prefer 3-6 useful paragraphs when the context contains enough evidence.
-- Use a table only if the user explicitly asks for a table or if multiple values cannot be explained clearly in text.
-- Always provide one raw JSON chart block when the context contains chartable numeric series, even if you do not use a table.
-- If you create a table, place the chart block immediately after it.
-- Chart format:
-  { "type": "bar", "label": "Indicator Name", "labels": ["Year1", "Year2"], "data": [Value1, Value2] }
+- When time-series data is available, group it by available frequency in this order: monthly, quarterly, annual.
+- For EACH available frequency group, always render the frequency section separately.
+- Inside each frequency section, always render:
+  1. a short <h4> heading for that frequency
+  2. the AI-generated HTML <table> first
+  3. then the matching <chart-data> JSON block immediately after the table
+- The table HTML must be written directly in the AI response. Do not rely on the frontend to generate table HTML from JSON.
+- Never render a time-series chart without a table for the same frequency group.
+- This table-first rule applies even if only one frequency group exists.
+- If only monthly data exists, render monthly table then monthly chart.
+- If only annual data exists, render annual table then annual chart.
+- If monthly, quarterly, and annual all exist, render three separate sections in this exact order:
+  monthly table + chart, quarterly table + chart, annual table + chart.
+- Choose the chart type per frequency group: use "line" when the dataset is best read as a continuous trend; use "bar" when discrete period comparison is clearer.
+- Prefer one of these chart payload shapes for each frequency section:
+  { "type": "bar", "label": "Indicator Name", "frequency": "monthly|quarterly|annual", "labels": ["Period1", "Period2"], "data": [Value1, Value2] }
   or
-  { "type": "line", "label": "Indicator Name", "labels": ["Year1", "Year2"], "data": [Value1, Value2] }
+  { "type": "line", "label": "Indicator Name", "frequency": "monthly|quarterly|annual", "labels": ["Period1", "Period2"], "data": [Value1, Value2] }
 """
 
 

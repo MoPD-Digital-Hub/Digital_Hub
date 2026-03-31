@@ -478,6 +478,7 @@
     attachTtsControls(node);
     enhanceTables(node);
     renderCharts(node);
+    enhanceTables(node);
     renderActionButtons(node);
   }
 
@@ -1184,17 +1185,10 @@
     const pattern = /<chart-data[^>]*>([\s\S]*?)<\/chart-data>/gi;
     return String(text).replace(pattern, function (_match, body) {
       const payload = parseStructuredPayload(String(body || "").trim());
-      if (!payload || payload.kind !== "chart") {
+      if (!payload) {
         return "";
       }
-      const encoded = encodeURIComponent(JSON.stringify(payload));
-      return (
-        '<div class="ai-chart-payload" data-chart="' +
-        encoded +
-        '">' +
-        '<div class="ai-chart-loading">Preparing chart...</div>' +
-        "</div>"
-      );
+      return buildPayloadPlaceholder(payload);
     });
   }
 
@@ -1211,21 +1205,37 @@
     let output = text;
     for (let i = blocks.length - 1; i >= 0; i -= 1) {
       const block = blocks[i];
-      const encoded = encodeURIComponent(JSON.stringify(block.payload));
-      let placeholder = "";
-      if (block.payload.kind === "chart") {
-        placeholder =
-          '<div class="ai-chart-payload" data-chart="' + encoded + '">' +
-          '<div class="ai-chart-loading">Preparing chart...</div>' +
-          "</div>";
-      } else if (block.payload.kind === "button") {
-        placeholder = '<div class="ai-action-payload" data-action="' + encoded + '"></div>';
-      } else {
+      const placeholder = buildPayloadPlaceholder(block.payload);
+      if (!placeholder) {
         continue;
       }
       output = output.slice(0, block.start) + placeholder + output.slice(block.end);
     }
     return output;
+  }
+
+  function buildPayloadPlaceholder(payload) {
+    if (!payload || !payload.kind) {
+      return "";
+    }
+
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+
+    if (payload.kind === "chart") {
+      return (
+        '<div class="ai-chart-payload" data-chart="' +
+        encoded +
+        '">' +
+        '<div class="ai-chart-loading">Preparing chart...</div>' +
+        "</div>"
+      );
+    }
+
+    if (payload.kind === "button") {
+      return '<div class="ai-action-payload" data-action="' + encoded + '"></div>';
+    }
+
+    return "";
   }
 
   function extractJsonPayloadBlocks(input) {
@@ -1446,8 +1456,43 @@
       label: obj.label ? String(obj.label) : "AI Chart",
       labels: normalizedLabels,
       data: normalizedData,
-      score_color: obj.score_color ? String(obj.score_color).trim() : ""
+      score_color: obj.score_color ? String(obj.score_color).trim() : "",
+      frequency: normalizeFrequencyKey(obj.frequency || obj.group || obj.data_type || obj.frequency_type || ""),
+      section_title: obj.section_title ? String(obj.section_title) : (obj.title ? String(obj.title) : ""),
+      value_label: obj.value_label ? String(obj.value_label) : "",
+      period_label: obj.period_label ? String(obj.period_label) : ""
     };
+  }
+
+  function normalizeFrequencyKey(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) {
+      return "";
+    }
+    if (["month", "months", "monthly"].includes(normalized)) {
+      return "monthly";
+    }
+    if (["quarter", "quarters", "quarterly"].includes(normalized)) {
+      return "quarterly";
+    }
+    if (["year", "years", "yearly", "annual", "annually"].includes(normalized)) {
+      return "annual";
+    }
+    return normalized;
+  }
+
+  function frequencyRank(frequency) {
+    if (frequency === "monthly") return 0;
+    if (frequency === "quarterly") return 1;
+    if (frequency === "annual") return 2;
+    return 3;
+  }
+
+  function getFrequencyTitle(frequency) {
+    if (frequency === "monthly") return "Monthly Data";
+    if (frequency === "quarterly") return "Quarterly Data";
+    if (frequency === "annual") return "Annual Data";
+    return "Data";
   }
 
   function convertMarkdownTablesToHtml(input) {
@@ -1542,6 +1587,54 @@
         holder.dataset.rendered = "1";
         holder.innerHTML = '<div class="ai-chart-error">Chart payload is invalid.</div>';
         return;
+      }
+
+      if (payload.frequency && !holder.closest(".ai-frequency-section")) {
+        const parent = holder.parentNode;
+        if (parent) {
+          const previousElement = holder.previousElementSibling;
+          const existingTable = previousElement && (
+            previousElement.classList.contains("ai-table-wrap") || previousElement.tagName === "TABLE"
+          ) ? previousElement : null;
+          const headingCandidate = existingTable
+            ? existingTable.previousElementSibling
+            : previousElement && /^H[34]$/.test(previousElement.tagName)
+              ? previousElement
+              : null;
+          const section = document.createElement("section");
+          section.className = "ai-frequency-section";
+          section.setAttribute("data-frequency", payload.frequency);
+          const heading = document.createElement("div");
+          heading.className = "ai-frequency-section-head";
+          heading.innerHTML = '<h4 class="ai-frequency-section-title">' + escapeHtml(payload.section_title || getFrequencyTitle(payload.frequency)) + "</h4>";
+
+          if (headingCandidate && /^H[34]$/.test(headingCandidate.tagName)) {
+            const adoptedHeading = document.createElement("h4");
+            adoptedHeading.className = "ai-frequency-section-title";
+            adoptedHeading.textContent = headingCandidate.textContent || (payload.section_title || getFrequencyTitle(payload.frequency));
+            heading.innerHTML = "";
+            heading.appendChild(adoptedHeading);
+          }
+          section.appendChild(heading);
+
+          if (headingCandidate && headingCandidate.parentNode === parent) {
+            parent.removeChild(headingCandidate);
+          }
+
+          if (existingTable && existingTable.parentNode === parent) {
+            const tableWrap = document.createElement("div");
+            tableWrap.className = "ai-frequency-section-table";
+            tableWrap.appendChild(existingTable);
+            section.appendChild(tableWrap);
+          }
+
+          const chartWrap = document.createElement("div");
+          chartWrap.className = "ai-frequency-section-chart";
+          parent.insertBefore(section, holder);
+          parent.removeChild(holder);
+          chartWrap.appendChild(holder);
+          section.appendChild(chartWrap);
+        }
       }
 
       if (!window.ApexCharts) {

@@ -5,14 +5,14 @@
 
 ## 📖 Overview
 
-**Digital Hub** is a Django-based project designed to provide a flexible and scalable foundation for building modern web applications. It leverages Django Rest Framework for API development and integrates with tools like Langchain for AI-driven features.
+**Digital Hub** is a Django-based project designed to provide a flexible and scalable foundation for building modern web applications. It leverages Django Rest Framework for API development and now includes a Gemini-first AI assistant for multilingual text generation grounded by Milvus retrieval.
 
 ## 🚀 Features
 
 - 🔗 **API Development** with Django Rest Framework.
 - 🔐 **JWT Authentication** using SimpleJWT.
 - 🌐 **CORS Support** for cross-origin requests.
-- 🧠 **AI Integration** with Langchain and related modules.
+- 🧠 **AI Integration** with Gemini for direct English and Amharic text generation, grounded by Milvus retrieval.
 - 📁 **File Handling** with PyMuPDF and python-magic-bin.
 - 📊 **Environment Management** using python-dotenv.
 
@@ -61,6 +61,7 @@ Create a `.env` file in the project root:
 SECRET_KEY=your_secret_key
 DEBUG=True
 ALLOWED_HOSTS=*
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 5. **Run migrations:**
@@ -76,6 +77,21 @@ poetry run python manage.py runserver
 ```
 
 Visit `http://localhost:8000/` in your browser.
+
+## AI Configuration
+
+The AI app expects:
+
+- `GEMINI_API_KEY` for text generation
+- `GEMINI_TEXT_MODEL` for the text model
+- `GEMINI_TIMEOUT_SECONDS` for request timeout
+- `GEMINI_TEMPERATURE`, `GEMINI_TOP_P`, and `GEMINI_MAX_OUTPUT_TOKENS` for generation tuning
+- `GEMINI_HISTORY_TURNS` for how much prior chat history is sent
+- `MILVUS_URI` and `MILVUS_COLLECTION_NAME` for retrieval
+- `EMBEDDING_API_BASE` for query embeddings
+- `TIME_SERIES_API_BASE` for annual/quarter/month indicator values by code
+
+Admas AI answers directly in the same language as the user's message. Amharic requests get Amharic responses, and English requests get English responses. There is no post-generation translation step in the text generation path. For grounded answers, the service retrieves context from Milvus first and then passes that context to Gemini.
 
 ## Production Deployment
 
