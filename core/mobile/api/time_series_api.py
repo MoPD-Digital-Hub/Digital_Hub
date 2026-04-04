@@ -2,13 +2,44 @@ import requests
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.conf import settings
 from django.http import HttpResponse
 from rest_framework import status
+from drf_spectacular.utils import extend_schema
+from mobile.api.docs import (
+    CATEGORY_LIST_RESPONSE_EXAMPLE,
+    CategoryListResponseSerializer,
+    EXPORT_DATA_TYPE_PARAMETER,
+    EXPORT_FILE_TYPE_PARAMETER,
+    HIGH_FREQUENCY_RESPONSE_EXAMPLE,
+    HighFrequencyResponseSerializer,
+    INDICATOR_DETAIL_RESPONSE_EXAMPLE,
+    IndicatorDetailResponseSerializer,
+    MONTH_LIST_RESPONSE_EXAMPLE,
+    MonthListResponseSerializer,
+    TIME_SERIES_ERROR_EXAMPLE,
+    TOPIC_LIST_ERROR_EXAMPLE,
+    TOPIC_LIST_RESPONSE_EXAMPLE,
+    TimeSeriesErrorResponseSerializer,
+    TopicListResponseSerializer,
+    YEAR_LIST_RESPONSE_EXAMPLE,
+    YearListResponseSerializer,
+    mobile_export_schema,
+    mobile_json_schema,
+)
+from drf_spectacular.utils import OpenApiResponse
 
 
 TIMESERIES_URL = "https://time-series.mopd.gov.et/"
 
+@mobile_json_schema(
+    "List time-series topics",
+    description="Proxies the upstream time-series topic listing endpoint for mobile clients.",
+    tags=["Time Series API"],
+    success_response=TopicListResponseSerializer,
+    success_examples=[TOPIC_LIST_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TOPIC_LIST_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def topic_list(request):
@@ -29,6 +60,7 @@ def topic_list(request):
             status=status.HTTP_502_BAD_GATEWAY
         )
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def topic_detail(request, id):
@@ -51,6 +83,15 @@ def topic_detail(request, id):
     
 
 
+@mobile_json_schema(
+    "Get indicator detail",
+    description="Returns a single indicator detail payload from the upstream time-series service.",
+    tags=["Time Series API"],
+    success_response=IndicatorDetailResponseSerializer,
+    success_examples=[INDICATOR_DETAIL_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def indicator_detail(request, id):
@@ -72,6 +113,7 @@ def indicator_detail(request, id):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def topic_categories_auto_complete(request, id):
@@ -93,6 +135,7 @@ def topic_categories_auto_complete(request, id):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def general_search(request):
@@ -114,6 +157,7 @@ def general_search(request):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def trending(request):
@@ -135,6 +179,15 @@ def trending(request):
         )
     
 
+@mobile_json_schema(
+    "List months",
+    description="Returns month list metadata for mobile filters.",
+    tags=["Time Series API"],
+    success_response=MonthListResponseSerializer,
+    success_examples=[MONTH_LIST_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def month_lists(request):
@@ -155,6 +208,15 @@ def month_lists(request):
             status=status.HTTP_502_BAD_GATEWAY
         )
     
+@mobile_json_schema(
+    "List years",
+    description="Returns year list metadata for mobile filters.",
+    tags=["Time Series API"],
+    success_response=YearListResponseSerializer,
+    success_examples=[YEAR_LIST_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def year_lists(request):
@@ -176,6 +238,7 @@ def year_lists(request):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def initiatives(request):
@@ -197,6 +260,7 @@ def initiatives(request):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_list(request):
@@ -218,6 +282,7 @@ def project_list(request):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_detail(request, id):
@@ -240,6 +305,7 @@ def project_detail(request, id):
     
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def overview(request):
@@ -261,6 +327,7 @@ def overview(request):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def filter_initiative_indicator_by_region(request):
@@ -282,6 +349,15 @@ def filter_initiative_indicator_by_region(request):
         )
 
 ###update api
+@mobile_json_schema(
+    "List topic categories",
+    description="Returns category list data for the provided topic.",
+    tags=["Time Series API"],
+    success_response=CategoryListResponseSerializer,
+    success_examples=[CATEGORY_LIST_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def categories(request, id):
@@ -303,6 +379,15 @@ def categories(request, id):
         )
     
 
+@mobile_json_schema(
+    "List KPIs",
+    description="Returns KPI data for the provided category or topic identifier.",
+    tags=["Time Series API"],
+    success_response=IndicatorDetailResponseSerializer,
+    success_examples=[INDICATOR_DETAIL_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def kpis(request, id):
@@ -324,6 +409,15 @@ def kpis(request, id):
         )
     
 
+@mobile_json_schema(
+    "Get high-frequency dashboard data",
+    description="Returns high-frequency indicator data for mobile dashboards.",
+    tags=["Time Series API"],
+    success_response=HighFrequencyResponseSerializer,
+    success_examples=[HIGH_FREQUENCY_RESPONSE_EXAMPLE],
+    error_response=TimeSeriesErrorResponseSerializer,
+    error_examples=[TIME_SERIES_ERROR_EXAMPLE],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def high_frequency(request):
@@ -345,6 +439,12 @@ def high_frequency(request):
         )
 
 
+@mobile_export_schema(
+    "Export topic data",
+    description="Downloads the topic export file from the upstream time-series service.",
+    tags=["Time Series API"],
+    parameters=[EXPORT_DATA_TYPE_PARAMETER, EXPORT_FILE_TYPE_PARAMETER],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_topic_data(request, id):
@@ -379,6 +479,12 @@ def export_topic_data(request, id):
         )
 
 
+@mobile_export_schema(
+    "Export category data",
+    description="Downloads the category export file from the upstream time-series service.",
+    tags=["Time Series API"],
+    parameters=[EXPORT_DATA_TYPE_PARAMETER, EXPORT_FILE_TYPE_PARAMETER],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_category_data(request, id):
@@ -413,6 +519,12 @@ def export_category_data(request, id):
         )
 
 
+@mobile_export_schema(
+    "Export indicator data",
+    description="Downloads the indicator export file from the upstream time-series service.",
+    tags=["Time Series API"],
+    parameters=[EXPORT_DATA_TYPE_PARAMETER, EXPORT_FILE_TYPE_PARAMETER],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_indicator_data(request, id):

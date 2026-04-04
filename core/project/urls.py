@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from userManagement.api.api import CustomTokenRefreshView
 from userManagement.oidc_views import admin_logout_view
 import os
@@ -18,6 +19,9 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/video/', include('Videos.urls')),
     path('api/mobile/', include('mobile.urls')),
+    path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
+    path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs-swagger'),
+    path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='api-schema'), name='api-docs-redoc'),
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/ai-chat/', include('AI.urls')),
     path('api/notification/', include('Notification.urls')),

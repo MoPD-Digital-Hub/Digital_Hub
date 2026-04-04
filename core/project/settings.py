@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'drf_spectacular',
     'rest_framework_simplejwt',
     'ckeditor',
     'userManagement',
@@ -112,8 +113,25 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'userManagement.drf_authentication.OptionalOIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
   
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Digital Hub API',
+    'DESCRIPTION': 'OpenAPI documentation for the mobile time-series API surface.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'PREPROCESSING_HOOKS': [
+        'project.schema.mobile_only_schema_endpoints',
+    ],
+    'SORT_OPERATIONS': 'project.schema.mobile_schema_sort_key',
+    'TAGS': [
+        {'name': 'Mobile Authentication', 'description': 'Authentication endpoints used by the mobile application.'},
+        {'name': 'Time Series API', 'description': 'Time-series endpoints used by the mobile experience.'},
+    ],
 }
 
 SIMPLE_JWT = {

@@ -7,6 +7,7 @@ from django.contrib.auth import authenticate
 from datetime import timedelta
 from django.utils import timezone
 import random
+from userManagement.docs import token_refresh_schema
 
 def validate_login_opt(request):
     
@@ -68,6 +69,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
 class CustomTokenRefreshView(TokenRefreshView):
+    @token_refresh_schema
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
 
@@ -90,4 +92,3 @@ class CustomTokenRefreshView(TokenRefreshView):
                 "message": "EXCEPTION_OCCURRED",
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-

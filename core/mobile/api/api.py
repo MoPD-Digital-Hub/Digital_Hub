@@ -8,7 +8,15 @@ from Videos.models import Video
 from Videos.api.serializer import VideoSerializer
 from collections import defaultdict
 from packaging import version as v
+from mobile.api.docs import (
+    ErrorEnvelopeSerializer,
+    SuccessEnvelopeSerializer,
+    UpdateCheckResponseSerializer,
+    VERSION_PARAMETER,
+)
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def app(request):
@@ -18,6 +26,7 @@ def app(request):
     if request.method == 'GET':
         return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : seriliazer.data,}, status=status.HTTP_200_OK)
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def latest_videos(request):
@@ -26,6 +35,7 @@ def latest_videos(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def setting(request):
@@ -34,6 +44,7 @@ def setting(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
     
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def faq(request):
@@ -51,6 +62,7 @@ def faq(request):
         "data": grouped_data
     }, status=status.HTTP_200_OK)
     
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def contact_us(request):
@@ -59,6 +71,7 @@ def contact_us(request):
 
     return Response({"result" : "SUCCUSS", "message" : "SUCCUSS", "data" : serializer.data,}, status=status.HTTP_200_OK)
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @authentication_classes([])
 @permission_classes([AllowAny])

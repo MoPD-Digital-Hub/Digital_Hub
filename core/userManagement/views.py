@@ -20,9 +20,15 @@ from axes.handlers.proxy import AxesProxyHandler
 from axes.signals import user_login_failed
 from ipware import get_client_ip
 from kombu.exceptions import OperationalError as KombuOperationalError
+from userManagement.docs import (
+    login_schema,
+    reset_password_confirm_schema,
+    reset_password_request_schema,
+    verify_otp_schema,
+)
 
 
-
+@login_schema
 @api_view(['POST'])
 def generate_login_opt(request):
     serializer = LoginSerializer(data=request.data)
@@ -92,6 +98,7 @@ def generate_login_opt(request):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
+@verify_otp_schema
 @api_view(['POST'])
 def validate_login_opt(request):
     serializer = ValidateOTPSerializer(data=request.data)
@@ -173,6 +180,8 @@ def user(request):
         
         return Response({"result" : "FAILURE", "data" : None, "message" : serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     
+@reset_password_request_schema
+@reset_password_confirm_schema
 @api_view(['POST', 'PUT'])
 def reset_password(request):
 

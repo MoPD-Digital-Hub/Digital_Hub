@@ -2,12 +2,13 @@ import requests
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.conf import settings
 from rest_framework import status
+from drf_spectacular.utils import extend_schema
 
 
 DPMES_URL = "https://dpmes.mopd.gov.et"
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def policy_areas(request):
@@ -28,6 +29,7 @@ def policy_areas(request):
             status=status.HTTP_502_BAD_GATEWAY
         )
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def policy_area_detail(request, id):
@@ -49,6 +51,7 @@ def policy_area_detail(request, id):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def goal_detail(request, id):
@@ -70,6 +73,7 @@ def goal_detail(request, id):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def all_ministries(request):
@@ -92,6 +96,7 @@ def all_ministries(request):
     
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ministry_detail(request, id):
@@ -113,6 +118,7 @@ def ministry_detail(request, id):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ministry_goal_detail(request, id):
@@ -134,6 +140,7 @@ def ministry_goal_detail(request, id):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def ministry_performance(request, id):
@@ -155,6 +162,7 @@ def ministry_performance(request, id):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def single_ministry(request):
@@ -176,6 +184,7 @@ def single_ministry(request):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def affiliated_ministries(request):
@@ -198,6 +207,7 @@ def affiliated_ministries(request):
     
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def indicator_detail(request, id):
@@ -218,6 +228,7 @@ def indicator_detail(request, id):
             status=status.HTTP_502_BAD_GATEWAY
         )
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def year_lists(request):
@@ -239,6 +250,7 @@ def year_lists(request):
         )
     
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def general_search(request):
@@ -260,6 +272,7 @@ def general_search(request):
         )
 
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def overview_ministries(request):
@@ -280,6 +293,7 @@ def overview_ministries(request):
             status=status.HTTP_502_BAD_GATEWAY
         )
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def overview_policy_area(request):
@@ -300,6 +314,7 @@ def overview_policy_area(request):
             status=status.HTTP_502_BAD_GATEWAY
         )
 
+@extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def time_frame(request):
