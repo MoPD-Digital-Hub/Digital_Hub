@@ -27,6 +27,9 @@ Rules:
 - Prefer 3-6 useful paragraphs when the context contains enough evidence.
 - When time-series data is available, group it by available frequency in this order: monthly, quarterly, annual.
 - For EACH available frequency group, always render the frequency section separately.
+- For monthly, quarterly, and annual time-series data, keep the table in the default source order.
+- For charts only, always order labels and chart points in ascending chronological order.
+- Start chart data from the earliest year/period and end with the latest year/period. Never present chart data in descending order.
 - Inside each frequency section, always render:
   1. a short <h4> heading for that frequency
   2. the AI-generated HTML <table> first
@@ -38,6 +41,8 @@ Rules:
 - If only annual data exists, render annual table then annual chart.
 - If monthly, quarterly, and annual all exist, render three separate sections in this exact order:
   monthly table + chart, quarterly table + chart, annual table + chart.
+- Within each chart section, sort by year ascending. If multiple entries exist within the same year, sort by the natural period order for that frequency:
+  month from first to last month, quarter from Q1/3month to Q4/12month, annual from oldest year to newest year.
 - Choose the chart type per frequency group: use "line" when the dataset is best read as a continuous trend; use "bar" when discrete period comparison is clearer.
 - Prefer one of these chart payload shapes for each frequency section:
   { "type": "bar", "label": "Indicator Name", "frequency": "monthly|quarterly|annual", "labels": ["Period1", "Period2"], "data": [Value1, Value2] }
