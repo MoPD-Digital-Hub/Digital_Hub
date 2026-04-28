@@ -149,6 +149,8 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.poetry_cache/
+.poetry_config/
 env/
 venv/
 ENV/

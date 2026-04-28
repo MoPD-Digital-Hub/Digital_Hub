@@ -30,6 +30,76 @@ from drf_spectacular.utils import OpenApiResponse
 
 
 TIMESERIES_URL = "https://time-series.mopd.gov.et/"
+KPI_CHILD_KEYS = ("children", "child", "childs", "sub_indicators", "subIndicators")
+
+
+def _kpi_identity(item):
+    if not isinstance(item, dict):
+        return None
+
+    for key in ("id", "indicator_id", "kpi_id", "code"):
+        value = item.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
+def _iter_child_kpis(item):
+    if not isinstance(item, dict):
+        return
+
+    for key in KPI_CHILD_KEYS:
+        children = item.get(key)
+        if isinstance(children, list):
+            for child in children:
+                if isinstance(child, dict):
+                    yield child
+
+
+def _collect_nested_child_ids(items):
+    child_ids = set()
+
+    def visit(item):
+        for child in _iter_child_kpis(item):
+            child_identity = _kpi_identity(child)
+            if child_identity:
+                child_ids.add(child_identity)
+            visit(child)
+
+    for item in items:
+        visit(item)
+
+    return child_ids
+
+
+def _remove_child_kpis_from_root(items):
+    if not isinstance(items, list):
+        return items
+
+    nested_child_ids = _collect_nested_child_ids(items)
+    if not nested_child_ids:
+        return items
+
+    return [
+        item
+        for item in items
+        if _kpi_identity(item) not in nested_child_ids
+    ]
+
+
+def _restructure_kpis_payload(payload):
+    if not isinstance(payload, dict):
+        return payload
+
+    data = payload.get("data")
+    if isinstance(data, list):
+        payload["data"] = _remove_child_kpis_from_root(data)
+    elif isinstance(data, dict):
+        for key in ("kpis", "results", "items"):
+            if isinstance(data.get(key), list):
+                data[key] = _remove_child_kpis_from_root(data[key])
+
+    return payload
 
 @mobile_json_schema(
     "List time-series topics",
@@ -400,7 +470,11 @@ def kpis(request, id):
             timeout=10
         )
 
-        return Response(res.json(), status=res.status_code)
+        payload = res.json()
+        if res.status_code == status.HTTP_200_OK:
+            payload = _restructure_kpis_payload(payload)
+
+        return Response(payload, status=res.status_code)
 
     except requests.exceptions.RequestException as e:
         return Response(
