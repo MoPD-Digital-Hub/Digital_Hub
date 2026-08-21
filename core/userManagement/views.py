@@ -3,8 +3,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.response import Response
 from rest_framework import status
 from userManagement.api.serializer import UserSerializer
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from userManagement.api.serializer import EmailSerializer, PasswordSerializer
 from datetime import timedelta
 from django.utils import timezone
@@ -30,6 +30,8 @@ from userManagement.docs import (
 
 @login_schema
 @api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def generate_login_opt(request):
     serializer = LoginSerializer(data=request.data)
     handler = AxesProxyHandler()
@@ -100,6 +102,8 @@ def generate_login_opt(request):
 
 @verify_otp_schema
 @api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def validate_login_opt(request):
     serializer = ValidateOTPSerializer(data=request.data)
     if serializer.is_valid():
@@ -183,6 +187,8 @@ def user(request):
 @reset_password_request_schema
 @reset_password_confirm_schema
 @api_view(['POST', 'PUT'])
+@authentication_classes([])
+@permission_classes([AllowAny])
 def reset_password(request):
 
     if request.method == 'POST':
@@ -207,8 +213,12 @@ def reset_password(request):
             user.save()
 
             return Response({"result" : "SUCCESS", "message" : "EMAIL_SENT", "data" : None}, status=status.HTTP_200_OK)
-    
-    
+
+        return Response(
+            {"result": "FAILURE", "message": serializer.errors, "data": None},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     elif request.method == 'PUT':
         serializer = PasswordSerializer(data=request.data)
         if not serializer.is_valid():

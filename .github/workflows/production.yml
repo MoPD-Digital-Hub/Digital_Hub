@@ -27,7 +27,9 @@ jobs:
           # Navigate to the project directory
           cd /mnt/data/Digital_Hub
           
-          # Pull the latest changes from GitHub
+          # Discard any local changes on the server, then pull the latest changes
+          git fetch origin production
+          git reset --hard origin/production
           git pull origin production
           
           # Activate virtual environment 
