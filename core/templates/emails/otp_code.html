@@ -1,0 +1,99 @@
+<!--
+  Transactional email: one-time code.
+  Table-based layout with inline styles — required for Outlook/Gmail.
+  Do not refactor to flexbox/grid or external CSS.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{ subject }}</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f5f7fb; -webkit-font-smoothing:antialiased;">
+
+<!-- Preheader: shown in the inbox preview, hidden in the body -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
+  {{ preheader }}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f7fb;">
+<tr>
+<td align="center" style="padding:32px 16px;">
+
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; background-color:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e3e8ef;">
+
+    <!-- Accent bar -->
+    <tr><td style="height:4px; background-color:#0f766e; line-height:4px; font-size:0;">&nbsp;</td></tr>
+
+    <!-- Masthead -->
+    <tr>
+      <td style="padding:28px 40px 20px 40px; border-bottom:1px solid #eef2f6;">
+        <p style="margin:0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:17px; font-weight:700; color:#0f766e; letter-spacing:-0.2px;">
+          MoPD Digital Hub
+        </p>
+        <p style="margin:3px 0 0 0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; color:#5f6b7a;">
+          Ministry of Planning and Development
+        </p>
+      </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+      <td style="padding:32px 40px 8px 40px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <h1 style="margin:0 0 12px 0; font-size:20px; font-weight:600; color:#17212f; letter-spacing:-0.3px;">
+          {{ heading }}
+        </h1>
+        <p style="margin:0 0 24px 0; font-size:15px; line-height:24px; color:#5f6b7a;">
+          {{ intro }}
+        </p>
+      </td>
+    </tr>
+
+    <!-- Code -->
+    <tr>
+      <td style="padding:0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f5f9f8; border:1px solid #d7e6e3; border-radius:10px;">
+          <tr>
+            <td align="center" style="padding:24px 16px;">
+              <p style="margin:0 0 8px 0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:11px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; color:#5f6b7a;">
+                {{ code_label }}
+              </p>
+              <p style="margin:0; font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace; font-size:34px; font-weight:700; letter-spacing:9px; color:#0f766e; line-height:1.1;">
+                {{ code }}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+
+    <!-- Expiry -->
+    <tr>
+      <td style="padding:20px 40px 32px 40px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <p style="margin:0; font-size:14px; line-height:22px; color:#5f6b7a;">
+          This code expires in <strong style="color:#17212f;">{{ expiry_minutes }} minutes</strong>. It can only be used once.
+        </p>
+      </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+      <td style="padding:20px 40px 28px 40px; border-top:1px solid #eef2f6; background-color:#fafbfc;">
+        <p style="margin:0 0 6px 0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:19px; color:#8592a3;">
+          This is an automated message from MoPD Digital Hub. Please do not reply to this email.
+        </p>
+        <p style="margin:0; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:19px; color:#8592a3;">
+          &copy; {{ year }} Ministry of Planning and Development, Federal Democratic Republic of Ethiopia.
+        </p>
+      </td>
+    </tr>
+
+  </table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>

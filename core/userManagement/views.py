@@ -209,7 +209,7 @@ def reset_password(request):
             user.tokenExpiration = expire_date
 
             ## send email
-            send_email(user.email, secret_token)
+            send_email(user.email, secret_token, purpose="reset")
             user.save()
 
             return Response({"result" : "SUCCESS", "message" : "EMAIL_SENT", "data" : None}, status=status.HTTP_200_OK)

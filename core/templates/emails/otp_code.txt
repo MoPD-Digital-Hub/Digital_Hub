@@ -1,0 +1,15 @@
+MoPD Digital Hub
+Ministry of Planning and Development
+
+{{ heading }}
+
+{{ intro }}
+
+{{ code_label }}: {{ code }}
+
+This code expires in {{ expiry_minutes }} minutes and can only be used once.
+
+--
+This is an automated message from MoPD Digital Hub. Please do not reply.
+(c) {{ year }} Ministry of Planning and Development,
+Federal Democratic Republic of Ethiopia.
