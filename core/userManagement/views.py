@@ -13,7 +13,9 @@ from .tasks.email_tasks import send_email
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate
 from .api.serializer import LoginSerializer, ValidateOTPSerializer
+import logging
 import random
+from django.conf import settings
 from axes.utils import reset_request
 from axes.helpers import get_client_username
 from axes.handlers.proxy import AxesProxyHandler
@@ -26,6 +28,8 @@ from userManagement.docs import (
     reset_password_request_schema,
     verify_otp_schema,
 )
+
+LOGGER = logging.getLogger("userManagement.auth")
 
 
 @login_schema
@@ -71,6 +75,10 @@ def generate_login_opt(request):
                 user.token = otp
                 user.tokenExpiration = expire_date
             user.save()
+
+            if settings.DEBUG:
+                # OTPs must never reach production logs.
+                LOGGER.info("Login OTP for %s: %s", user.email, user.token)
 
             try:
                 send_email.delay(user.email, otp)

@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/auth/token/refresh/', CustomTokenRefreshView.as_view(), name='token_refresh'),
     path('api/ai-chat/', include('AI.urls')),
     path('api/notification/', include('Notification.urls')),
+    path('api/chat/', include('chat.urls')),
     path('dashboard/', include('dashboard.urls')),
     path('oidc/', include('mozilla_django_oidc.urls')),
 

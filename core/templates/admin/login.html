@@ -2,6 +2,7 @@
 {% load i18n static %}
 
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static "admin/css/login.css" %}">
+<link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260309a">
 {{ form.media }}
 {% endblock %}
 
@@ -69,4 +70,6 @@
 </form>
 
 </div>
+
+<script type="module" src="{% static 'assets/js/pages/gesture-global.js' %}?v=20260309a"></script>
 {% endblock %}
