@@ -23,3 +23,10 @@ class MessageAdmin(admin.ModelAdmin):
     list_filter = ['is_deleted']
     search_fields = ['body']
     raw_id_fields = ['conversation', 'sender']
+
+
+@admin.register(ConversationParticipant)
+class ConversationParticipantAdmin(admin.ModelAdmin):
+    list_display = ['id', 'conversation', 'user', 'role', 'is_muted', 'last_read_at', 'joined_at']
+    list_filter = ['role', 'is_muted']
+    raw_id_fields = ['conversation', 'user']
