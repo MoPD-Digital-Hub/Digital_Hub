@@ -86,6 +86,7 @@ INSTALLED_APPS = [
     'AI',
     'mobile',
     'Notification',
+    'chat',
     'dashboard',
     'axes',
     'drf_user_activity_tracker',
