@@ -15,6 +15,7 @@ urlpatterns = [
     path('admin/logout/', admin_logout_view, name='admin_logout'),
     path('admin/', admin.site.urls),
     path('privacy_policy/' , privacy_policy , name='privacy_policy' ),
+    path('privacy-policy/', privacy_policy, name='privacy_policy_hyphen'),
     path('api/user/', include('userManagement.urls')),
     path('api-auth/', include('rest_framework.urls')),
     path('api/video/', include('Videos.urls')),

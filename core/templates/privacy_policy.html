@@ -1,39 +1,317 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Privacy Policy</title>
-  <link rel="stylesheet" href="{% static 'assets/css/components/gesture-control.css' %}?v=20260309a">
+  <title>ADMAS Privacy Policy</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
   <style>
+    :root {
+      --ground: #FCFDFB;
+      --surface: #F2F5EF;
+      --ink: #1E2619;
+      --body: #3A4436;
+      --muted: #6C7566;
+      --accent: #58874B;
+      --deep: #23361D;
+      --line: #DDE4D8;
+      --mark: #EEF4E9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ground: #141911;
+        --surface: #1C2318;
+        --ink: #EAEFE5;
+        --body: #C6CFBF;
+        --muted: #8B957F;
+        --accent: #7FAE6F;
+        --deep: #A8C89A;
+        --line: #2C3527;
+        --mark: #232D1D;
+      }
+    }
+    :root[data-theme="dark"] {
+      --ground: #141911;
+      --surface: #1C2318;
+      --ink: #EAEFE5;
+      --body: #C6CFBF;
+      --muted: #8B957F;
+      --accent: #7FAE6F;
+      --deep: #A8C89A;
+      --line: #2C3527;
+      --mark: #232D1D;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      line-height: 1.6;
-      max-width: 800px;
-      margin: auto;
-      background-color: #f9f9f9;
-      color: #333;
+      margin: 0;
+      background: var(--ground);
+      color: var(--body);
+      font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+      font-size: 1.06rem;
+      line-height: 1.65;
     }
-    h1, h2 {
-      color: #2c3e50;
+    .wrap { max-width: 46rem; margin: 0 auto; padding: 0 1.4rem 5rem; }
+    header {
+      border-bottom: 3px solid var(--accent);
+      background: var(--surface);
     }
-    a {
-      color: #0066cc;
-      text-decoration: none;
+    header .wrap { padding-top: 3.2rem; padding-bottom: 2.2rem; }
+    .eyebrow {
+      font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 0.9rem;
     }
-    a:hover {
-      text-decoration: underline;
+    h1 {
+      font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.9rem, 5vw, 2.6rem);
+      line-height: 1.15;
+      color: var(--ink);
+      margin: 0 0 0.9rem;
+      text-wrap: balance;
+    }
+    .meta {
+      font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--muted);
+      display: flex;
+      gap: 1.6rem;
+      flex-wrap: wrap;
+      margin: 0;
+    }
+    nav.toc {
+      margin: 2.4rem 0 0;
+      padding: 1.2rem 1.4rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    nav.toc p {
+      font-family: Montserrat, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 0.6rem;
+    }
+    nav.toc ol { margin: 0; padding-left: 1.3rem; columns: 2; column-gap: 2rem; }
+    nav.toc li { font-size: 0.92rem; margin-bottom: 0.35rem; break-inside: avoid; }
+    nav.toc a { color: var(--body); text-decoration: none; }
+    nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); text-decoration: underline; }
+    @media (max-width: 560px) { nav.toc ol { columns: 1; } }
+    h2 {
+      font-family: Montserrat, "Helvetica Neue", Arial, sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--ink);
+      margin: 2.8rem 0 0.8rem;
+      padding-top: 0.6rem;
+      scroll-margin-top: 1rem;
+    }
+    h2 .no {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      margin-right: 0.5rem;
+    }
+    h3 {
+      font-family: Montserrat, sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--ink);
+      margin: 1.6rem 0 0.4rem;
+    }
+    p { margin: 0 0 1rem; }
+    ul { margin: 0 0 1rem; padding-left: 1.3rem; }
+    li { margin-bottom: 0.45rem; }
+    strong { color: var(--ink); font-weight: 600; }
+    a { color: var(--accent); }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+    .tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin: 1.2rem 0 1.6rem; }
+    table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 0.93rem; }
+    th {
+      font-family: Montserrat, sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-align: left;
+      color: var(--muted);
+      background: var(--surface);
+      padding: 0.7rem 1rem;
+    }
+    td { padding: 0.75rem 1rem; border-top: 1px solid var(--line); vertical-align: top; }
+    td:first-child { font-family: Montserrat, sans-serif; font-size: 0.85rem; font-weight: 600; color: var(--ink); white-space: nowrap; }
+    .contact {
+      margin-top: 2rem;
+      padding: 1.3rem 1.5rem;
+      background: var(--surface);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 10px 10px 0;
+    }
+    .contact p { margin: 0 0 0.4rem; }
+    footer {
+      margin-top: 3.5rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--line);
+      font-family: Montserrat, sans-serif;
+      font-size: 0.78rem;
+      color: var(--muted);
     }
   </style>
 </head>
 <body>
 
-  <h1>Privacy Policy</h1>
- <div>
-    {{ privacy_policy.content|safe }}
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Ministry of Planning and Development · Federal Democratic Republic of Ethiopia</p>
+    <h1>ADMAS Privacy Policy</h1>
+    <p class="meta">
+      <span>Effective: 4 September 2026</span>
+      <span>Applies to: ADMAS mobile application (Android &amp; iOS)</span>
+    </p>
   </div>
-  <script type="module" src="{% static 'assets/js/pages/gesture-global.js' %}?v=20260309a"></script>
+</header>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#collect">Information we collect</a></li>
+      <li><a href="#use">How we use your information</a></li>
+      <li><a href="#chat">Messaging &amp; the AI assistant</a></li>
+      <li><a href="#share">When we share information</a></li>
+      <li><a href="#permissions">Device permissions</a></li>
+      <li><a href="#security">Storage, security &amp; data handling</a></li>
+      <li><a href="#retention">Data retention</a></li>
+      <li><a href="#rights">Your rights &amp; choices</a></li>
+      <li><a href="#children">Children</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+      <li><a href="#contact">Contact us</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="who"><span class="no">1.</span>Who we are</h2>
+  <p>ADMAS (አድማስ) is the official mobile application of the <strong>Ministry of Planning and Development</strong> of the Federal Democratic Republic of Ethiopia (“the Ministry”, “we”, “us”). The app provides access to national development data — indicators, ministry scorecards, projects, initiatives, SDG tracking, and economic updates — together with an AI assistant and a secure messaging service for registered users.</p>
+  <p>The Ministry is the data controller for personal data processed through ADMAS. Our services are hosted on Ministry-operated infrastructure at <strong>data-hub.mopd.gov.et</strong> and related government systems.</p>
+
+  <h2 id="collect"><span class="no">2.</span>Information we collect</h2>
+  <div class="tablebox">
+    <table>
+      <tr><th>Category</th><th>What it includes</th><th>When</th></tr>
+      <tr>
+        <td>Account details</td>
+        <td>Name, email address, username, phone number, profile photo, and a short bio if you add one. Sign-in is verified with a one-time passcode (OTP) sent to your email.</td>
+        <td>When you register or edit your profile</td>
+      </tr>
+      <tr>
+        <td>Messages</td>
+        <td>The text of chat messages, photos you attach, group names and membership, delivery and read status, and typing activity shared with your conversation partners.</td>
+        <td>When you use the chat feature</td>
+      </tr>
+      <tr>
+        <td>Assistant queries</td>
+        <td>Questions you type to the AI assistant, and voice recordings you make when using the voice assistant.</td>
+        <td>When you use the assistant</td>
+      </tr>
+      <tr>
+        <td>Notification token</td>
+        <td>A push-notification token issued by Google Firebase for your device, and the platform type (Android, iOS, or web).</td>
+        <td>When you sign in with notifications enabled</td>
+      </tr>
+      <tr>
+        <td>Technical data</td>
+        <td>App version (used to check for updates), network connectivity status, and a device-integrity check (whether the device is rooted or jailbroken) that runs on your device.</td>
+        <td>While you use the app</td>
+      </tr>
+    </table>
+  </div>
+  <p><strong>What we do not collect:</strong> ADMAS does not access your photo library or media files. Photos are attached only when you choose them one at a time through your device’s system photo picker or camera. The app does not collect your location, contacts, or advertising identifiers, and it contains no third-party advertising or analytics trackers.</p>
+
+  <h2 id="use"><span class="no">3.</span>How we use your information</h2>
+  <ul>
+    <li><strong>To provide the service</strong> — signing you in, showing your profile to colleagues you chat with, delivering messages, and answering assistant queries.</li>
+    <li><strong>To notify you</strong> — sending push notifications for new chat messages and important Ministry updates. Notifications for a conversation are suppressed while you are viewing it, and muted conversations do not generate notifications.</li>
+    <li><strong>To keep the service safe</strong> — authenticating requests, checking device integrity, and protecting accounts against unauthorized access.</li>
+    <li><strong>To maintain and improve the app</strong> — for example prompting you to update when a new version is required.</li>
+  </ul>
+  <p>We process personal data in accordance with Ethiopia’s <strong>Personal Data Protection Proclamation No. 1321/2024</strong> and other applicable law, on the basis of performing our public mandate, your consent where required (for example, notification and microphone permissions), and our legitimate need to secure the service.</p>
+
+  <h2 id="chat"><span class="no">4.</span>Messaging &amp; the AI assistant</h2>
+  <h3>Messaging</h3>
+  <p>Chat messages and attachments are transmitted over encrypted connections and stored on Ministry servers so that they can be delivered to conversation members and shown in your history. Read receipts and typing indicators are visible to the people in the conversation. Group administrators can add or remove members; when you are removed from or leave a group, you stop receiving its messages.</p>
+  <h3>AI and voice assistant</h3>
+  <p>Questions you send to the AI assistant are processed on Ministry servers to generate a response. If you use the voice assistant, your voice recording is sent to <strong>Addis Assistant</strong> (api.addisassistant.com), a speech-technology service, to convert speech to text and text to speech. Do not share sensitive personal information in assistant conversations.</p>
+
+  <h2 id="share"><span class="no">5.</span>When we share information</h2>
+  <p>We do not sell personal data, and we do not share it with advertisers. Information is shared only with:</p>
+  <ul>
+    <li><strong>Other users</strong> — your name, photo, email, and messages are visible to people you chat with, and your name may appear in user search for starting conversations.</li>
+    <li><strong>Google Firebase</strong> — to deliver push notifications, your device token and notification content pass through Google’s Firebase Cloud Messaging service.</li>
+    <li><strong>Addis Assistant</strong> — voice recordings, only when you use the voice assistant, for speech processing.</li>
+    <li><strong>Public authorities</strong> — where disclosure is required by Ethiopian law or a lawful order.</li>
+  </ul>
+
+  <h2 id="permissions"><span class="no">6.</span>Device permissions</h2>
+  <div class="tablebox">
+    <table>
+      <tr><th>Permission</th><th>Why we ask</th><th>Optional?</th></tr>
+      <tr><td>Notifications</td><td>To alert you to new chat messages and Ministry updates.</td><td>Yes — deny it and the app still works; you simply receive no alerts.</td></tr>
+      <tr><td>Camera</td><td>To take a photo to attach to a chat message.</td><td>Yes — asked only when you choose “Take a photo”.</td></tr>
+      <tr><td>Microphone</td><td>To record your question for the voice assistant.</td><td>Yes — asked only when you use voice input.</td></tr>
+    </table>
+  </div>
+  <p>ADMAS deliberately requests <strong>no storage or media-library permissions</strong>; photo attachments use the operating system’s picker, which shares only the items you select.</p>
+
+  <h2 id="security"><span class="no">7.</span>Storage, security &amp; data handling</h2>
+  <p>We apply the following secure data handling procedures to personal and sensitive user data throughout its lifecycle — from collection, through storage and use, to deletion:</p>
+  <ul>
+    <li><strong>Encrypted transmission</strong> — all data sent between the app and our servers travels over encrypted HTTPS/TLS connections, including the real-time messaging connection (WSS) and push-notification delivery.</li>
+    <li><strong>Protected sign-in</strong> — passwords are never stored in readable form (they are salted and hashed). Sign-in is confirmed with a one-time passcode that expires after 20 minutes, accounts are temporarily locked after repeated failed attempts, and sessions use signed tokens kept in your device’s secure storage (Android Keystore / iOS Keychain). Credentials are never stored in the app itself.</li>
+    <li><strong>Restricted access</strong> — personal data is stored on Ministry-operated infrastructure in access-controlled environments. Access is limited to authorized Ministry personnel who need it to operate the service and who are bound by confidentiality obligations.</li>
+    <li><strong>Sensitive data safeguards</strong> — chat messages and attachments can be retrieved only by authenticated members of that conversation; every request is checked against conversation membership. Voice recordings are used solely to process your assistant request. The app requests no storage, location, or contacts permissions, so this data never reaches us.</li>
+    <li><strong>Data minimisation</strong> — we collect only the data listed in section 2, and notification content is limited to what is needed to display the alert.</li>
+    <li><strong>Device integrity</strong> — the app refuses to run on devices detected as rooted or jailbroken, to protect the integrity of government data.</li>
+    <li><strong>Deletion</strong> — you can request deletion of your account and associated personal data at any time (see section 9). Push-notification tokens are deleted when you sign out and pruned automatically when a device becomes unreachable.</li>
+  </ul>
+  <p>If a security incident affecting personal data occurs, we will assess it and notify affected users and the competent authorities as required by the Personal Data Protection Proclamation No. 1321/2024.</p>
+
+  <h2 id="retention"><span class="no">8.</span>Data retention</h2>
+  <p>We keep your account information for as long as your account is active. Chat messages are retained so that conversation members can access their history. Push-notification tokens are deleted when you sign out and pruned automatically when a device becomes unreachable. When data is no longer needed for the purposes above, it is deleted or anonymized in line with the Ministry’s records-management rules. Specific retention periods are available on request.</p>
+
+  <h2 id="rights"><span class="no">9.</span>Your rights &amp; choices</h2>
+  <ul>
+    <li><strong>Access and correction</strong> — you can view and edit your profile in the app at any time, and request a copy of your personal data.</li>
+    <li><strong>Deletion</strong> — you may request deletion of your account and associated personal data by contacting us using the details below.</li>
+    <li><strong>Notifications</strong> — you can disable push notifications in your device settings, and mute individual conversations in the app.</li>
+    <li><strong>Permissions</strong> — camera and microphone access can be revoked at any time in your device settings.</li>
+    <li><strong>Complaint</strong> — you have the right to lodge a complaint with the competent Ethiopian data protection authority.</li>
+  </ul>
+
+  <h2 id="children"><span class="no">10.</span>Children</h2>
+  <p>ADMAS is intended for professional and public-information use and is not directed at children under 18. We do not knowingly collect personal data from children; if you believe a child has created an account, please contact us and we will remove it.</p>
+
+  <h2 id="changes"><span class="no">11.</span>Changes to this policy</h2>
+  <p>We may update this policy as the app evolves or the law changes. We will post the revised version on this page with a new effective date, and for significant changes we will notify you in the app.</p>
+
+  <h2 id="contact"><span class="no">12.</span>Contact us</h2>
+  <div class="contact">
+    <p><strong>Ministry of Planning and Development</strong></p>
+    <p>Addis Ababa, Federal Democratic Republic of Ethiopia</p>
+    <p>Email: <a href="mailto:privacy@mopd.gov.et">privacy@mopd.gov.et</a></p>
+    <p>Web: <a href="https://data-hub.mopd.gov.et">data-hub.mopd.gov.et</a></p>
+  </div>
+
+  <footer>
+    © Ministry of Planning and Development. This policy applies to the ADMAS mobile application; Ministry websites may carry their own privacy notices.
+  </footer>
+</div>
+
 </body>
 </html>
