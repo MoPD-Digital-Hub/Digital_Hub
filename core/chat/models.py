@@ -5,9 +5,11 @@ from django.db import models
 class Conversation(models.Model):
     DIRECT = "direct"
     GROUP = "group"
+    CHANNEL = "channel"
     TYPE_CHOICES = [
         (DIRECT, "Direct"),
         (GROUP, "Group"),
+        (CHANNEL, "Channel"),
     ]
 
     type = models.CharField(max_length=10, choices=TYPE_CHOICES, default=DIRECT)

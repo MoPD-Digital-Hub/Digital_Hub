@@ -31,12 +31,13 @@ class ConversationSerializer(serializers.ModelSerializer):
     is_muted = serializers.SerializerMethodField()
     my_role = serializers.SerializerMethodField()
     participant_count = serializers.SerializerMethodField()
+    can_post = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'type', 'title', 'created_by', 'other_participants', 'last_message',
-            'unread_count', 'is_muted', 'my_role', 'participant_count',
+            'unread_count', 'is_muted', 'my_role', 'participant_count', 'can_post',
             'created_at', 'updated_at',
         ]
 
@@ -76,3 +77,9 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     def get_participant_count(self, conversation):
         return len(conversation.participants.all())
+
+    def get_can_post(self, conversation):
+        if conversation.type != Conversation.CHANNEL:
+            return True
+        participant = self._my_participant(conversation)
+        return bool(participant and participant.role == 'admin')

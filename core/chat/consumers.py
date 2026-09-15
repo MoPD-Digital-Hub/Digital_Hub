@@ -104,6 +104,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             conversation_id = int(conversation_id)
         except (TypeError, ValueError):
             return
+        if not await self._can_post(conversation_id):
+            return
         other_user_ids = await self._other_participant_ids(conversation_id)
         if other_user_ids is None:
             return
@@ -123,7 +125,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         result = await self._mark_read(conversation_id)
         if result is None:
             return
-        other_user_ids, last_read_at = result
+        other_user_ids, last_read_at, is_channel = result
+        if is_channel:
+            # Channels track reads silently — no receipt fan-out.
+            return
         payload = {
             "type": "message.read",
             "conversation_id": conversation_id,
@@ -158,8 +163,25 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         return [user_id for user_id in participants if user_id != self.user.id]
 
     @database_sync_to_async
+    def _can_post(self, conversation_id):
+        """True when the user may send into this conversation — always for
+        direct and group chats, admins only for channels."""
+        from chat.models import Conversation, ConversationParticipant
+
+        participant = (
+            ConversationParticipant.objects.select_related("conversation")
+            .filter(conversation_id=conversation_id, user=self.user)
+            .first()
+        )
+        if participant is None:
+            return False
+        if participant.conversation.type != Conversation.CHANNEL:
+            return True
+        return participant.role == ConversationParticipant.ADMIN
+
+    @database_sync_to_async
     def _mark_read(self, conversation_id):
-        from chat.models import ConversationParticipant
+        from chat.models import Conversation, ConversationParticipant
 
         now = timezone.now()
         updated = ConversationParticipant.objects.filter(
@@ -172,4 +194,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             .exclude(user=self.user)
             .values_list("user_id", flat=True)
         )
-        return other_ids, now
+        is_channel = Conversation.objects.filter(
+            id=conversation_id, type=Conversation.CHANNEL
+        ).exists()
+        return other_ids, now, is_channel

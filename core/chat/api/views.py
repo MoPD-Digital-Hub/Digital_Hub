@@ -128,8 +128,8 @@ def conversations(request):
         serializer = ConversationSerializer(queryset, many=True, context={"request": request})
         return _ok(request, serializer.data)
 
-    if request.data.get('type') == Conversation.GROUP:
-        return _create_group(request)
+    if request.data.get('type') in (Conversation.GROUP, Conversation.CHANNEL):
+        return _create_group_or_channel(request, request.data.get('type'))
 
     user_id = request.data.get('user_id')
     if not user_id:
@@ -170,17 +170,28 @@ def conversations(request):
     )
 
 
-def _create_group(request):
+def _create_group_or_channel(request, conversation_type):
+    """Groups can be created by anyone; channels (read-only broadcast
+    conversations) only by staff accounts."""
+    is_channel = conversation_type == Conversation.CHANNEL
+    if is_channel and not request.user.is_staff:
+        return _err(request, "CHANNEL_STAFF_ONLY", "Only staff accounts can create channels.", status.HTTP_403_FORBIDDEN)
+
     title = str(request.data.get('title', '')).strip()
     if not title:
-        return _err(request, "TITLE_REQUIRED", "Group conversations need a title.", status.HTTP_400_BAD_REQUEST)
+        return _err(request, "TITLE_REQUIRED", "Group and channel conversations need a title.", status.HTTP_400_BAD_REQUEST)
 
-    user_ids, error = _parse_user_ids(request.data.get('user_ids'))
-    if error:
-        return _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
+    raw_user_ids = request.data.get('user_ids')
+    if is_channel and not raw_user_ids:
+        # A channel may start empty; subscribers are added later.
+        user_ids = []
+    else:
+        user_ids, error = _parse_user_ids(raw_user_ids)
+        if error:
+            return _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
 
     user_ids = [user_id for user_id in user_ids if user_id != request.user.id]
-    if not user_ids:
+    if not user_ids and not is_channel:
         return _err(request, "USER_IDS_REQUIRED", "A group needs at least one other member.", status.HTTP_400_BAD_REQUEST)
     if len(user_ids) > GROUP_MEMBERS_MAX:
         return _err(request, "TOO_MANY_MEMBERS", f"A group can have at most {GROUP_MEMBERS_MAX} members.", status.HTTP_400_BAD_REQUEST)
@@ -195,7 +206,7 @@ def _create_group(request):
 
     with transaction.atomic():
         conversation = Conversation.objects.create(
-            type=Conversation.GROUP, title=title, created_by=request.user,
+            type=conversation_type, title=title, created_by=request.user,
         )
         ConversationParticipant.objects.bulk_create(
             [ConversationParticipant(conversation=conversation, user=request.user, role=ConversationParticipant.ADMIN)]
@@ -217,10 +228,10 @@ def conversation_detail(request, conversation_id):
         return _ok(request, _serialize_for(request, conversation_id))
 
     conversation = membership.conversation
-    if conversation.type != Conversation.GROUP:
-        return _err(request, "NOT_GROUP", "Only group conversations can be renamed.", status.HTTP_400_BAD_REQUEST)
+    if conversation.type == Conversation.DIRECT:
+        return _err(request, "NOT_GROUP", "Only group and channel conversations can be renamed.", status.HTTP_400_BAD_REQUEST)
     if membership.role != ConversationParticipant.ADMIN:
-        return _err(request, "NOT_ADMIN", "Only group admins can rename the group.", status.HTTP_403_FORBIDDEN)
+        return _err(request, "NOT_ADMIN", "Only admins can rename this conversation.", status.HTTP_403_FORBIDDEN)
 
     title = str(request.data.get('title', '')).strip()
     if not title:
@@ -240,8 +251,8 @@ def conversation_participants(request, conversation_id):
         return _err(request, "CONVERSATION_NOT_FOUND", "Conversation doesn't exist!", status.HTTP_404_NOT_FOUND)
 
     conversation = membership.conversation
-    if conversation.type != Conversation.GROUP:
-        return _err(request, "NOT_GROUP", "Members can only be managed on group conversations.", status.HTTP_400_BAD_REQUEST)
+    if conversation.type == Conversation.DIRECT:
+        return _err(request, "NOT_GROUP", "Members can only be managed on group and channel conversations.", status.HTTP_400_BAD_REQUEST)
 
     is_admin = membership.role == ConversationParticipant.ADMIN
 
@@ -298,11 +309,14 @@ def conversation_participants(request, conversation_id):
     target.delete()
 
     # Never leave a group without an admin: promote the oldest member.
-    remaining = ConversationParticipant.objects.filter(conversation=conversation)
-    if remaining.exists() and not remaining.filter(role=ConversationParticipant.ADMIN).exists():
-        oldest = remaining.order_by("joined_at").first()
-        oldest.role = ConversationParticipant.ADMIN
-        oldest.save(update_fields=["role"])
+    # Channels are exempt — promoting a read-only subscriber would silently
+    # grant them posting rights.
+    if conversation.type == Conversation.GROUP:
+        remaining = ConversationParticipant.objects.filter(conversation=conversation)
+        if remaining.exists() and not remaining.filter(role=ConversationParticipant.ADMIN).exists():
+            oldest = remaining.order_by("joined_at").first()
+            oldest.role = ConversationParticipant.ADMIN
+            oldest.save(update_fields=["role"])
 
     conversation.save(update_fields=["updated_at"])
     _notify_conversation_updated(
@@ -354,12 +368,14 @@ def conversation_messages(request, conversation_id):
             },
         )
 
+    conversation = membership.conversation
+    if conversation.type == Conversation.CHANNEL and membership.role != ConversationParticipant.ADMIN:
+        return _err(request, "READ_ONLY_CHANNEL", "Only channel admins can post in a channel.", status.HTTP_403_FORBIDDEN)
+
     body = str(request.data.get('body', '')).strip()
     attachment = request.FILES.get('attachment')
     if not body and not attachment:
         return _err(request, "EMPTY_MESSAGE", "Message body or attachment is required.", status.HTTP_400_BAD_REQUEST)
-
-    conversation = membership.conversation
     message = Message.objects.create(
         conversation=conversation,
         sender=request.user,
@@ -397,14 +413,17 @@ def mark_conversation_read(request, conversation_id):
     membership.last_read_at = now
     membership.save(update_fields=["last_read_at"])
 
-    other_ids = [uid for uid in conversation_user_ids(membership.conversation) if uid != request.user.id]
-    broadcast_to_users(
-        other_ids,
-        {
-            "type": "message.read",
-            "conversation_id": membership.conversation_id,
-            "user_id": request.user.id,
-            "last_read_at": now.isoformat(),
-        },
-    )
+    # Channels track unread counts but never broadcast read receipts —
+    # a receipt per reader would flood every subscriber's socket.
+    if membership.conversation.type != Conversation.CHANNEL:
+        other_ids = [uid for uid in conversation_user_ids(membership.conversation) if uid != request.user.id]
+        broadcast_to_users(
+            other_ids,
+            {
+                "type": "message.read",
+                "conversation_id": membership.conversation_id,
+                "user_id": request.user.id,
+                "last_read_at": now.isoformat(),
+            },
+        )
     return _ok(request, {"last_read_at": now.isoformat()})

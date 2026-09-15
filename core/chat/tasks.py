@@ -26,7 +26,7 @@ def send_chat_push(message_id):
     sender = message.sender
     sender_name = (sender.get_full_name() if sender else "") or "New message"
     preview = message.body.strip()[:PUSH_BODY_PREVIEW_LENGTH] or "Sent an attachment"
-    if message.conversation.type == "group":
+    if message.conversation.type in ("group", "channel"):
         # "Team Alpha" / "Abebe: See you then"
         title = message.conversation.title or sender_name
         body = f"{sender_name}: {preview}"

@@ -24,7 +24,7 @@ Every chat endpoint responds with the standard envelope:
 { "result": "SUCCESS", "message": "SUCCESS", "request_id": "…", "data": … }
 ```
 
-Failures use `"result": "FAILURE"` with `error: { code, message, details }`. Machine-readable codes you will encounter: `USER_ID_REQUIRED`, `USER_ID_INVALID`, `SELF_CONVERSATION`, `USER_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `EMPTY_MESSAGE`, `BEFORE_INVALID`, and for groups: `TITLE_REQUIRED`, `USER_IDS_REQUIRED`, `USER_IDS_INVALID`, `NOT_GROUP`, `NOT_ADMIN`, `PARTICIPANT_NOT_FOUND`, `TOO_MANY_MEMBERS`.
+Failures use `"result": "FAILURE"` with `error: { code, message, details }`. Machine-readable codes you will encounter: `USER_ID_REQUIRED`, `USER_ID_INVALID`, `SELF_CONVERSATION`, `USER_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `EMPTY_MESSAGE`, `BEFORE_INVALID`, and for groups/channels: `TITLE_REQUIRED`, `USER_IDS_REQUIRED`, `USER_IDS_INVALID`, `NOT_GROUP`, `NOT_ADMIN`, `PARTICIPANT_NOT_FOUND`, `TOO_MANY_MEMBERS`, `CHANNEL_STAFF_ONLY`, `READ_ONLY_CHANNEL`.
 
 ## 3. Device registration (required for push)
 
@@ -78,7 +78,9 @@ Returns conversations sorted by most recent activity. Each item:
 }
 ```
 
-For a group conversation, `type` is `"group"`, `title` is the group name, `created_by` is the creator's user id, `other_participants` lists everyone but you, and `my_role` is `"admin"` or `"member"`. Display name for the UI: `title` for groups, the other participant's name for direct chats.
+For a group conversation, `type` is `"group"`, `title` is the group name, `created_by` is the creator's user id, `other_participants` lists everyone but you, and `my_role` is `"admin"` or `"member"`. Display name for the UI: `title` for groups and channels, the other participant's name for direct chats.
+
+Every conversation also carries **`can_post`**: always `true` for direct and group chats; in a **channel** it is `true` only for channel admins. When `can_post` is `false`, hide the message composer — the API will reject sends with `READ_ONLY_CHANNEL` anyway.
 
 ### Start (or fetch) a direct conversation
 
@@ -91,6 +93,17 @@ Returns the conversation in the same shape. `201` if newly created, `200` if it 
 `POST /api/chat/conversations/` with `{ "type": "group", "title": "Team Alpha", "user_ids": [7, 9, 12] }`
 
 The creator becomes the group's **admin**; everyone in `user_ids` joins as a member (your own id is ignored if included). At least one other member is required; max 100 members. Returns `201` with the conversation.
+
+### Create a channel (staff only)
+
+`POST /api/chat/conversations/` with `{ "type": "channel", "title": "Ministry Announcements", "user_ids": [7, 9] }`
+
+A **channel** is a read-only broadcast conversation: only channel admins can post; everyone else subscribes and reads. Only staff accounts can create one (`CHANNEL_STAFF_ONLY` otherwise); the creator becomes its admin. `user_ids` is optional — a channel may start empty and gain subscribers later via the participants endpoint. Channel behavior differences:
+
+- Subscribers get `can_post: false`; their sends return `403 READ_ONLY_CHANNEL` and their typing events are ignored.
+- Channels never emit `message.read` receipts (unread counts still work per subscriber) — so don't expect ticks in channels.
+- Group management (rename, add/remove members, leave) works identically, except no one is auto-promoted to admin if the last admin leaves.
+- Pushes format like groups: title = channel name, body = `"Sender: preview"`; mute and focus suppression apply per subscriber.
 
 ### Group management
 
