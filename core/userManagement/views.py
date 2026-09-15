@@ -276,3 +276,22 @@ def reset_password(request):
 
         
     return Response({"result" : "FAILURE", "data" : None, "message" : "Invalid Input!", "data" : None}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def ministries(request):
+    """List active ministries/organizations, for profile and filter pickers."""
+    from userManagement.models import Ministry
+
+    queryset = Ministry.objects.filter(is_active=True).order_by('name')
+    search = request.query_params.get('search', '').strip()
+    if search:
+        from django.db.models import Q
+        queryset = queryset.filter(Q(name__icontains=search) | Q(abbreviation__icontains=search))
+
+    data = [
+        {"id": m.id, "name": m.name, "abbreviation": m.abbreviation}
+        for m in queryset
+    ]
+    return Response({"result": "SUCCESS", "message": "SUCCESS", "data": data}, status=status.HTTP_200_OK)

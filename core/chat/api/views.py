@@ -10,12 +10,13 @@ from django.db.models import Q
 from chat.models import Conversation, ConversationParticipant, Message
 from chat.services import broadcast_to_users, conversation_user_ids
 from chat.tasks import send_chat_push
-from userManagement.models import CustomUser
+from userManagement.models import CustomUser, Ministry
 from .serializers import ChatUserSerializer, ConversationSerializer, MessageSerializer
 
 MESSAGES_PAGE_SIZE_DEFAULT = 30
 MESSAGES_PAGE_SIZE_MAX = 100
 GROUP_MEMBERS_MAX = 100
+CHANNEL_MEMBERS_MAX = 1000
 
 
 def _request_id(request):
@@ -64,9 +65,57 @@ def _get_membership(request, conversation_id):
 def _conversation_queryset(user):
     return (
         Conversation.objects.filter(participants__user=user)
-        .prefetch_related("participants__user")
+        .prefetch_related("participants__user__ministry")
         .order_by("-updated_at")
     )
+
+
+def _member_cap(conversation_type):
+    return CHANNEL_MEMBERS_MAX if conversation_type == Conversation.CHANNEL else GROUP_MEMBERS_MAX
+
+
+def _resolve_members(request):
+    """Resolve the requested membership: the union of explicit `user_ids`
+    and every active user of the organizations in `ministry_ids`.
+    Returns (members, error_response) — exactly one is None."""
+    raw_user_ids = request.data.get('user_ids')
+    raw_ministry_ids = request.data.get('ministry_ids')
+
+    user_ids = []
+    if raw_user_ids:
+        user_ids, error = _parse_user_ids(raw_user_ids)
+        if error:
+            return None, _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
+
+    ministry_ids = []
+    if raw_ministry_ids:
+        ministry_ids, error = _parse_user_ids(raw_ministry_ids)
+        if error:
+            return None, _err(
+                request, error.replace("USER_IDS", "MINISTRY_IDS"),
+                "ministry_ids must be a non-empty list of ministry ids.", status.HTTP_400_BAD_REQUEST,
+            )
+        found = set(Ministry.objects.filter(id__in=ministry_ids).values_list("id", flat=True))
+        missing = set(ministry_ids) - found
+        if missing:
+            return None, _err(
+                request, "MINISTRY_NOT_FOUND", "Some ministries don't exist.",
+                status.HTTP_404_NOT_FOUND, details={"ministry_ids": sorted(missing)},
+            )
+
+    members = list(
+        CustomUser.objects.filter(is_active=True)
+        .filter(Q(id__in=user_ids) | Q(ministry_id__in=ministry_ids))
+        .exclude(id=request.user.id)
+    )
+    # Explicitly named users must exist; ministry members are best-effort.
+    missing_users = set(user_ids) - {member.id for member in members} - {request.user.id}
+    if missing_users:
+        return None, _err(
+            request, "USER_NOT_FOUND", "Some users don't exist.",
+            status.HTTP_404_NOT_FOUND, details={"user_ids": sorted(missing_users)},
+        )
+    return members, None
 
 
 def _serialize_for(request, conversation_id):
@@ -105,7 +154,7 @@ def _parse_user_ids(raw):
 def chat_users(request):
     """Users the requester can start a conversation with. Optional
     ?search= filters by name or email."""
-    queryset = CustomUser.objects.filter(is_active=True).exclude(id=request.user.id)
+    queryset = CustomUser.objects.filter(is_active=True).exclude(id=request.user.id).select_related('ministry')
 
     search = request.query_params.get('search', '').strip()
     if search:
@@ -114,6 +163,13 @@ def chat_users(request):
             | Q(last_name__icontains=search)
             | Q(email__icontains=search)
         )
+
+    ministry = request.query_params.get('ministry', '').strip()
+    if ministry:
+        try:
+            queryset = queryset.filter(ministry_id=int(ministry))
+        except (TypeError, ValueError):
+            return _err(request, "MINISTRY_INVALID", "ministry must be a ministry id.", status.HTTP_400_BAD_REQUEST)
 
     queryset = queryset.order_by('first_name', 'last_name')
     serializer = ChatUserSerializer(queryset, many=True, context={"request": request})
@@ -181,28 +237,17 @@ def _create_group_or_channel(request, conversation_type):
     if not title:
         return _err(request, "TITLE_REQUIRED", "Group and channel conversations need a title.", status.HTTP_400_BAD_REQUEST)
 
-    raw_user_ids = request.data.get('user_ids')
-    if is_channel and not raw_user_ids:
-        # A channel may start empty; subscribers are added later.
-        user_ids = []
-    else:
-        user_ids, error = _parse_user_ids(raw_user_ids)
-        if error:
-            return _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
+    members, error_response = _resolve_members(request)
+    if error_response is not None:
+        return error_response
 
-    user_ids = [user_id for user_id in user_ids if user_id != request.user.id]
-    if not user_ids and not is_channel:
+    if not members and not is_channel:
+        # A channel may start empty; a group needs at least one other member.
         return _err(request, "USER_IDS_REQUIRED", "A group needs at least one other member.", status.HTTP_400_BAD_REQUEST)
-    if len(user_ids) > GROUP_MEMBERS_MAX:
-        return _err(request, "TOO_MANY_MEMBERS", f"A group can have at most {GROUP_MEMBERS_MAX} members.", status.HTTP_400_BAD_REQUEST)
 
-    members = list(CustomUser.objects.filter(id__in=user_ids, is_active=True))
-    missing = set(user_ids) - {member.id for member in members}
-    if missing:
-        return _err(
-            request, "USER_NOT_FOUND", "Some users don't exist.",
-            status.HTTP_404_NOT_FOUND, details={"user_ids": sorted(missing)},
-        )
+    cap = _member_cap(conversation_type)
+    if len(members) >= cap:
+        return _err(request, "TOO_MANY_MEMBERS", f"A {conversation_type} can have at most {cap} members.", status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
         conversation = Conversation.objects.create(
@@ -260,22 +305,18 @@ def conversation_participants(request, conversation_id):
         if not is_admin:
             return _err(request, "NOT_ADMIN", "Only group admins can add members.", status.HTTP_403_FORBIDDEN)
 
-        user_ids, error = _parse_user_ids(request.data.get('user_ids'))
-        if error:
-            return _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
+        if not request.data.get('user_ids') and not request.data.get('ministry_ids'):
+            return _err(request, "USER_IDS_REQUIRED", "Provide user_ids and/or ministry_ids.", status.HTTP_400_BAD_REQUEST)
 
-        members = list(CustomUser.objects.filter(id__in=user_ids, is_active=True))
-        missing = set(user_ids) - {member.id for member in members}
-        if missing:
-            return _err(
-                request, "USER_NOT_FOUND", "Some users don't exist.",
-                status.HTTP_404_NOT_FOUND, details={"user_ids": sorted(missing)},
-            )
+        members, error_response = _resolve_members(request)
+        if error_response is not None:
+            return error_response
 
+        cap = _member_cap(conversation.type)
         existing_ids = set(conversation.participants.values_list("user_id", flat=True))
         new_members = [member for member in members if member.id not in existing_ids]
-        if len(existing_ids) + len(new_members) > GROUP_MEMBERS_MAX:
-            return _err(request, "TOO_MANY_MEMBERS", f"A group can have at most {GROUP_MEMBERS_MAX} members.", status.HTTP_400_BAD_REQUEST)
+        if len(existing_ids) + len(new_members) > cap:
+            return _err(request, "TOO_MANY_MEMBERS", f"A {conversation.type} can have at most {cap} members.", status.HTTP_400_BAD_REQUEST)
 
         added = []
         for member in new_members:

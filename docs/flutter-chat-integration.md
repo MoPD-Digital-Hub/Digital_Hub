@@ -24,7 +24,7 @@ Every chat endpoint responds with the standard envelope:
 { "result": "SUCCESS", "message": "SUCCESS", "request_id": "…", "data": … }
 ```
 
-Failures use `"result": "FAILURE"` with `error: { code, message, details }`. Machine-readable codes you will encounter: `USER_ID_REQUIRED`, `USER_ID_INVALID`, `SELF_CONVERSATION`, `USER_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `EMPTY_MESSAGE`, `BEFORE_INVALID`, and for groups/channels: `TITLE_REQUIRED`, `USER_IDS_REQUIRED`, `USER_IDS_INVALID`, `NOT_GROUP`, `NOT_ADMIN`, `PARTICIPANT_NOT_FOUND`, `TOO_MANY_MEMBERS`, `CHANNEL_STAFF_ONLY`, `READ_ONLY_CHANNEL`.
+Failures use `"result": "FAILURE"` with `error: { code, message, details }`. Machine-readable codes you will encounter: `USER_ID_REQUIRED`, `USER_ID_INVALID`, `SELF_CONVERSATION`, `USER_NOT_FOUND`, `CONVERSATION_NOT_FOUND`, `EMPTY_MESSAGE`, `BEFORE_INVALID`, and for groups/channels: `TITLE_REQUIRED`, `USER_IDS_REQUIRED`, `USER_IDS_INVALID`, `NOT_GROUP`, `NOT_ADMIN`, `PARTICIPANT_NOT_FOUND`, `TOO_MANY_MEMBERS`, `CHANNEL_STAFF_ONLY`, `READ_ONLY_CHANNEL`, `MINISTRY_INVALID`, `MINISTRY_NOT_FOUND`, `MINISTRY_IDS_REQUIRED`, `MINISTRY_IDS_INVALID`.
 
 ## 3. Device registration (required for push)
 
@@ -43,14 +43,21 @@ Registration is idempotent — re-posting the same token just re-binds it to the
 
 Base path: `/api/chat/`
 
+### Ministries (organizations)
+
+Every user can belong to one ministry/organization. The app attaches it through the existing profile endpoint — `PUT /api/user/` with `{ "ministry": <id> }` — and pickers list them via:
+
+`GET /api/user/ministries/?search=<query>` → `[ { "id": 3, "name": "Ministry of Finance", "abbreviation": "MoF" }, … ]`
+
 ### List chat users
 
-`GET /api/chat/users/?search=<query>`
+`GET /api/chat/users/?search=<query>&ministry=<id>`
 
-All active users except yourself — the "start a new chat" picker. Optional `search` filters by first name, last name, or email (case-insensitive contains). Each item is the standard user shape:
+All active users except yourself — the "start a new chat" picker. Optional `search` filters by first name, last name, or email (case-insensitive contains); optional `ministry` narrows to one organization. Each item is the standard user shape, with the user's organization nested (or `null`):
 
 ```json
-{ "id": 7, "first_name": "Abebe", "last_name": "Bekele", "email": "…", "photo": "…", "excellence": "Mr" }
+{ "id": 7, "first_name": "Abebe", "last_name": "Bekele", "email": "…", "photo": "…", "excellence": "Mr",
+  "ministry": { "id": 3, "name": "Ministry of Finance", "abbreviation": "MoF" } }
 ```
 
 ### List conversations
@@ -96,9 +103,9 @@ The creator becomes the group's **admin**; everyone in `user_ids` joins as a mem
 
 ### Create a channel (staff only)
 
-`POST /api/chat/conversations/` with `{ "type": "channel", "title": "Ministry Announcements", "user_ids": [7, 9] }`
+`POST /api/chat/conversations/` with `{ "type": "channel", "title": "Ministry Announcements", "user_ids": [7, 9], "ministry_ids": [3] }`
 
-A **channel** is a read-only broadcast conversation: only channel admins can post; everyone else subscribes and reads. Only staff accounts can create one (`CHANNEL_STAFF_ONLY` otherwise); the creator becomes its admin. `user_ids` is optional — a channel may start empty and gain subscribers later via the participants endpoint. Channel behavior differences:
+A **channel** is a read-only broadcast conversation: only channel admins can post; everyone else subscribes and reads. Only staff accounts can create one (`CHANNEL_STAFF_ONLY` otherwise); the creator becomes its admin. Membership is the union of explicit `user_ids` and **every active user of the organizations in `ministry_ids`** — both optional, so a channel may start empty and gain subscribers later. The participants endpoint accepts the same `ministry_ids` key for bulk-adding an organization to an existing conversation. Members cap: 1000 for channels, 100 for groups. Channel behavior differences:
 
 - Subscribers get `can_post: false`; their sends return `403 READ_ONLY_CHANNEL` and their typing events are ignored.
 - Channels never emit `message.read` receipts (unread counts still work per subscriber) — so don't expect ticks in channels.

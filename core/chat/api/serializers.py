@@ -1,13 +1,21 @@
 from rest_framework import serializers
 
 from chat.models import Conversation, Message
-from userManagement.models import CustomUser
+from userManagement.models import CustomUser, Ministry
+
+
+class MinistrySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ministry
+        fields = ['id', 'name', 'abbreviation']
 
 
 class ChatUserSerializer(serializers.ModelSerializer):
+    ministry = MinistrySerializer(read_only=True)
+
     class Meta:
         model = CustomUser
-        fields = ['id', 'first_name', 'last_name', 'email', 'photo', 'excellence']
+        fields = ['id', 'first_name', 'last_name', 'email', 'photo', 'excellence', 'ministry']
 
 
 class MessageSerializer(serializers.ModelSerializer):
