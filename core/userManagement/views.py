@@ -291,7 +291,7 @@ def ministries(request):
         queryset = queryset.filter(Q(name__icontains=search) | Q(abbreviation__icontains=search))
 
     data = [
-        {"id": m.id, "name": m.name, "abbreviation": m.abbreviation}
+        {"id": m.id, "name": m.name, "name_am": m.name_am, "abbreviation": m.abbreviation, "image": m.image}
         for m in queryset
     ]
     return Response({"result": "SUCCESS", "message": "SUCCESS", "data": data}, status=status.HTTP_200_OK)

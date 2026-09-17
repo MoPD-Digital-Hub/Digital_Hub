@@ -1,5 +1,7 @@
 from django.urls import path
 
+from .api import organization_overview
+
 from .views import (
     admas_ai_page,
     about_dpmes_page,
@@ -53,6 +55,7 @@ urlpatterns = [
     path("frameworks/sdgs/", sdg_list_page, name="sdg_list"),
     path("frameworks/sdgs/<int:goal_id>/", sdg_detail_page, name="sdg_detail"),
     path("frameworks/sdgs/<int:goal_id>/data/", sdg_data_page, name="sdg_data"),
+    path("api/organization-overview/", organization_overview, name="organization_overview"),
     path("api/sdgs/", sdg_list_data, name="sdg_list_data"),
     path("api/sdgs/<int:goal_id>/", sdg_detail_data, name="sdg_detail_data"),
 ]

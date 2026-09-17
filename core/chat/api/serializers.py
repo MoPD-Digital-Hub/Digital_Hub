@@ -7,7 +7,7 @@ from userManagement.models import CustomUser, Ministry
 class MinistrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Ministry
-        fields = ['id', 'name', 'abbreviation']
+        fields = ['id', 'name', 'name_am', 'abbreviation', 'image']
 
 
 class ChatUserSerializer(serializers.ModelSerializer):

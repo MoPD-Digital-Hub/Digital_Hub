@@ -5,9 +5,9 @@ from .models import CustomUser, Ministry
 
 @admin.register(Ministry)
 class MinistryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'abbreviation', 'is_active')
+    list_display = ('name', 'abbreviation', 'external_id', 'is_active')
     list_filter = ('is_active',)
-    search_fields = ('name', 'abbreviation')
+    search_fields = ('name', 'name_am', 'abbreviation')
 
 
 class CustomUserAdmin(UserAdmin):

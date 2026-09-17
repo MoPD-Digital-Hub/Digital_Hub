@@ -3,10 +3,18 @@ from django.contrib.auth.models import AbstractUser
 
 
 class Ministry(models.Model):
-    """Organization a user belongs to (ministry, agency, institution)."""
+    """Organization a user belongs to (ministry, agency, institution).
+
+    Seeded from the DPMES all-ministries API (manage.py seed_ministries);
+    external_id is the ministry's id in DPMES, used to fetch its detail
+    and performance data.
+    """
 
     name = models.CharField(max_length=200, unique=True)
+    name_am = models.CharField(max_length=200, blank=True)
     abbreviation = models.CharField(max_length=50, blank=True)
+    external_id = models.IntegerField(unique=True, null=True, blank=True, help_text="Ministry id in the DPMES service.")
+    image = models.URLField(max_length=500, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
