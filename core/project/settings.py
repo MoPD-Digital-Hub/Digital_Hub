@@ -249,8 +249,13 @@ DRF_ACTIVITY_TRACKER_INTERVAL = 30
 
 
 testing_database = {
-        'ENGINE': 'django.db.backends.sqlite3',
+        'ENGINE': 'project.sqlite_immediate',
         'NAME': BASE_DIR / 'db.sqlite3',
+        # SQLite allows one writer at a time; wait for the lock instead of
+        # raising "database is locked" when concurrent requests write.
+        'OPTIONS': {
+            'timeout': 20,
+        },
     }
 
 server_database = {
