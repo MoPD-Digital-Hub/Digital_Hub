@@ -28,7 +28,14 @@ class Ministry(models.Model):
 
 def default_ministry():
     """MoPD is every user's default organization."""
-    ministry = Ministry.objects.filter(abbreviation__iexact='MoPD').first()
+    from django.db.utils import OperationalError, ProgrammingError
+
+    try:
+        ministry = Ministry.objects.filter(abbreviation__iexact='MoPD').first()
+    except (OperationalError, ProgrammingError):
+        # The ministry table doesn't exist yet (makemigrations/migrate on a
+        # fresh database evaluates this default before creating it).
+        return None
     return ministry.id if ministry else None
 
 
