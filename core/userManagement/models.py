@@ -26,6 +26,12 @@ class Ministry(models.Model):
         return self.name
 
 
+def default_ministry():
+    """MoPD is every user's default organization."""
+    ministry = Ministry.objects.filter(abbreviation__iexact='MoPD').first()
+    return ministry.id if ministry else None
+
+
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
     photo = models.ImageField(upload_to='User/Photo', null=True, blank=True)
@@ -36,7 +42,16 @@ class CustomUser(AbstractUser):
     tokenExpiration = models.DateTimeField(null=True, blank=True)
     trial = models.IntegerField(default=0)
     waiting_period = models.DateTimeField(null=True, blank=True)
-    ministry = models.ForeignKey(Ministry, null=True, blank=True, on_delete=models.SET_NULL, related_name='users')
+    ministry = models.ForeignKey(
+        Ministry, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='users', default=default_ministry,
+    )
 
     USERNAME_FIELD='email'
     REQUIRED_FIELDS=['first_name','last_name', 'username']
+
+    def save(self, *args, **kwargs):
+        # A user always belongs to an organization; fall back to MoPD.
+        if self.ministry_id is None:
+            self.ministry_id = default_ministry()
+        super().save(*args, **kwargs)

@@ -1,7 +1,7 @@
 import requests
 from django.core.management.base import BaseCommand, CommandError
 
-from userManagement.models import Ministry
+from userManagement.models import CustomUser, Ministry, default_ministry
 
 
 class Command(BaseCommand):
@@ -61,3 +61,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Ministries seeded: {created} created, {updated} updated, {skipped} skipped."
         ))
+
+        # Every user belongs to an organization; default the unassigned to MoPD.
+        mopd_id = default_ministry()
+        if mopd_id is None:
+            self.stdout.write(self.style.WARNING("MoPD not found — users without a ministry were left as-is."))
+            return
+        backfilled = CustomUser.objects.filter(ministry__isnull=True).update(ministry_id=mopd_id)
+        if backfilled:
+            self.stdout.write(self.style.SUCCESS(f"Assigned MoPD to {backfilled} user(s) without an organization."))
