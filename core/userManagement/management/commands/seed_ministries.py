@@ -62,6 +62,8 @@ class Command(BaseCommand):
             f"Ministries seeded: {created} created, {updated} updated, {skipped} skipped."
         ))
 
+        self._link_dpmes2()
+
         # Every user belongs to an organization; default the unassigned to MoPD.
         mopd_id = default_ministry()
         if mopd_id is None:
@@ -70,3 +72,30 @@ class Command(BaseCommand):
         backfilled = CustomUser.objects.filter(ministry__isnull=True).update(ministry_id=mopd_id)
         if backfilled:
             self.stdout.write(self.style.SUCCESS(f"Assigned MoPD to {backfilled} user(s) without an organization."))
+
+    def _link_dpmes2(self):
+        """Store each ministry's DPMES2 organization id, matched by code
+        (DPMES2 ids differ from DPMES1's external_id)."""
+        from dashboard import dpmes2
+
+        if not dpmes2.is_configured():
+            self.stdout.write(self.style.WARNING("DPMES2_API_KEY not set — skipped DPMES2 linking."))
+            return
+        try:
+            organizations = dpmes2.child_organizations()
+        except dpmes2.DPMES2Error as exc:
+            self.stdout.write(self.style.WARNING(f"DPMES2 linking skipped: {exc}"))
+            return
+
+        by_code = {str(org.get("code", "")).upper(): org["id"] for org in organizations if org.get("code")}
+        linked = unmatched = 0
+        for ministry in Ministry.objects.all():
+            org_id = by_code.get(ministry.abbreviation.upper())
+            if org_id is None:
+                unmatched += 1
+                continue
+            if ministry.dpmes2_id != org_id:
+                ministry.dpmes2_id = org_id
+                ministry.save(update_fields=["dpmes2_id"])
+            linked += 1
+        self.stdout.write(self.style.SUCCESS(f"DPMES2 linked: {linked} ministries, {unmatched} without a matching code."))

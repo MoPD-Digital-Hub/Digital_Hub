@@ -14,6 +14,7 @@ class Ministry(models.Model):
     name_am = models.CharField(max_length=200, blank=True)
     abbreviation = models.CharField(max_length=50, blank=True)
     external_id = models.IntegerField(unique=True, null=True, blank=True, help_text="Ministry id in the DPMES service.")
+    dpmes2_id = models.IntegerField(unique=True, null=True, blank=True, help_text="Organization id in the DPMES2 service (matched by code).")
     image = models.URLField(max_length=500, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

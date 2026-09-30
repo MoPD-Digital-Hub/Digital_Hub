@@ -460,6 +460,10 @@ SERVER_EMAIL = os.getenv("EMAIL")
 
 ASGI_APPLICATION = "project.asgi.application"
 
+# DPMES2 organization-performance API (key issued to the Digital Hub)
+DPMES2_API_BASE = config('DPMES2_API_BASE', default='https://dpmes2.mopd.gov.et')
+DPMES2_API_KEY = config('DPMES2_API_KEY', default='')
+
 REDIS_HOST = config('REDIS_HOST', default='127.0.0.1')
 REDIS_PORT = config('REDIS_PORT', default=6379, cast=int)
 USE_REDIS_CHANNELS = config('USE_REDIS_CHANNELS', default=not DEBUG, cast=bool)
