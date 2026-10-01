@@ -36,13 +36,13 @@ def get_llm_instance():
     if _llm_cache is not None:
         return _llm_cache
 
-    default_llm_url = "http://localhost:8000/v1"
+    default_llm_url = "https://llm.mopd.gov.et/v1"
     VLLM_URL = _normalize_openai_base_url(
         os.getenv("VLLM_API_BASE", default_llm_url),
         fallback=default_llm_url,
     )
-    VLLM_MODEL = os.getenv("VLLM_MODEL", "openai/gpt-oss-20b")
-    OPENAI_API_KEY = os.getenv("VLLM_API_KEY", "EMPTY")
+    VLLM_MODEL = os.getenv("VLLM_MODEL", "gemma-4-31b")
+    OPENAI_API_KEY = os.getenv("VLLM_API_KEY") or "EMPTY"
     REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "60"))
     MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
 
@@ -66,13 +66,13 @@ def get_llm_instance():
 
 
 def get_streaming_client_config():
-    default_llm_url = "http://localhost:8000/v1"
+    default_llm_url = "https://llm.mopd.gov.et/v1"
     api_base = _normalize_openai_base_url(
         os.getenv("VLLM_API_BASE", default_llm_url),
         fallback=default_llm_url,
     )
-    model = os.getenv("VLLM_MODEL", "openai/gpt-oss-20b")
-    api_key = os.getenv("VLLM_API_KEY", "EMPTY")
+    model = os.getenv("VLLM_MODEL", "gemma-4-31b")
+    api_key = os.getenv("VLLM_API_KEY") or "EMPTY"
     request_timeout = int(os.getenv("AI_REQUEST_TIMEOUT", "60"))
     max_retries = int(os.getenv("AI_MAX_RETRIES", "3"))
 
@@ -108,13 +108,13 @@ def get_remote_embeddings():
     if _embeddings_cache is not None:
         return _embeddings_cache
 
-    default_embed_url = "http://196.189.61.160:4001/v1"
+    default_embed_url = "https://llm.mopd.gov.et/v1"
     EMBED_URL = _normalize_openai_base_url(
         os.getenv("EMBEDDING_API_BASE", default_embed_url),
         fallback=default_embed_url,
     )
-    EMBED_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-base-en-v1.5")
-    EMBED_API_KEY = os.getenv("EMBEDDING_API_KEY", "empty")
+    EMBED_MODEL = os.getenv("EMBEDDING_MODEL", "bge-m3")
+    EMBED_API_KEY = os.getenv("EMBEDDING_API_KEY") or "EMPTY"
     REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "60"))
 
     try:

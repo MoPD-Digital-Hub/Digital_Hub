@@ -6,7 +6,7 @@ import re
 from pymilvus import MilvusClient, DataType, FieldSchema, CollectionSchema
 from langchain_milvus import Milvus
 from AI.parsing import YEAR_PATTERN, metadata_all_aliases, question_entity_aliases
-from .constants import COLLECTION_NAME, DEFAULT_MILVUS_URI, INDICATOR_CODE_PATTERN
+from .constants import COLLECTION_NAME, DEFAULT_MILVUS_URI, EMBEDDING_DIM, INDICATOR_CODE_PATTERN
 from .providers import get_remote_embeddings
 _milvus_uri_in_use = None
 LOGGER = logging.getLogger("AI.vectorstore")
@@ -162,6 +162,17 @@ def _candidate_milvus_uris():
             ordered.append(uri)
     return ordered
 
+def _collection_vector_dim(client):
+    """Vector dimension of the existing collection, or None if unknown."""
+    try:
+        for field in client.describe_collection(COLLECTION_NAME).get("fields", []):
+            if field.get("name") == "vector":
+                return int(field.get("params", {}).get("dim"))
+    except Exception:
+        return None
+    return None
+
+
 def ensure_collection():
     global _milvus_uri_in_use
 
@@ -171,17 +182,25 @@ def ensure_collection():
             client = MilvusClient(uri=uri)
             
             if not client.has_collection(collection_name=COLLECTION_NAME):
-                print(f"📦 Creating collection: {COLLECTION_NAME}")
+                print(f"📦 Creating collection: {COLLECTION_NAME} (dim={EMBEDDING_DIM})")
                 
                 fields = [
         
                     FieldSchema(name="pk", dtype=DataType.VARCHAR, is_primary=True, max_length=100),
                     FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=8192),
-                    FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=768),
+                    FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=EMBEDDING_DIM),
                 ]
                 schema = CollectionSchema(fields, description="Admas docs", enable_dynamic_field=True)
                 
                 client.create_collection(collection_name=COLLECTION_NAME, schema=schema)
+            else:
+                existing_dim = _collection_vector_dim(client)
+                if existing_dim and existing_dim != EMBEDDING_DIM:
+                    LOGGER.error(
+                        "Milvus collection %s has %s-dim vectors but the embedding model produces %s-dim vectors. "
+                        "Retrieval will fail until you run: manage.py reindex_documents --drop-collection",
+                        COLLECTION_NAME, existing_dim, EMBEDDING_DIM,
+                    )
             
             _milvus_uri_in_use = uri
             print(f"📦 Milvus Schema Connected! ({uri})")
