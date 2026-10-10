@@ -134,6 +134,20 @@ def kpis_by_score_range(org_id, period):
     return get("/indicator-framework/api/kpis_by_score_range/", {**period, "org": org_id})
 
 
+def key_organization_score(period):
+    """The API key's organization (FDRE for a national key) with its score."""
+    return get("/indicator-framework/api/parent_organization_score/", period)
+
+
+def dashboard_cards(plan=None):
+    """Counts of goals, KRAs, KPIs and child organizations visible to the key."""
+    return get("/indicator-framework/api/dashboard_cards/", {"plan": plan} if plan else None)
+
+
+def plans():
+    return _cached("plans", lambda: get("/indicator-framework/api/plans/"))
+
+
 def period_from_query(query_params):
     """Build the year/quarter/month/plan filter DPMES2 expects. `year`
     defaults to the current Ethiopian year; the others pass through."""

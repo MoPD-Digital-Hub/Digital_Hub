@@ -1,5 +1,5 @@
 import { TopicScroller } from "../components/topic-scroller.js?v=20260307a";
-import { MinistryScorecard } from "../components/ministry-scorecard.js";
+import { MinistryScorecard } from "../components/ministry-scorecard.js?v=20261010a";
 import { SummaryPanels } from "../components/summary-panels.js";
 import { HighFrequencyIndicators } from "../components/high-frequency-indicators.js";
 import { ProjectStrip } from "../components/project-strip.js";

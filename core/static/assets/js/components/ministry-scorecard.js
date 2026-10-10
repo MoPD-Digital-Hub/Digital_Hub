@@ -36,6 +36,11 @@ function formatScore(value) {
 }
 
 function indicatorLabel(count) {
+  // DPMES organizations-score carries no per-organization indicator count,
+  // so omit the label rather than claim zero.
+  if (count === null || count === undefined || count === "") {
+    return "";
+  }
   const numeric = Number(count || 0);
   return `${numeric} indicator${numeric === 1 ? "" : "s"}`;
 }
@@ -142,7 +147,7 @@ function createCard(item, endpoint, detailBase) {
             <strong>${escapeHtml(score)}</strong>
           </div>
           <div class="ministry-card-side">
-            <span class="ministry-card-indicators">${escapeHtml(indicatorLabel(item.count_indicator))}</span>
+            ${indicatorLabel(item.count_indicator) ? `<span class="ministry-card-indicators">${escapeHtml(indicatorLabel(item.count_indicator))}</span>` : ""}
           </div>
         </div>
       </div>

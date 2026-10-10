@@ -36,6 +36,31 @@ def _org_id(request, *keys):
     return dpmes2.key_organization_id()
 
 
+def _overview_response(request, fetch_rows, mapper, title_key, score_key):
+    """Shared body of the two overview endpoints (see docs/dpmes-overview-api.md)."""
+    try:
+        period = dpmes_compat.overview_period(request.query_params, dpmes2.current_ethiopian_year())
+        rows = fetch_rows(period)
+        national = dpmes2.key_organization_score(period)
+        counts = dpmes2.dashboard_cards(period.get("plan"))
+        ranges = dpmes2.score_ranges()
+        plan_rows = dpmes2.plans()
+    except dpmes2.DPMES2Error as exc:
+        return _dpmes2_failure(exc)
+
+    items = dpmes_compat.map_rows(rows, mapper)
+    return _success(dpmes_compat.overview(
+        items,
+        title_key=title_key,
+        score_key=score_key,
+        national=national,
+        counts=counts,
+        ranges=ranges,
+        plan_rows=plan_rows,
+        period=period,
+    ))
+
+
 def _goal_detail_response(request, goal_id, org_keys):
     try:
         period = dpmes_compat.build_period(request.query_params)
@@ -269,43 +294,25 @@ def general_search(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def overview_ministries(request):
-    try:
-        params = request.query_params.dict()
+    """Mobile home overview of public bodies: national score, counts, score
+    distribution and every ministry with its score."""
+    return _overview_response(
+        request, dpmes2.child_organizations, dpmes_compat.ministry,
+        "responsible_ministry_eng", "ministry_score_card",
+    )
 
-        res = requests.get(
-            f"{DPMES_URL}/api/digital-hub/dashboard/ministries/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def overview_policy_area(request):
-    try:
-        params = request.query_params.dict()
+    """Mobile home overview of policy areas: national score, counts, score
+    distribution and every policy area with its score."""
+    return _overview_response(
+        request, dpmes2.policy_area_scores, dpmes_compat.policy_area,
+        "policyAreaEng", "policy_area_score_card",
+    )
 
-        res = requests.get(
-            f"{DPMES_URL}/api/digital-hub/dashboard/policy-area/",
-            params=params,
-            timeout=10
-        )
-
-        return Response(res.json(), status=res.status_code)
-
-    except requests.exceptions.RequestException as e:
-        return Response(
-            {"detail": f"Failed to reach Time-Series service: {str(e)}"},
-            status=status.HTTP_502_BAD_GATEWAY
-        )
 
 @extend_schema(exclude=True)
 @api_view(['GET'])

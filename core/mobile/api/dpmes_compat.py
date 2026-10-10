@@ -346,3 +346,109 @@ def organization_performance(score_ranges_with_kpis):
                 "scorecard": record.get("score_color") or band.get("color"),
             })
     return buckets
+
+
+# --- Overview (mobile home) ----------------------------------------------
+#
+# The old /dashboard/ministries/ and /dashboard/policy-area/ responses were
+# never recorded, so this is a new shape, documented in
+# docs/dpmes-overview-api.md. `items` reuses the list endpoints' objects so
+# the app can parse them with the models it already has.
+
+
+def overview_period(query_params, current_year):
+    """Like build_period, but defaults to the last completed year, matching
+    /default-time/, since the current year is mostly unreported."""
+    params = query_params.dict() if hasattr(query_params, "dict") else dict(query_params)
+    if params.get("year") in (None, ""):
+        params["year"] = current_year - 1
+    return build_period(params)
+
+
+def _float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _active_plan(plan_rows, requested=None):
+    rows = [r for r in plan_rows or [] if isinstance(r, dict)]
+    if requested not in (None, ""):
+        chosen = next((r for r in rows if str(r.get("id")) == str(requested)), None)
+    else:
+        chosen = next((r for r in rows if r.get("is_active")), rows[0] if rows else None)
+    if not chosen:
+        return None
+    return {key: chosen.get(key) for key in ("id", "code", "name", "name_eth", "start_year", "end_year")}
+
+
+def _brief(item, title_key, score_key):
+    score = item[score_key]
+    return {
+        "id": item.get("id"),
+        "name": item.get(title_key),
+        "code": item.get("code"),
+        "avg_score": score.get("avg_score"),
+        "scorecard_color": score.get("scorecard_color"),
+    }
+
+
+def overview(items, *, title_key, score_key, national, counts, ranges, plan_rows, period):
+    """Assemble the overview payload from already-mapped list items."""
+    scored = [i for i in items if _float(i[score_key].get("avg_score")) is not None]
+
+    distribution = []
+    for band in ranges or []:
+        distribution.append({
+            "name": band.get("name_en") or band.get("trans_name"),
+            "name_eth": band.get("name_eth"),
+            "color": band.get("color"),
+            "start": _float(band.get("start")),
+            "end": _float(band.get("end")),
+            "count": 0,
+        })
+    for item in items:
+        band = range_for_score(item[score_key].get("avg_score"), ranges or [])
+        name = (band or {}).get("name_en") or (band or {}).get("trans_name")
+        for row in distribution:
+            if row["name"] == name:
+                row["count"] += 1
+                break
+
+    ordered = sorted(scored, key=lambda i: _float(i[score_key]["avg_score"]), reverse=True)
+    national_score = (national or {}).get("score") or {}
+    cards = counts or {}
+
+    return {
+        # Integers throughout so a typed client model sees one type per field.
+        "period": {
+            key: int(period[key]) if str(period.get(key, "")).isdigit() else None
+            for key in ("year", "quarter", "month", "plan")
+        },
+        "plan": _active_plan(plan_rows, period.get("plan")),
+        "national": {
+            "id": (national or {}).get("id"),
+            "name": _name(national or {}),
+            "name_eth": (national or {}).get("name_eth"),
+            "code": (national or {}).get("code"),
+            "icon": (national or {}).get("icon"),
+            "avg_score": national_score.get("avg_score"),
+            "scorecard_color": national_score.get("color"),
+        },
+        "counts": {
+            "organizations": cards.get("organization"),
+            "strategic_goals": cards.get("strategic_goals"),
+            "key_result_areas": cards.get("key_result_areas"),
+            "key_performance_indicators": cards.get("key_performance_indicators"),
+        },
+        "score_ranges": distribution,
+        "summary": {
+            "total": len(items),
+            "scored": len(scored),
+            "average": round(sum(_float(i[score_key]["avg_score"]) for i in scored) / len(scored), 2) if scored else None,
+            "highest": _brief(ordered[0], title_key, score_key) if ordered else None,
+            "lowest": _brief(ordered[-1], title_key, score_key) if ordered else None,
+        },
+        "items": items,
+    }
