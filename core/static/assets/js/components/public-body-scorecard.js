@@ -15,6 +15,11 @@ function formatScore(value) {
 }
 
 function indicatorLabel(count) {
+  // The DPMES organizations-score endpoint carries no per-organization
+  // indicator count, so omit the label rather than claim zero.
+  if (count === null || count === undefined || count === "") {
+    return "";
+  }
   const numeric = Number(count || 0);
   return `${numeric} indicator${numeric === 1 ? "" : "s"}`;
 }
@@ -120,7 +125,7 @@ function createGridCard(item, filterState) {
             <strong>${escapeHtml(score)}</strong>
           </div>
           <div class="ministry-card-side">
-            <span class="ministry-card-indicators">${escapeHtml(indicators)}</span>
+            ${indicators ? `<span class="ministry-card-indicators">${escapeHtml(indicators)}</span>` : ""}
           </div>
         </div>
       </div>

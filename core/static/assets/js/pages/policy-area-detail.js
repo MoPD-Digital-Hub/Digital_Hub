@@ -138,7 +138,10 @@ function renderHero(overview, detail, state) {
 function renderGoalCard(goal, state) {
   const goalScore = goal?.goal_score_card?.avg_score;
   const scoreColor = goal?.goal_score_card?.scorecard_color || "#5d9444";
-  const ministry = goal?.responsible_ministries || {};
+  // DPMES policy-area goals carry no owning ministry; show the goal code instead.
+  const ministry =
+    goal?.responsible_ministries && typeof goal.responsible_ministries === "object" ? goal.responsible_ministries : {};
+  const hasMinistry = Boolean(ministry.code || ministry.responsible_ministry_eng || ministry.image);
   const image = buildMediaUrl(ministry.image || "");
   const params = new URLSearchParams({ year: state.year });
   if (state.dateType === "quarterly") {
@@ -149,7 +152,9 @@ function renderGoalCard(goal, state) {
     <a class="policy-area-goal-card" href="/dashboard/statistics/goals/${escapeHtml(goal.id)}/?${escapeHtml(params.toString())}" style="--goal-accent:${escapeHtml(scoreColor)}">
       <div class="policy-area-goal-card__accent"></div>
       <div class="policy-area-goal-card__head">
-        <div class="policy-area-goal-card__ministry">
+        ${
+          hasMinistry
+            ? `<div class="policy-area-goal-card__ministry">
           ${
             image
               ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(ministry.responsible_ministry_eng || "Ministry")}" loading="lazy">`
@@ -159,13 +164,19 @@ function renderGoalCard(goal, state) {
             <span class="policy-area-goal-card__code">${escapeHtml(ministry.code || "Ministry")}</span>
             <p>${escapeHtml(ministry.responsible_ministry_eng || "Responsible ministry unavailable")}</p>
           </div>
-        </div>
+        </div>`
+            : `<span class="policy-area-goal-card__code">${escapeHtml(goal.code || "Goal")}</span>`
+        }
         <div class="policy-area-goal-card__score">${escapeHtml(goalScore != null ? `${Number(goalScore).toFixed(2)}%` : "--")}</div>
       </div>
       <div class="policy-area-goal-card__body">
-        <div class="policy-area-goal-card__eyebrow">
+        ${
+          typeof goal.goal_is_shared === "boolean"
+            ? `<div class="policy-area-goal-card__eyebrow">
           <span>${escapeHtml(goal.goal_is_shared ? "Shared goal" : "Single ministry goal")}</span>
-        </div>
+        </div>`
+            : ""
+        }
         <h3>${escapeHtml(goal.goal_name_eng || goal.goal_name_amh || "Goal")}</h3>
       </div>
       <div class="policy-area-goal-card__footer">

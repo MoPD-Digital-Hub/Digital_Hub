@@ -34,7 +34,7 @@ def _cached(key, loader):
 
 
 def base_url():
-    return getattr(settings, "DPMES2_API_BASE", "https://dpmes2.mopd.gov.et").rstrip("/")
+    return getattr(settings, "DPMES2_API_BASE", "https://dpmes.mopd.gov.et").rstrip("/")
 
 
 def is_configured():
@@ -74,15 +74,64 @@ def score_ranges():
     return _cached("score_ranges", lambda: get("/indicator-framework/api/score_range/"))
 
 
-def child_organizations(year=None):
-    """All organizations under the API key's organization, with scores."""
-    year = year or current_ethiopian_year()
-    return get("/indicator-framework/api/organizations-score/", {"year": year})
+def child_organizations(period=None):
+    """All organizations under the API key's organization, with scores.
+
+    Accepts a full period dict; a bare year is still allowed for callers that
+    only care about the annual score.
+    """
+    if period is None:
+        period = {"year": current_ethiopian_year()}
+    elif not isinstance(period, dict):
+        period = {"year": period}
+    return get("/indicator-framework/api/organizations-score/", period)
 
 
 def organization_scorecard(org_id, period):
     """Score, policy areas -> goals with scores, and KPI counts per score band."""
     return get(f"/indicator-framework/api/organizations/{org_id}/goals/", period)
+
+
+def policy_area_scores(period=None):
+    """Policy areas visible to the key's organization, each with its score."""
+    period = period or {"year": current_ethiopian_year()}
+    return get("/indicator-framework/api/policy-area-score/", period)
+
+
+def policy_area_scorecard(policy_area_id, period):
+    """A policy area's score, its goals with scores, and KPI counts per band."""
+    return get(f"/indicator-framework/api/policy-areas/{policy_area_id}/goals/", period)
+
+
+def key_organization_id():
+    """ID of the organization the API key is scoped to (FDRE for a national key).
+
+    Goal and KPI endpoints are organization-scoped, so this is the fallback
+    when a caller does not name one.
+    """
+    def load():
+        org = get("/indicator-framework/api/parent_organization_score/", {"year": current_ethiopian_year()})
+        return org["id"]
+    return _cached("key_organization_id", load)
+
+
+def goal_kras(goal_id, org_id, period):
+    """A goal's KRAs with scores, and each KRA's KPIs with their period records."""
+    return get(f"/indicator-framework/api/goals/{goal_id}/kras/", {**period, "org": org_id})
+
+
+def kpi_detail(kpi_id, org_id):
+    """A KPI's definition and every record (yearly and quarterly) for an org.
+
+    DPMES answers an unknown KPI with HTTP 200 and no data, which surfaces
+    here as None.
+    """
+    return get(f"/indicator-framework/api/kpi_detail/{kpi_id}/{org_id}/")
+
+
+def kpis_by_score_range(org_id, period):
+    """Each score range with the organization's KPIs that scored inside it."""
+    return get("/indicator-framework/api/kpis_by_score_range/", {**period, "org": org_id})
 
 
 def period_from_query(query_params):

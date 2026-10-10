@@ -417,7 +417,11 @@ function renderKraCard(kra, state, index) {
           </div>
         </div>
         <div class="goal-kra-card__meta">
-            <span>${escapeHtml(kra.activity_is_shared ? "Shared activity" : "Single activity")}</span>
+            ${
+              typeof kra.activity_is_shared === "boolean"
+                ? `<span>${escapeHtml(kra.activity_is_shared ? "Shared activity" : "Single activity")}</span>`
+                : ""
+            }
             <span>${escapeHtml(indicators.length)} indicators</span>
           </div>
       </summary>
@@ -871,7 +875,10 @@ async function loadGoalDetail() {
     openKpiDrawerShell();
 
     try {
-      const payload = await fetchJson(`/api/mobile/dpmes-indicator-detail/${indicatorId}/`);
+      // KPI records are organization-scoped; without an org the API uses the national view.
+      const drawerOrg = orgId || ministryId;
+      const drawerQuery = drawerOrg ? `?org=${encodeURIComponent(drawerOrg)}` : "";
+      const payload = await fetchJson(`/api/mobile/dpmes-indicator-detail/${indicatorId}/${drawerQuery}`);
       const detail = normalizeIndicatorDetail(payload);
       const availableSeries = getIndicatorAvailableSeries(detail);
       currentDrawerSeries = availableSeries.includes("quarterly") ? "quarterly" : (availableSeries[0] || "yearly");

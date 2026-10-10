@@ -816,7 +816,8 @@ async function loadPublicBodyDetail() {
     openKpiDrawerShell();
 
     try {
-      const payload = await fetchJson(`/api/mobile/dpmes-indicator-detail/${indicatorId}/`);
+      const drawerOrg = selectedOrganizationId === "all" ? ministryId : selectedOrganizationId;
+      const payload = await fetchJson(`/api/mobile/dpmes-indicator-detail/${indicatorId}/?org=${encodeURIComponent(drawerOrg)}`);
       const detail = normalizeIndicatorDetail(payload);
       const availableSeries = getIndicatorAvailableSeries(detail);
       currentDrawerSeries = availableSeries.includes("quarterly") ? "quarterly" : (availableSeries[0] || "yearly");
