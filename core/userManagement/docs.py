@@ -64,6 +64,20 @@ login_schema = extend_schema(
 )
 
 
+password_login_schema = extend_schema(
+    summary="Log in with email and password",
+    description="Authenticates email and password and returns refresh and access tokens directly. No OTP email is sent.",
+    tags=["Mobile Authentication"],
+    request=LoginSerializer,
+    responses={
+        200: OpenApiResponse(response=OTPValidationSuccessSerializer, description="Credentials accepted and tokens created."),
+        400: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid input or temporarily blocked account."),
+        401: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid credentials."),
+        403: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Too many failed attempts."),
+    },
+)
+
+
 verify_otp_schema = extend_schema(
     summary="Verify login OTP",
     description="Verifies the one-time password and returns refresh and access tokens.",

@@ -24,6 +24,7 @@ from ipware import get_client_ip
 from kombu.exceptions import OperationalError as KombuOperationalError
 from userManagement.docs import (
     login_schema,
+    password_login_schema,
     reset_password_confirm_schema,
     reset_password_request_schema,
     verify_otp_schema,
@@ -107,6 +108,68 @@ def generate_login_opt(request):
             "message": "INVALID_INPUT",
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+@password_login_schema
+@api_view(['POST'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def password_login(request):
+    """Email + password login that returns JWTs directly, without an OTP email.
+
+    The OTP endpoints stay in place for flows that need email verification
+    (signup, password reset).
+    """
+    serializer = LoginSerializer(data=request.data)
+    handler = AxesProxyHandler()
+
+    if handler.is_locked(request):
+        return Response({
+            "result": "FAILURE",
+            "message": "Too many failed attempts. Try again later.",
+            "data": None
+        }, status=status.HTTP_403_FORBIDDEN)
+
+    if not serializer.is_valid():
+        return Response({
+            "result": "FAILURE",
+            "message": "INVALID_INPUT",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    email = serializer.validated_data['email'].lower().strip()
+    password = serializer.validated_data['password']
+    # Passing request lets Axes count failed attempts toward the lockout.
+    user = authenticate(request=request, email=email, password=password)
+
+    if user is None:
+        return Response({
+            "result": "FAILURE",
+            "message": "LOGIN_FAILED",
+            "data": None
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+    if user.waiting_period and timezone.now() < user.waiting_period:
+        remaining_time = user.waiting_period - timezone.now()
+        minutes = int(remaining_time.total_seconds() // 60)
+        return Response({
+            "result": "FAILURE",
+            "message": f"This account is temporarily blocked. Try again in {minutes} minutes.",
+            "data": None
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    handler.reset_attempts(username=email, ip_address=request.META.get('REMOTE_ADDR'))
+
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        "result": "SUCCESS",
+        "message": "TOKEN_CREATED",
+        "data": {
+            "user": UserSerializer(user).data,
+            "refresh": str(refresh),
+            "access": str(refresh.access_token)
+        }
+    }, status=status.HTTP_200_OK)
+
 
 @verify_otp_schema
 @api_view(['POST'])
