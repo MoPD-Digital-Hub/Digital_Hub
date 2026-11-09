@@ -24,6 +24,9 @@ from dashboard import dpmes2
 LOGGER = logging.getLogger(__name__)
 
 KB_SOURCE = "live_api"
+# Long technical descriptions drown out the indicator name in the embedding
+# (GDP Growth lost to unrelated export records), so keep only their opening.
+MAX_DESCRIPTION_CHARS = 220
 # Milvus stores the text in a VARCHAR(8192) field counted in bytes; Amharic
 # takes three bytes per character, so keep well under the limit.
 MAX_TEXT_CHARS = 2000
@@ -46,6 +49,15 @@ def _record_id(prefix, key):
     """Stable primary key; Milvus limits it to 100 characters."""
     safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(key))
     return f"kb-{prefix}-{safe}"[:100]
+
+
+def _lead(text):
+    """The first sentence, capped, so a description supports the name instead of dominating it."""
+    text = _clean(text)
+    sentence = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0]
+    if len(sentence) > MAX_DESCRIPTION_CHARS:
+        sentence = sentence[: MAX_DESCRIPTION_CHARS - 1].rstrip() + "…"
+    return sentence
 
 
 def _second_name(primary, other):
@@ -106,22 +118,20 @@ def _indicator_document(item, title, code, topic, category, parent):
     topic_name = _clean(topic.get("title_ENG"))
     category_name = _clean(category.get("name_ENG"))
     amharic = _second_name(title, item.get("title_AMH"))
-    lines = [f"Indicator: {title}" + (f" ({amharic})" if amharic else "")]
-    lines.append(f"Code: {code}")
-    lines.append(f"Topic: {topic_name}. Category: {category_name}.")
-    if parent:
-        lines.append(f"Part of: {parent}.")
     unit = _clean(item.get("measurement_units"))
     frequency = _clean(item.get("frequency"))
     source = _clean(item.get("source"))
+    # Lead with the name: it is what questions ask about.
+    lines = [title, f"Ethiopia indicator: {title}" + (f" ({amharic})" if amharic else "") + f". Code {code}."]
+    lines.append(f"Topic: {topic_name}; category: {category_name}" + (f"; part of {parent}" if parent else "") + ".")
     details = [part for part in (
-        f"Unit: {unit}" if unit and unit != "None" else "",
-        f"Frequency: {frequency}" if frequency else "",
-        f"Source: {source}" if source else "",
+        f"unit {unit}" if unit and unit != "None" else "",
+        f"{frequency} data" if frequency else "",
+        f"source {source}" if source else "",
     ) if part]
     if details:
-        lines.append(". ".join(details) + ".")
-    description = _clean(item.get("description"))
+        lines.append("Measured as " + ", ".join(details) + ".")
+    description = _lead(item.get("description"))
     if description:
         lines.append(description)
 
@@ -173,20 +183,18 @@ def organization_documents(organizations, scorecards):
             continue
         name = _clean(org.get("name") or org.get("trans_name"))
         code = _clean(org.get("code"))
-        card = scorecards[org["id"]]
-        areas = card.get("policy_areas") or []
-        goals = [goal for area in areas for goal in area.get("goals") or []]
+        areas = scorecards[org["id"]].get("policy_areas") or []
 
-        lines = [f"Public body (ministry or agency): {name}" + (f" ({code})" if code else "")]
+        # Identity, not subject matter: listing every goal here made ministry
+        # records match topical questions (GDP pulled in the National Bank).
+        # Goals have their own records.
+        lines = [name + (f" ({code})" if code else "")]
         amharic = _second_name(name, org.get("name_eth"))
-        if amharic:
-            lines.append(f"Also known as: {amharic}")
-        lines.append("Performance is tracked in DPMES: overall score, policy area scores, and KPIs grouped by "
-                     "performance (on track, in progress, weak performance, no data).")
+        lines.append(f"Ethiopian public body (ministry or agency): {name}" + (f", also known as {amharic}" if amharic else "") + ".")
+        lines.append(f"{name} performance in DPMES: overall score, policy area scores, and KPIs that are on track, "
+                     "in progress, weak or have no data.")
         if areas:
-            lines.append(f"Policy areas: {_names(areas)}.")
-        if goals:
-            lines.append(f"Strategic goals: {_names(goals)}.")
+            lines.append(f"Policy areas: {_names(areas, limit=8)}.")
 
         documents.append((_record_id("ministry", org["id"]), _document("\n".join(lines), {
             "doc_type": "ministry",
@@ -204,12 +212,11 @@ def policy_area_documents(policy_areas, scorecards):
         name = _clean(area.get("name") or area.get("trans_name"))
         code = _clean(area.get("code"))
         goals = (scorecards.get(area.get("id")) or {}).get("goals") or []
-        lines = [f"Policy area: {name}" + (f" ({code})" if code else "")]
+        lines = [name + (f" ({code})" if code else "")]
         amharic = _second_name(name, area.get("name_eth"))
-        if amharic:
-            lines.append(f"Also known as: {amharic}")
+        lines.append(f"Ethiopia national policy area: {name}" + (f", also known as {amharic}" if amharic else "") + ".")
         if goals:
-            lines.append(f"Strategic goals: {_names(goals)}.")
+            lines.append(f"Strategic goals: {_names(goals, limit=10)}.")
 
         documents.append((_record_id("policy-area", area["id"]), _document("\n".join(lines), {
             "doc_type": "policy_area",
@@ -232,10 +239,9 @@ def goal_documents(policy_areas, scorecards):
             seen.add(goal.get("id"))
             name = _clean(goal.get("name") or goal.get("trans_name"))
             code = _clean(goal.get("code"))
-            lines = [f"Strategic goal: {name}" + (f" ({code})" if code else "")]
+            lines = [name + (f" ({code})" if code else "")]
             amharic = _second_name(name, goal.get("name_eth"))
-            if amharic:
-                lines.append(f"Also known as: {amharic}")
+            lines.append(f"Ethiopia national strategic goal: {name}" + (f", also known as {amharic}" if amharic else "") + ".")
             lines.append(f"Policy area: {area_name}.")
 
             documents.append((_record_id("goal", goal["id"]), _document("\n".join(lines), {

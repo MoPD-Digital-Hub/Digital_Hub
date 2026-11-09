@@ -309,7 +309,9 @@ class KnowledgeBaseBuilderTests(TestCase):
         self.assertEqual(record_id, "kb-ministry-312")
         self.assertEqual(doc.metadata["responsible_ministry_id"], "312")
         self.assertEqual(doc.metadata["responsible_ministry_code"], "MoH")
-        self.assertIn("Maternal health", doc.page_content)
+        self.assertIn("Healthcare", doc.page_content)
+        # Goals have their own records; listing them here made ministries match topical questions.
+        self.assertNotIn("Maternal health", doc.page_content)
 
     def test_goal_documents_are_deduplicated_across_policy_areas(self):
         from AI.knowledge_base import goal_documents
@@ -374,3 +376,23 @@ class DPMESMinistryClientTests(TestCase):
 
         mock_card.side_effect = dpmes2.DPMES2Error("down")
         self.assertEqual(fetch_ministry_score("312", year="2018"), {})
+
+
+class ToolContextDocSelectionTests(TestCase):
+    @patch("AI.shared.context.fetch_ministry_score", return_value={})
+    def test_ministry_score_context_skips_records_without_ministry(self, mock_fetch):
+        from AI.shared.context import build_ministry_score_context_from_docs
+
+        indicator = SimpleNamespace(page_content="Health spending", metadata={"indicator_code": "HEA-09"})
+        ministry = SimpleNamespace(page_content="Ministry of Health", metadata={"responsible_ministry_id": "312"})
+        build_ministry_score_context_from_docs([indicator, ministry], {"year": "2018"}, max_docs=1)
+        mock_fetch.assert_called_once_with("312", year="2018", quarter=None)
+
+    @patch("AI.shared.context.fetch_indicator_time_series", return_value={})
+    def test_time_series_context_prefers_records_with_codes(self, mock_fetch):
+        from AI.shared.context import build_timeseries_context_from_docs
+
+        ministry = SimpleNamespace(page_content="National Bank", metadata={"responsible_ministry_id": "5"})
+        indicator = SimpleNamespace(page_content="GDP Growth", metadata={"indicator_code": "EG-GDPCP-01"})
+        build_timeseries_context_from_docs([ministry, indicator], year=None, max_docs=1)
+        mock_fetch.assert_called_once_with("EG-GDPCP-01", year=None)

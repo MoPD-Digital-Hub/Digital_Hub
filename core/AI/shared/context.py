@@ -17,6 +17,13 @@ def extract_year_from_question(question: str):
     return int(match.group()) if match else None
 
 
+def _docs_with(docs, key):
+    """Records the tool can act on first, so a ministry tool is not handed an
+    indicator record (or vice versa) that retrieval ranked above them."""
+    usable = [doc for doc in docs or [] if (getattr(doc, "metadata", {}) or {}).get(key)]
+    return usable or list(docs or [])
+
+
 def build_context_from_docs(docs):
     if not docs:
         return "No relevant indicator found."
@@ -28,7 +35,7 @@ def build_timeseries_context_from_docs(docs, year=None, max_docs=4):
         return "No relevant indicator found."
 
     contexts = []
-    for doc in docs[:max_docs]:
+    for doc in _docs_with(docs, "indicator_code")[:max_docs]:
         meta = getattr(doc, "metadata", {}) or {}
         indicator_code = meta.get("indicator_code", "")
         name = meta.get("indicator_eng", "")
@@ -56,7 +63,7 @@ def build_ministry_score_context_from_docs(docs, period_requested, max_docs=4):
     year = (period_requested or {}).get("year")
     quarter = (period_requested or {}).get("quarter")
 
-    for doc in (docs or [])[:max_docs]:
+    for doc in _docs_with(docs, "responsible_ministry_id")[:max_docs]:
         meta = getattr(doc, "metadata", {}) or {}
         m_id = meta.get("responsible_ministry_id", "")
         payload = fetch_ministry_score(m_id, year=year, quarter=quarter)
@@ -77,7 +84,7 @@ def build_ministry_performance_context_from_docs(docs, period_requested, perform
     year = (period_requested or {}).get("year")
     quarter = (period_requested or {}).get("quarter")
 
-    for doc in (docs or [])[:max_docs]:
+    for doc in _docs_with(docs, "responsible_ministry_id")[:max_docs]:
         meta = getattr(doc, "metadata", {}) or {}
         m_id = meta.get("responsible_ministry_id", "")
         payload = fetch_ministry_performance(m_id, year=year, quarter=quarter, performance_type=performance_type)
