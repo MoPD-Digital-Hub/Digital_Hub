@@ -2,7 +2,9 @@ from unittest.mock import patch
 from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from asgiref.sync import async_to_sync
+from channels.db import database_sync_to_async
+from django.test import TestCase, TransactionTestCase
 from rest_framework.test import APIClient
 
 from AI.infrastructure.translation import detect_request_language
@@ -11,7 +13,7 @@ from AI.parsing.entity_aliases import has_goal_reference, has_policy_area_refere
 from AI.parsing.query_parser import classify_intent, extract_performance_type, extract_year_quarter
 from AI.parsing.rules import match_performance_vocabulary
 from AI.mcp_tools import execute_mcp_tool_plan, resolve_mcp_tool_plan
-from AI.models import ChatInstance
+from AI.models import ChatInstance, QuestionHistory
 from AI.application import AnswerResult, format_history_records_for_llm, generate_answer
 from AI.application.services import build_retrieval_query
 
@@ -396,3 +398,50 @@ class ToolContextDocSelectionTests(TestCase):
         indicator = SimpleNamespace(page_content="GDP Growth", metadata={"indicator_code": "EG-GDPCP-01"})
         build_timeseries_context_from_docs([ministry, indicator], year=None, max_docs=1)
         mock_fetch.assert_called_once_with("EG-GDPCP-01", year=None)
+
+
+class ChatSocketFinalMessageTests(TransactionTestCase):
+    """The mobile app must not get the answer twice; the web page still needs the final message."""
+
+    async def _conversation(self, headers):
+        from channels.routing import URLRouter
+        from channels.testing import WebsocketCommunicator
+
+        from AI.routing import websocket_urlpatterns
+
+        instance = await database_sync_to_async(ChatInstance.objects.create)(title="t")
+
+        async def fake_stream(*args, **kwargs):
+            for chunk in ("Hello ", "world"):
+                yield chunk
+
+        prepared = SimpleNamespace(
+            route="get_general_context", context="ctx", response_language="English", normalized_question="hi"
+        )
+        with patch("AI.consumers.get_llm_instance", return_value=object()), \
+                patch("AI.consumers.prepare_answer", return_value=prepared), \
+                patch("AI.consumers.run_chain_stream", fake_stream):
+            communicator = WebsocketCommunicator(URLRouter(websocket_urlpatterns), f"/ws/chat/{instance.id}/", headers=headers)
+            connected, _ = await communicator.connect()
+            self.assertTrue(connected)
+            await communicator.send_json_to({"message": "hi"})
+            received = []
+            while not await communicator.receive_nothing(timeout=0.5):
+                received.append(await communicator.receive_json_from())
+            await communicator.disconnect()
+        saved = await database_sync_to_async(
+            lambda: QuestionHistory.objects.get(instance=instance).response
+        )()
+        return received, saved
+
+    def test_mobile_client_gets_stream_without_repeated_final(self):
+        received, saved = async_to_sync(self._conversation)(headers=[])
+        self.assertEqual([m["message"] for m in received], ["Hello ", "world"])
+        self.assertTrue(all(m["is_stream"] for m in received))
+        self.assertEqual(saved, "Hello world")
+
+    def test_browser_still_gets_final_message(self):
+        received, saved = async_to_sync(self._conversation)(headers=[(b"origin", b"http://localhost")])
+        self.assertEqual([m["message"] for m in received], ["Hello ", "world", "Hello world"])
+        self.assertTrue(received[-1]["is_final"])
+        self.assertEqual(saved, "Hello world")

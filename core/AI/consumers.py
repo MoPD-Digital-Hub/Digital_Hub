@@ -75,6 +75,9 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = f"chat_{self.room_name}"
+        # Browsers always send Origin; the Flutter app sends none (see
+        # chat.middleware.MobileFriendlyOriginValidator).
+        self.is_native_client = not any(name == b"origin" for name, _ in self.scope.get("headers", []))
         self.instance_id = await self.get_instance_id(self.room_name)
 
         if not self.instance_id:
@@ -172,7 +175,7 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
                 await asyncio.sleep(0)
 
             answer = "".join(chunks).strip() or "<p>Unable to generate a response right now. Please try again.</p>"
-            await self._finalize_answer(answer, route=route)
+            await self._finalize_answer(answer, route=route, streamed=bool(chunks))
 
     async def _handle_translation(self, payload):
         text = str(payload.get("text", "")).strip()
@@ -221,8 +224,13 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
                 )
             )
 
-    async def _finalize_answer(self, answer, route):
+    async def _finalize_answer(self, answer, route, streamed=False):
         await self.save_response(self.instance_id, answer)
+        # After a stream the mobile app already has the whole answer and shows
+        # a repeated final message as a second bubble. The web page needs it to
+        # end the stream and render the formatted answer, so browsers keep it.
+        if streamed and self.is_native_client:
+            return
         await self.send(
             text_data=json.dumps(
                 {
