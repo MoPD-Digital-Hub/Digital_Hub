@@ -110,7 +110,7 @@ def indicator_series(*, indicator, year=None, **_):
     return {
         "tool": "indicator_series",
         "title": indicator.name,
-        "source": details.get("source") or "MoPD time-series database",
+        "source": details.get("source") or "MoNS time-series database",
         "notes": notes,
         "data": {
             "indicator": {"name": indicator.name, "code": code, "unit": details.get("unit"),

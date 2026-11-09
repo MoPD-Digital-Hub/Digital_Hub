@@ -23,21 +23,21 @@ OTP_EXPIRY_MINUTES = 20
 # separate means the login mail never talks about resetting a password.
 EMAIL_CONTEXTS = {
     "login": {
-        "subject": "Your MoPD Digital Hub sign-in code",
+        "subject": "Your MoNS Digital Hub sign-in code",
         "preheader": "Use this code to finish signing in. It expires in 20 minutes.",
         "heading": "Confirm it's you",
         "intro": (
-            "We received a request to sign in to your MoPD Digital Hub account. "
+            "We received a request to sign in to your MoNS Digital Hub account. "
             "Enter the code below to complete sign-in."
         ),
         "code_label": "Sign-in code",
     },
     "reset": {
-        "subject": "Reset your MoPD Digital Hub password",
+        "subject": "Reset your MoNS Digital Hub password",
         "preheader": "Use this code to reset your password. It expires in 20 minutes.",
         "heading": "Reset your password",
         "intro": (
-            "We received a request to reset the password for your MoPD Digital Hub "
+            "We received a request to reset the password for your MoNS Digital Hub "
             "account. Enter the code below to choose a new password."
         ),
         "code_label": "Password reset code",

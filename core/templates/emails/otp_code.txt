@@ -1,5 +1,5 @@
-MoPD Digital Hub
-Ministry of Planning and Development
+MoNS Digital Hub
+Ministry of National Strategy
 
 {{ heading }}
 
@@ -10,6 +10,6 @@ Ministry of Planning and Development
 This code expires in {{ expiry_minutes }} minutes and can only be used once.
 
 --
-This is an automated message from MoPD Digital Hub. Please do not reply.
-(c) {{ year }} Ministry of Planning and Development,
+This is an automated message from MoNS Digital Hub. Please do not reply.
+(c) {{ year }} Ministry of National Strategy,
 Federal Democratic Republic of Ethiopia.

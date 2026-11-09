@@ -110,6 +110,9 @@ def _indicator_rows(topics):
     return list(rows.values())
 
 
+# Saved from each sync row; a change to any of them updates the entity.
+STORED_FIELDS = ("code", "name", "name_am", "aliases", "context", "details", "search_text")
+
 def _dpmes_rows(organizations, org_cards, areas, area_cards):
     rows = []
     for org in organizations:
@@ -122,6 +125,10 @@ def _dpmes_rows(organizations, org_cards, areas, area_cards):
         context = "Public body (ministry or agency)" + (f"; policy areas: {'; '.join(area_names[:8])}" if area_names else "")
         # DPMES misspells some names ("Minsitry of Education"); accept the right spelling too.
         aliases = [alias for alias in (code, name.replace("Minsitry", "Ministry")) if alias and alias != name]
+        # The Ministry of Planning and Development is now the Ministry of National Strategy.
+        if code.upper() in ("MOPD", "MONS") or "planning and development" in name.lower():
+            aliases += [a for a in ("Ministry of National Strategy", "MoNS", "Ministry of Planning and Development", "MoPD")
+                        if a != name and a not in aliases]
         rows.append({
             "kind": CatalogEntity.ORGANIZATION, "external_id": str(org["id"]), "code": code,
             "name": name, "name_am": name_am, "aliases": aliases,
@@ -192,12 +199,13 @@ def sync(*, include_dpmes=True, period=None, log=LOGGER.info):
             if entity is None:
                 entity = CatalogEntity(kind=row["kind"], external_id=row["external_id"])
                 counts["created"] += 1
-            elif entity.text_hash == text_hash and entity.is_active and entity.embedding:
+            elif (entity.text_hash == text_hash and entity.is_active and entity.embedding
+                    and all(getattr(entity, name) == row[name] for name in STORED_FIELDS)):
                 counts["unchanged"] += 1
                 continue
             else:
                 counts["updated"] += 1
-            for name in ("code", "name", "name_am", "aliases", "context", "details", "search_text"):
+            for name in STORED_FIELDS:
                 setattr(entity, name, row[name])
             entity.is_active = True
             if entity.text_hash != text_hash or not entity.embedding:

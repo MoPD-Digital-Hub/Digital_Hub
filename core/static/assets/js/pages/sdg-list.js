@@ -157,7 +157,7 @@ function renderPage(payload, detailBase) {
             </article>
             <article class="sdg-hero__metric">
               <span>Source</span>
-              <strong>MOPD SDG</strong>
+              <strong>MoNS SDG</strong>
             </article>
           </div>
         </aside>

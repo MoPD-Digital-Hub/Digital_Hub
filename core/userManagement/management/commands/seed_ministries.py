@@ -64,14 +64,14 @@ class Command(BaseCommand):
 
         self._link_dpmes2()
 
-        # Every user belongs to an organization; default the unassigned to MoPD.
+        # Every user belongs to an organization; default the unassigned to MoNS.
         mopd_id = default_ministry()
         if mopd_id is None:
-            self.stdout.write(self.style.WARNING("MoPD not found — users without a ministry were left as-is."))
+            self.stdout.write(self.style.WARNING("MoNS not found — users without a ministry were left as-is."))
             return
         backfilled = CustomUser.objects.filter(ministry__isnull=True).update(ministry_id=mopd_id)
         if backfilled:
-            self.stdout.write(self.style.SUCCESS(f"Assigned MoPD to {backfilled} user(s) without an organization."))
+            self.stdout.write(self.style.SUCCESS(f"Assigned MoNS to {backfilled} user(s) without an organization."))
 
     def _link_dpmes2(self):
         """Store each ministry's DPMES2 organization id, matched by code

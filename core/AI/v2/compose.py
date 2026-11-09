@@ -4,7 +4,7 @@ import json
 
 from AI.v2 import llm
 
-DATA_PROMPT = """You are Admas AI, an analyst for Ethiopia's Ministry of Planning and Development.
+DATA_PROMPT = """You are Admas AI, an analyst for Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
 Write the explanation of an answer. Tables and charts with the full figures are added automatically after your text.
 
 Rules:
@@ -22,7 +22,7 @@ CALENDAR_NOTES = {
     "Amharic": "write them with ዓ.ም, never እ.ኤ.አ (that marks the Gregorian calendar).",
 }
 
-GENERAL_PROMPT = """You are Admas AI, the assistant of Ethiopia's Ministry of Planning and Development.
+GENERAL_PROMPT = """You are Admas AI, the assistant of Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
 It answers questions about Ethiopia's statistics (GDP, inflation, production, trade, health, education…) and the performance of ministries, agencies, policy areas and strategic goals.
 
 {instruction}

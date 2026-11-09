@@ -38,6 +38,31 @@ class CatalogBuildTests(SimpleTestCase):
         self.assertIn("Ministry of Education", rows[0]["aliases"])
 
 
+    def test_planning_ministry_answers_to_its_new_name(self):
+        rows = catalog._dpmes_rows(
+            [{"id": 9, "name": "Ministry of Planning and Development", "code": "MoPD"}], {9: {"policy_areas": []}}, [], {})
+        self.assertIn("Ministry of National Strategy", rows[0]["aliases"])
+        self.assertIn("MoNS", rows[0]["aliases"])
+
+
+class CatalogSyncTests(TestCase):
+    def test_alias_changes_are_saved_without_re_embedding(self):
+        row = {"kind": CatalogEntity.ORGANIZATION, "external_id": "9", "code": "MoPD", "name": "Ministry X",
+               "name_am": "", "aliases": ["MoPD"], "context": "", "details": {}, "search_text": "Ministry X"}
+
+        def run(rows):
+            embed = lambda texts: [np.array([1.0, 0.0])] * len(texts)
+            with patch.object(catalog, "fetch_time_series_topics", return_value=[]), \
+                    patch.object(catalog, "_indicator_rows", return_value=[dict(r) for r in rows]), \
+                    patch.object(catalog.llm, "embed_documents", side_effect=embed) as embedded:
+                return catalog.sync(include_dpmes=False, log=lambda *_: None), embedded.call_count
+
+        self.assertEqual(run([row])[0]["created"], 1)
+        counts, embeds = run([{**row, "aliases": ["MoPD", "MoNS"]}])
+        self.assertEqual((counts["updated"], embeds), (1, 0))
+        self.assertEqual(CatalogEntity.objects.get(external_id="9").aliases, ["MoPD", "MoNS"])
+        self.assertEqual(run([{**row, "aliases": ["MoPD", "MoNS"]}])[0]["unchanged"], 1)
+
 class CatalogResolveTests(SimpleTestCase):
     def setUp(self):
         rows = [

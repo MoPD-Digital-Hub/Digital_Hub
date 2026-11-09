@@ -40,7 +40,7 @@ SCHEMA = {
     "required": ["kind", "calls"],
 }
 
-SYSTEM_PROMPT = """You plan data lookups for Admas AI, the assistant of Ethiopia's Ministry of Planning and Development.
+SYSTEM_PROMPT = """You plan data lookups for Admas AI, the assistant of Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
 It answers from two sources: the national time-series database (economic and social indicators) and DPMES (performance scores of ministries/agencies, policy areas, strategic goals and their KPIs).
 
 Tools:

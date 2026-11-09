@@ -192,7 +192,7 @@ def generate_answer(chat_instance, question: str) -> AnswerResult:
     record = QuestionHistory.objects.create(instance=chat_instance, question=question)
 
     if is_greeting(question):
-        answer_text = "Hello, I'm MoPD Chat Bot. How can I assist you?"
+        answer_text = "Hello, I'm MoNS Chat Bot. How can I assist you?"
         record.response = answer_text
         record.save(update_fields=["response"])
         request_timer()

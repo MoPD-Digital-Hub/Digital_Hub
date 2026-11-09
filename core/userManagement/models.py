@@ -28,11 +28,12 @@ class Ministry(models.Model):
 
 
 def default_ministry():
-    """MoPD is every user's default organization."""
+    """MoNS (formerly MoPD) is every user's default organization."""
     from django.db.utils import OperationalError, ProgrammingError
 
     try:
-        ministry = Ministry.objects.filter(abbreviation__iexact='MoPD').first()
+        ministry = (Ministry.objects.filter(abbreviation__iexact='MoNS').first()
+                    or Ministry.objects.filter(abbreviation__iexact='MoPD').first())
     except (OperationalError, ProgrammingError):
         # The ministry table doesn't exist yet (makemigrations/migrate on a
         # fresh database evaluates this default before creating it).
@@ -59,7 +60,7 @@ class CustomUser(AbstractUser):
     REQUIRED_FIELDS=['first_name','last_name', 'username']
 
     def save(self, *args, **kwargs):
-        # A user always belongs to an organization; fall back to MoPD.
+        # A user always belongs to an organization; fall back to MoNS.
         if self.ministry_id is None:
             self.ministry_id = default_ministry()
         super().save(*args, **kwargs)
