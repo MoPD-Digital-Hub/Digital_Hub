@@ -63,7 +63,11 @@ class Command(BaseCommand):
             self.stdout.write(f"  loaded {min(start + BATCH_SIZE, len(records))}/{len(records)}")
 
         client.flush(collection_name=COLLECTION_NAME)
-        total = client.get_collection_stats(collection_name=COLLECTION_NAME).get("row_count")
+        # Collection stats keep counting deleted rows until Milvus compacts, so a
+        # rebuild would report double; count(*) applies the deletes.
+        total = client.query(
+            collection_name=COLLECTION_NAME, filter='pk != ""', output_fields=["count(*)"]
+        )[0]["count(*)"]
         self.stdout.write(self.style.SUCCESS(
             f"Knowledge base rebuilt: {len(records)} records loaded; collection '{COLLECTION_NAME}' now holds {total}."
         ))
