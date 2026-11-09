@@ -22,7 +22,7 @@ def _normalize_token(value):
     return "".join(ch for ch in _normalize_text(value) if ch.isalnum())
 
 
-def _enrich_metadata(metadata):
+def enrich_metadata(metadata):
     meta = dict(metadata or {})
     for key in ("indicator_code", "responsible_ministry_id", "responsible_ministry_code"):
         if meta.get(key):
@@ -97,7 +97,7 @@ async def process_document(to_be_loaded_doc, vector_store) -> bool:
         }
 
         for idx, document in enumerate(documents):
-            meta = _enrich_metadata(getattr(document, "metadata", {}) or {})
+            meta = enrich_metadata(getattr(document, "metadata", {}) or {})
             document.metadata = meta
             if not any(k in meta and meta.get(k) for k in REQUIRED_METADATA_KEYS_ANY):
                 report["skipped"] += 1

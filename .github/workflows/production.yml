@@ -49,6 +49,10 @@ jobs:
           # Collect static files
           poetry run python manage.py collectstatic --noinput
             
+          # Restart Daphne: nginx proxies data-hub.mopd.gov.et (HTTP and the AI
+          # chat WebSocket) to its domains.sock, so this is what serves the site.
+          sudo systemctl restart daphne.service
+
           # Restart the uWSGI service
           sudo systemctl restart uwsgi.service
 

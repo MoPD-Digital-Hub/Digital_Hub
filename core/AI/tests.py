@@ -251,3 +251,126 @@ class AIAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["result"], "SUCCESS")
         self.assertIn("dependencies", response.data["data"])
+
+
+class KnowledgeBaseBuilderTests(TestCase):
+    TOPICS = [{
+        "title_ENG": "Macro-Economic Aggregates",
+        "categories": [
+            {
+                "name_ENG": "Economic (GDP) Growth",
+                "code": "EG",
+                "is_deleted": False,
+                "indicators": [
+                    {
+                        "title_ENG": "GDP Growth",
+                        "title_AMH": "የአገር ውስጥ ምርት እድገት",
+                        "code": "EG-GDPCP-01",
+                        "measurement_units": "%",
+                        "frequency": "annual",
+                        "source": "MoPD",
+                        "description": "Real growth of gross domestic product.",
+                        "children": [
+                            {"title_ENG": "Agriculture growth", "code": "EG-AGR-01", "children": []},
+                            {"title_ENG": "Grouping row without code", "code": "", "children": [
+                                {"title_ENG": "Industry growth", "code": "EG-IND-01", "children": []},
+                            ]},
+                        ],
+                    },
+                    {"title_ENG": "GDP Growth (duplicate listing)", "code": "EG-GDPCP-01", "children": []},
+                ],
+            },
+            {"name_ENG": "Deleted category", "is_deleted": True, "indicators": [{"title_ENG": "Gone", "code": "X-1"}]},
+        ],
+    }]
+
+    def test_indicator_documents_walk_children_and_skip_uncoded_rows(self):
+        from AI.knowledge_base import KB_SOURCE, indicator_documents
+
+        records = dict(indicator_documents(self.TOPICS))
+        self.assertEqual(
+            sorted(records),
+            ["kb-indicator-EG-AGR-01", "kb-indicator-EG-GDPCP-01", "kb-indicator-EG-IND-01"],
+        )
+        gdp = records["kb-indicator-EG-GDPCP-01"]
+        self.assertEqual(gdp.metadata["indicator_code"], "EG-GDPCP-01")
+        self.assertEqual(gdp.metadata["indicator_eng"], "GDP Growth")
+        self.assertEqual(gdp.metadata["topic_name"], "Macro-Economic Aggregates")
+        self.assertEqual(gdp.metadata["kb_source"], KB_SOURCE)
+        self.assertIn("የአገር ውስጥ ምርት እድገት", gdp.page_content)
+        self.assertEqual(records["kb-indicator-EG-IND-01"].metadata["parent_indicator"], "Grouping row without code")
+
+    def test_organization_documents_carry_ministry_routing_metadata(self):
+        from AI.knowledge_base import organization_documents
+
+        orgs = [{"id": 312, "name": "Ministry of Health", "code": "MoH", "is_active": True}]
+        cards = {312: {"policy_areas": [{"name": "Healthcare", "goals": [{"name": "Maternal health"}]}]}}
+        (record_id, doc), = organization_documents(orgs, cards)
+        self.assertEqual(record_id, "kb-ministry-312")
+        self.assertEqual(doc.metadata["responsible_ministry_id"], "312")
+        self.assertEqual(doc.metadata["responsible_ministry_code"], "MoH")
+        self.assertIn("Maternal health", doc.page_content)
+
+    def test_goal_documents_are_deduplicated_across_policy_areas(self):
+        from AI.knowledge_base import goal_documents
+
+        areas = [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]
+        shared = {"id": 9, "name": "Shared goal", "code": "GA-9"}
+        cards = {1: {"goals": [shared]}, 2: {"goals": [shared, {"id": 10, "name": "Other", "code": "GA-10"}]}}
+        self.assertEqual([key for key, _ in goal_documents(areas, cards)], ["kb-goal-9", "kb-goal-10"])
+
+
+class DPMESMinistryClientTests(TestCase):
+    CARD = {
+        "name": "Ministry of Health",
+        "code": "MoH",
+        "score": {"avg_score": 70.62, "color": "#FFBF00"},
+        "policy_areas": [{"name": "Healthcare", "score": {"avg_score": 68.39}}],
+    }
+    RANGES = [
+        {"name_en": "On Track", "color": "#6FC327", "kpis": [{"id": 1, "name": "Good KPI", "records": [{"score": 90.0}]}]},
+        {"name_en": "Weak Performance", "color": "#FF7259", "kpis": [
+            {"id": 2, "name": "Weak KPI", "records": [{"score": 55.0}]},
+        ]},
+        {"name_en": "Requires Intervention", "color": "#FF0000", "kpis": [
+            {"id": 3, "name": "Worst KPI", "records": [{"score": 10.0}]},
+        ]},
+    ]
+
+    def test_period_treats_default_12month_as_annual(self):
+        from AI.infrastructure.clients import _dpmes_period
+
+        with patch("AI.infrastructure.clients.dpmes2.current_ethiopian_year", return_value=2019):
+            self.assertEqual(_dpmes_period(None, "12month"), {"year": 2018})
+            self.assertEqual(_dpmes_period("2017", "6month"), {"year": 2017, "quarter": 2})
+
+    @patch("AI.infrastructure.clients.dpmes2.organization_scorecard")
+    def test_fetch_ministry_score_keeps_formatter_shape(self, mock_card):
+        from AI.infrastructure.clients import fetch_ministry_score
+        from AI.shared.upstream import format_ministry_score
+
+        mock_card.return_value = self.CARD
+        payload = fetch_ministry_score("312", year="2018", quarter="12month")
+        self.assertEqual(payload["ministry_score_card"]["score"], 70.62)
+        self.assertEqual(payload["ministry_score_card"]["quarter"], "Annual")
+        html = format_ministry_score(payload)
+        self.assertIn("Ministry of Health", html)
+        self.assertIn("Healthcare", html)
+
+    @patch("AI.infrastructure.clients.dpmes2.kpis_by_score_range")
+    @patch("AI.infrastructure.clients.dpmes2.organization_scorecard")
+    def test_fetch_ministry_performance_lists_weakest_first(self, mock_card, mock_ranges):
+        from AI.infrastructure.clients import fetch_ministry_performance
+
+        mock_card.return_value = self.CARD
+        mock_ranges.return_value = self.RANGES
+        payload = fetch_ministry_performance("312", year="2018", performance_type="weak_performance")
+        self.assertEqual([kpi["indicator_name"] for kpi in payload["kpis"]], ["Worst KPI", "Weak KPI"])
+
+    @patch("AI.infrastructure.clients.dpmes2.organization_scorecard")
+    def test_fetch_ministry_score_returns_empty_when_dpmes_fails(self, mock_card):
+        from AI.infrastructure.clients import fetch_ministry_score
+        from dashboard import dpmes2
+
+        mock_card.side_effect = dpmes2.DPMES2Error("down")
+        self.assertEqual(fetch_ministry_score("312", year="2018"), {})
