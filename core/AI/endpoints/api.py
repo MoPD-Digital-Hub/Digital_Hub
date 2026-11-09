@@ -19,6 +19,7 @@ from celery.result import AsyncResult
 from project.celery import app as celery_app
 from django.conf import settings
 from AI.tasks import generate_answer_task
+from AI.v2 import compat as v2_compat
 
 LOGGER = logging.getLogger("AI.endpoints")
 
@@ -166,6 +167,12 @@ def answer(request, chat_instance_id):
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 details={"exception": str(exc)},
             )
+
+    if v2_compat.uses_v2(request.user.email):
+        data, ok = v2_compat.answer_as_v1(question, instance=chat_instance)
+        if not ok:
+            return _err(request, "AI_UNAVAILABLE", data["message"], status.HTTP_503_SERVICE_UNAVAILABLE)
+        return _ok(request, data)
 
     result = generate_answer(chat_instance, question)
 

@@ -51,7 +51,7 @@ def _record_id(prefix, key):
     return f"kb-{prefix}-{safe}"[:100]
 
 
-def _lead(text):
+def lead_sentence(text):
     """The first sentence, capped, so a description supports the name instead of dominating it."""
     text = _clean(text)
     sentence = re.split(r"(?<=[.!?])\s", text, maxsplit=1)[0]
@@ -131,7 +131,7 @@ def _indicator_document(item, title, code, topic, category, parent):
     ) if part]
     if details:
         lines.append("Measured as " + ", ".join(details) + ".")
-    description = _lead(item.get("description"))
+    description = lead_sentence(item.get("description"))
     if description:
         lines.append(description)
 

@@ -16,6 +16,7 @@ from AI.endpoints.api import (
     update_chat_instance,
 )
 from .views import room
+from .v2.api import answer_v2
     
 urlpatterns = [
     path("chat-new/<str:room_name>/", room, name="ai-chat-room"),
@@ -33,4 +34,5 @@ urlpatterns = [
     path("history/<int:chat_instance_id>/", get_chat_list, name="ai-history"),
     path("instance/<int:chat_instance_id>/", update_chat_instance, name="ai-instance-update"),
     path("delete/<int:chat_instance_id>/", delete_chat_instance, name="ai-delete"),
+    path("v2/answer/<int:chat_instance_id>/", answer_v2, name="ai-v2-answer"),
 ]

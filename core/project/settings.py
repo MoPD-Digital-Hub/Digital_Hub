@@ -376,6 +376,10 @@ LOGGING = {
 }
 
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
+# Which assistant answers /ws/chat/ and /api/ai-chat/answer/ (see docs/ai-v2.md).
+# v2 pilot: chats owned by AI_ENGINE_V2_USERS use v2 while AI_ENGINE stays v1.
+AI_ENGINE = config("AI_ENGINE", default="v1")
+AI_ENGINE_V2_USERS = config("AI_ENGINE_V2_USERS", default="", cast=Csv())
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
 AI_MAX_RETRIEVAL_DOCS = config("AI_MAX_RETRIEVAL_DOCS", default=4, cast=int)
 AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)

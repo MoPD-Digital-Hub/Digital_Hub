@@ -19,6 +19,7 @@ from AI.infrastructure import get_llm_instance
 from AI.infrastructure.translation import translate_text_with_gemini
 from AI.application import format_history_records_for_llm, prepare_answer
 from AI.shared import invoke_chat_once, run_chain_stream
+from AI.v2 import compat as v2_compat
 
 LOGGER = logging.getLogger("AI.consumers")
 WS_SEMAPHORE = asyncio.Semaphore(max(1, getattr(settings, "AI_WS_MAX_CONCURRENCY", 20)))
@@ -109,6 +110,17 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
 
             question_text = str(payload.get("message", "")).strip()
             if not question_text:
+                return
+
+            v2_instance = await self.get_v2_instance(self.instance_id)
+            if v2_instance is not None:
+                await v2_compat.stream_as_v1(
+                    question_text,
+                    instance=v2_instance,
+                    send=lambda payload: self.send(text_data=json.dumps(payload)),
+                    is_native_client=self.is_native_client,
+                    preview=_build_stream_preview,
+                )
                 return
 
             history = await self.get_history(self.instance_id)
@@ -259,6 +271,15 @@ class BaseAIConsumer(AsyncWebsocketConsumer):
 
         instance = ChatInstance.objects.filter(id=room_name, is_deleted=False).first()
         return instance.id if instance else None
+
+    @database_sync_to_async
+    def get_v2_instance(self, instance_id):
+        """The chat instance when this chat should be answered by v2 (AI_ENGINE / pilot), else None."""
+        from .models import ChatInstance
+
+        instance = ChatInstance.objects.select_related("user").filter(id=instance_id).first()
+        owner_email = instance.user.email if instance and instance.user else None
+        return instance if instance and v2_compat.uses_v2(owner_email) else None
 
     @database_sync_to_async
     def get_history(self, instance_id):
