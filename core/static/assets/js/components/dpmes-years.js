@@ -13,7 +13,8 @@ async function fetchJson(url) {
 
 export async function fetchDpmesYears(endpoint = "/api/mobile/dpmes-year-lists/") {
   const payload = await fetchJson(endpoint);
-  const items = Array.isArray(payload?.years) ? payload.years : [];
+  const body = payload?.data ?? payload;
+  const items = Array.isArray(body?.years) ? body.years : [];
 
   return items
     .filter((item) => item && item.visible)

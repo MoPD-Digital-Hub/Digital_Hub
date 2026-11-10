@@ -1,0 +1,45 @@
+# Production on the Digital Hub server (data-hub.mopd.gov.et).
+#
+# Run it through deploy/deploy.sh, not by hand; see docs/deploy.md.
+#
+# The containers use the host's network, so the existing PostgreSQL, Redis and
+# nginx keep working unchanged: the database stays where it is, nginx keeps the
+# TLS certificate and proxies to Daphne on 127.0.0.1:${WEB_PORT}.
+
+name: digital-hub
+
+x-app: &app
+  image: digital-hub:${IMAGE_TAG:-latest}
+  build:
+    context: ..
+    args:
+      APP_UID: ${APP_UID:-1000}
+  network_mode: host
+  restart: unless-stopped
+  env_file:
+    - ../.env
+  environment:
+    DEBUG: "False"
+    WEB_PORT: ${WEB_PORT:-8000}
+  volumes:
+    # Uploaded files live on the server, as before.
+    - ../core/media:/app/core/media
+    # Key files (Firebase), kept on the server only, never in git or the image.
+    - ../secrets:/app/secrets:ro
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  web:
+    <<: *app
+    # Only nginx on this machine talks to Daphne; it is not exposed publicly.
+    command: sh -c "exec daphne --bind 127.0.0.1 --port $${WEB_PORT} --proxy-headers project.asgi:application"
+
+  worker:
+    <<: *app
+    command: celery --app project worker --loglevel info --queues celery,ai_queue --concurrency 2
+    healthcheck:
+      disable: true

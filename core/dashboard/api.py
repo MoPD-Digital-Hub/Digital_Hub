@@ -1,13 +1,9 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
-from dashboard import dpmes2
-
-
-def _envelope(result, message, data, status_code):
-    return Response({"result": result, "message": message, "data": data}, status=status_code)
+from integrations.dpmes import client as dpmes_client
+from project.responses import failure, success
 
 
 @api_view(['GET'])
@@ -22,22 +18,20 @@ def organization_overview(request):
     """
     ministry = getattr(request.user, "ministry", None)
     if ministry is None:
-        return _envelope("FAILURE", "NO_MINISTRY", None, status.HTTP_400_BAD_REQUEST)
+        return failure(request, "NO_MINISTRY", status.HTTP_400_BAD_REQUEST)
     if ministry.dpmes2_id is None:
-        return _envelope("FAILURE", "MINISTRY_NOT_LINKED", None, status.HTTP_400_BAD_REQUEST)
-    if not dpmes2.is_configured():
-        return _envelope("FAILURE", "DPMES2_NOT_CONFIGURED", None, status.HTTP_503_SERVICE_UNAVAILABLE)
+        return failure(request, "MINISTRY_NOT_LINKED", status.HTTP_400_BAD_REQUEST)
+    if not dpmes_client.is_configured():
+        return failure(request, "DPMES2_NOT_CONFIGURED", status.HTTP_503_SERVICE_UNAVAILABLE)
 
     try:
-        period = dpmes2.period_from_query(request.query_params)
-        scorecard = dpmes2.organization_scorecard(ministry.dpmes2_id, period)
-        ranges = dpmes2.score_ranges()
-    except dpmes2.DPMES2Error as exc:
-        return _envelope("FAILURE", str(exc), None, status.HTTP_502_BAD_GATEWAY)
+        period = dpmes_client.period_from_query(request.query_params)
+        scorecard = dpmes_client.organization_scorecard(ministry.dpmes2_id, period)
+        ranges = dpmes_client.score_ranges()
+    except dpmes_client.DPMES2Error as exc:
+        return failure(request, str(exc), status.HTTP_502_BAD_GATEWAY)
 
-    return _envelope(
-        "SUCCESS", "SUCCESS",
-        {
+    return success(request, {
             "ministry": {
                 "id": ministry.id,
                 "name": ministry.name,
@@ -63,6 +57,4 @@ def organization_overview(request):
                 "performance_analysis": scorecard.get("performance_analysis", {}),
                 "score_ranges": ranges,
             },
-        },
-        status.HTTP_200_OK,
-    )
+        }, message="SUCCESS", status=status.HTTP_200_OK)

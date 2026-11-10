@@ -1,0 +1,21 @@
+# Keep secrets, local state and build output out of the image.
+.env
+.env.*
+!.env.example
+.git
+.github
+.claude
+.venv
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+
+core/db.sqlite3*
+core/media/
+core/staticfiles/
+core/logs/
+core/conf/
+
+secrets/
+docs/
+deploy/

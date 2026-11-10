@@ -13,7 +13,6 @@ class NotFoundRedirectMiddleware:
         "/admin/",
         "/media/",
         "/static/",
-        "/oidc/",
     )
 
     def __init__(self, get_response):

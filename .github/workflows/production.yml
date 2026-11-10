@@ -1,65 +1,29 @@
 name: Deploy Project
 
+# Pushing to `production` deploys it on the server with Docker (deploy/deploy.sh).
 on:
   push:
     branches:
-      - production  
+      - production
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-    # Step 1: Checkout the code
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    # Step 2: Set up SSH key for authentication
-    - name: Set up SSH key for authentication
-      uses: webfactory/ssh-agent@v0.5.3
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} # The private SSH key stored in GitHub secrets
-
-    # Step 3: Deploy to the server via SSH
-    - name: Deploy to server via SSH
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          # Navigate to the project directory
-          cd /mnt/data/Digital_Hub
-          
-          # Discard any local changes on the server, then pull the latest changes
-          git fetch origin production
-          git reset --hard origin/production
-          git pull origin production
-          
-          # Activate virtual environment 
-          source .venv/bin/activate  
-
-          # Navigate to the 'core' directory (where your migrations are located)
-          cd core
-
-          poetry install --no-root
-          
-          # Run migrations
-          poetry run python manage.py makemigrations
-          
-          # Run migrations
-          poetry run python manage.py migrate
-          
-          # Collect static files
-          poetry run python manage.py collectstatic --noinput
-            
-          # Restart Daphne: nginx proxies data-hub.mopd.gov.et (HTTP and the AI
-          # chat WebSocket) to its domains.sock, so this is what serves the site.
-          sudo systemctl restart daphne.service
-
-          # Restart the uWSGI service
-          sudo systemctl restart uwsgi.service
-
-          # Restart the Nginx service
-          sudo systemctl restart nginx.service
-
-          # Restart the celery service
-          sudo systemctl restart celery.service
-
-        EOF
+      - name: Deploy on the server
+        run: |
+          # Update the checkout first, so the deploy script that runs is the new one.
+          ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            'set -e; cd /mnt/data/Digital_Hub; git fetch origin production; git reset --hard origin/production; bash deploy/deploy.sh --no-pull'

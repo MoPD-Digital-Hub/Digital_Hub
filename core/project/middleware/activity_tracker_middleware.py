@@ -20,7 +20,7 @@ class ActivityTrackerMiddleware:
     """
     Local safe version of drf_user_activity_tracker middleware.
     Key fix:
-    - Do not assume every response has `response.data` (e.g. HttpResponseRedirect from OIDC).
+    - Do not assume every response has `response.data` (e.g. an HttpResponseRedirect).
     """
 
     def __init__(self, get_response):
@@ -59,7 +59,7 @@ class ActivityTrackerMiddleware:
         except Resolver404:
             return self.get_response(request)
 
-        if namespace in ("admin", "oidc"):
+        if namespace == "admin":
             return self.get_response(request)
         if url_name in self.DRF_ACTIVITY_TRACKER_SKIP_URL_NAME:
             return self.get_response(request)

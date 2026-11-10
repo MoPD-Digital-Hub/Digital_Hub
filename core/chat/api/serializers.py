@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from chat.models import Conversation, Message
-from userManagement.models import CustomUser, Ministry
+from users.models import CustomUser, Ministry
 
 
 class MinistrySerializer(serializers.ModelSerializer):

@@ -5,169 +5,92 @@
 
 ## 📖 Overview
 
-**Digital Hub** is a Django-based project designed to provide a flexible and scalable foundation for building modern web applications. It leverages Django Rest Framework for API development and now includes a Gemini-first AI assistant for multilingual text generation grounded by Milvus retrieval.
+**Digital Hub** is a Django-based project designed to provide a flexible and scalable foundation for building modern web applications. It leverages Django Rest Framework for API development and includes Admas AI, a data assistant that answers in English and Amharic from the live time-series and DPMES data.
 
 ## 🚀 Features
 
 - 🔗 **API Development** with Django Rest Framework.
 - 🔐 **JWT Authentication** using SimpleJWT.
 - 🌐 **CORS Support** for cross-origin requests.
-- 🧠 **AI Integration** with Gemini for direct English and Amharic text generation, grounded by Milvus retrieval.
-- 📁 **File Handling** with PyMuPDF and python-magic-bin.
+- 🧠 **Admas AI**: answers questions about indicators, ministries, policy areas and goals with tables and charts (see [docs/ai.md](docs/ai.md)).
 - 📊 **Environment Management** using python-dotenv.
 
 ## 📂 Project Structure
 
 ```bash
-digital-hub/
-├── manage.py
-├── digital_hub/
-│   ├── __init__.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-├── apps/
-│   └── ...
-├── pyproject.toml
-└── README.md
+Digital_Hub/
+├── core/                  # Django project (manage.py)
+│   ├── project/           # settings, urls, ASGI, Celery
+│   ├── ai/  users/  dashboard/  mobile/  chat/  notifications/
+│   ├── integrations/      # external APIs (DPMES)
+│   ├── templates/  static/
+├── deploy/                # production compose file, deploy script, nginx site
+├── secrets/               # key files, git-ignored (docs/deploy.md)
+├── docs/                  # ai.md, deploy.md, …
+├── Dockerfile  compose.yaml  .env.example
+└── pyproject.toml  poetry.lock
 ```
 
-## ⚙️ Installation
+## ⚙️ Running it
 
-1. **Clone the repository:**
+The project runs in Docker; the only thing to install is
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine with the Compose plugin).
 
 ```bash
-git clone https://github.com/your-username/digital-hub.git
-cd digital-hub
+make env            # creates .env from .env.example: set DEBUG=True and fill in the keys you have
+make up             # PostgreSQL, Redis, web and Celery worker on http://localhost:8000
+make superuser      # an admin login
+make sync-catalog   # once, so the AI can answer data questions
 ```
 
-2. **Install Poetry:**
+Code in `core/` is mounted into the container, so edits reload without a rebuild. Run `make` to list
+every command; the common ones:
 
-```bash
-pip install poetry
-```
+| Command | Does |
+|---|---|
+| `make logs` | Follow web and worker logs (`s=db` for another service) |
+| `make test` | Run the tests (`app=AI` for one app) |
+| `make check` | Django checks and missing-migration check |
+| `make shell` / `make dbshell` | Django shell / psql |
+| `make manage cmd="..."` | Any `manage.py` command |
+| `make ask-ai q="..."` | Ask the AI one question and see its trace |
+| `make stop` / `make down` | Stop / remove the containers (the database is kept) |
 
-3. **Install dependencies using Poetry:**
-
-```bash
-poetry install
-```
-
-4. **Set up environment variables:**
-
-Create a `.env` file in the project root:
-
-```env
-SECRET_KEY=your_secret_key
-DEBUG=True
-ALLOWED_HOSTS=*
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-5. **Run migrations:**
-
-```bash
-poetry run python manage.py migrate
-```
-
-6. **Start the development server:**
-
-```bash
-poetry run python manage.py runserver
-```
-
-Visit `http://localhost:8000/` in your browser.
+Every setting is listed in [.env.example](.env.example).
 
 ## AI Configuration
 
-The AI app expects:
+Admas AI uses the Ministry LLM gateway (OpenAI-compatible) for chat and embeddings. Set in `.env`
+(see `.env.example`):
 
-- `GEMINI_API_KEY` for text generation
-- `GEMINI_TEXT_MODEL` for the text model
-- `GEMINI_TIMEOUT_SECONDS` for request timeout
-- `GEMINI_TEMPERATURE`, `GEMINI_TOP_P`, and `GEMINI_MAX_OUTPUT_TOKENS` for generation tuning
-- `GEMINI_HISTORY_TURNS` for how much prior chat history is sent
-- `MILVUS_URI` and `MILVUS_COLLECTION_NAME` for retrieval
-- `EMBEDDING_API_BASE` for query embeddings
-- `TIME_SERIES_API_BASE` for annual/quarter/month indicator values by code
+- `VLLM_API_BASE`, `VLLM_MODEL`, `VLLM_API_KEY` for the chat model
+- `EMBEDDING_API_BASE`, `EMBEDDING_MODEL`, `EMBEDDING_API_KEY` for embeddings
+- `DPMES2_API_BASE`, `DPMES2_API_KEY` for ministry and policy-area performance
+- `TIME_SERIES_API_BASE` for indicator values
+- `GEMINI_API_KEY` only for the chat's translate button and read-aloud
 
-Admas AI answers directly in the same language as the user's message. Amharic requests get Amharic responses, and English requests get English responses. There is no post-generation translation step in the text generation path. For grounded answers, the service retrieves context from Milvus first and then passes that context to Gemini.
+After the first deploy, and then daily, build the catalog of indicators and organizations:
 
-## Production Deployment
+```bash
+python core/manage.py sync_ai_catalog
+```
 
-1. Copy environment template and fill real values:
-   ```bash
-   cp .env.example .env
-   ```
-2. Set production env values in `.env`:
-   - `DEBUG=False`
-   - `SECRET_KEY=<long-random-secret>`
-   - `ALLOWED_HOSTS=<comma-separated-hosts>`
-   - `USE_SQLITE=False` with Postgres credentials
-   - `CSRF_TRUSTED_ORIGINS` and `CORS_ALLOWED_ORIGINS`
-3. Run deployment checks:
-   ```bash
-   python core/manage.py check --deploy
-   ```
-4. Run migrations and collect static:
-   ```bash
-   python core/manage.py migrate
-   python core/manage.py collectstatic --noinput
-   ```
-5. Start ASGI app with Daphne (example):
-   ```bash
-   daphne -b 0.0.0.0 -p 8000 project.asgi:application
-   ```
-6. Run Celery worker separately:
-   ```bash
-   celery -A project worker -l info
-   ```
+How answers are made, the client protocol and the other commands are in [docs/ai.md](docs/ai.md).
 
+## API
 
+Every JSON endpoint returns `{"result", "message", "request_id", "data"}` (plus `error` on failure),
+while keeping every field the installed mobile app already reads. See [docs/api.md](docs/api.md).
 
-# Server Installation (Linux)
+## Deployment
 
-1. **Install Celery**:
-   ```bash
-   pip install celery
-   ```
-
-2. **Install RabbitMQ**:
-   ```bash
-   sudo apt-get install rabbitmq-server
-   ```
-
-3. **Enable and start RabbitMQ**:
-   ```bash
-   sudo systemctl enable rabbitmq-server
-   sudo systemctl start rabbitmq-server
-   ```
-
-4. **Check RabbitMQ server status**:
-   ```bash
-   systemctl status rabbitmq-server
-   ```
-
-5. **Run Celery worker**:
-   ```bash
-   celery -A project worker -l info
-   ```
+Production runs the same image with Docker. Pushing to the `production` branch deploys it
+(`.github/workflows/production.yml` → `deploy/deploy.sh`). Setup, the one-time switch from systemd, rollback
+and everyday commands: [docs/deploy.md](docs/deploy.md).
 
 ## 📦 Dependencies
 
-- Django `==4.2.6`
-- djangorestframework `>=3.15.2,<4.0.0`
-- Pillow `>=11.1.0,<12.0.0`
-- django-cors-headers `>=4.7.0,<5.0.0`
-- djangorestframework-simplejwt `>=5.4.0,<6.0.0`
-- langchain `>=0.3.18,<0.4.0`
-- langchain-ollama `>=0.2.3,<0.3.0`
-- langchain-chroma `>=0.2.2,<0.3.0`
-- langchain-community `>=0.3.17,<0.4.0`
-- pymupdf `>=1.25.3,<2.0.0`
-- rest-framework-simplejwt `>=0.0.2,<0.0.3`
-- python-magic-bin `>=0.4.14,<0.5.0`
-- python-dotenv `>=1.0.1,<2.0.0`
+Listed in [pyproject.toml](pyproject.toml) and pinned in `poetry.lock`.
 
 ## 🧑‍💻 Authors
 

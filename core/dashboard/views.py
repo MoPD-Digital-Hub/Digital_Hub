@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
-from AI.models import ChatInstance, QuestionHistory
+from ai.models import ChatInstance, QuestionHistory
 
 from .forms import DashboardPasswordChangeForm, DashboardProfileForm
 

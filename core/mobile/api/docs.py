@@ -133,48 +133,6 @@ class IndicatorDetailChildSerializer(serializers.Serializer):
     for_category = serializers.ListField(child=serializers.IntegerField())
 
 
-class IndicatorDetailItemSerializer(serializers.Serializer):
-    id = serializers.IntegerField()
-    annual_data = IndicatorDataPointSerializer(many=True)
-    quarter_data = IndicatorDataPointSerializer(many=True)
-    month_data = IndicatorDataPointSerializer(many=True)
-    week_data = IndicatorDataPointSerializer(many=True)
-    day_data = IndicatorDataPointSerializer(many=True)
-    latest_data = serializers.CharField(allow_blank=True, allow_null=True)
-    children = IndicatorDetailChildSerializer(many=True)
-    title_ENG = serializers.CharField()
-    title_AMH = serializers.CharField()
-    code = serializers.CharField(allow_blank=True, allow_null=True)
-    rank = serializers.IntegerField()
-    description = serializers.CharField(allow_blank=True, allow_null=True)
-    measurement_units = serializers.CharField(allow_blank=True, allow_null=True)
-    measurement_units_quarter = serializers.CharField(allow_blank=True, allow_null=True)
-    measurement_units_month = serializers.CharField(allow_blank=True, allow_null=True)
-    frequency = serializers.CharField(allow_blank=True, allow_null=True)
-    source = serializers.CharField(allow_blank=True, allow_null=True)
-    methodology = serializers.CharField(allow_blank=True, allow_null=True)
-    disaggregation_dimensions = serializers.CharField(allow_blank=True, allow_null=True)
-    data_type = serializers.CharField(allow_blank=True, allow_null=True)
-    responsible_entity = serializers.CharField(allow_blank=True, allow_null=True)
-    tags = serializers.CharField(allow_blank=True, allow_null=True)
-    sdg_link = serializers.CharField(allow_blank=True, allow_null=True)
-    status = serializers.CharField(allow_blank=True, allow_null=True)
-    version = serializers.IntegerField(allow_null=True)
-    collection_Instrument = serializers.CharField(allow_blank=True, allow_null=True)
-    kpi_characteristics = serializers.CharField(allow_blank=True, allow_null=True)
-    is_dashboard_visible = serializers.BooleanField()
-    is_public = serializers.BooleanField()
-    is_verified = serializers.BooleanField()
-    main_parent = serializers.BooleanField()
-    image = serializers.CharField(allow_blank=True, allow_null=True)
-    created_at = serializers.DateTimeField(allow_null=True)
-    updated_at = serializers.DateTimeField(allow_null=True)
-    time_coverage_start_year = serializers.IntegerField(allow_null=True)
-    time_coverage_end_year = serializers.IntegerField(allow_null=True)
-    parent = serializers.IntegerField(allow_null=True)
-    for_category = serializers.ListField(child=serializers.IntegerField())
-
-
 class IndicatorDetailObjectSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     annual_data = IndicatorDataPointSerializer(many=True)
@@ -533,22 +491,6 @@ YEAR_LIST_RESPONSE_EXAMPLE = OpenApiExample(
     response_only=True,
 )
 
-
-YEAR_PARAMETER = OpenApiParameter(
-    name="year",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    required=False,
-    description="Reporting year filter.",
-)
-
-QUARTER_PARAMETER = OpenApiParameter(
-    name="quarter",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    required=False,
-    description="Reporting period filter such as 3month, 6month, 9month, or 12month.",
-)
 
 VERSION_PARAMETER = OpenApiParameter(
     name="version",

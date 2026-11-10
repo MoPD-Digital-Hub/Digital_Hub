@@ -1,11 +1,10 @@
 import os
-import warnings
 import logging
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 from decouple import Csv, config
-from AI.runtime.config import validate_ai_config
+from ai.config import validate_ai_config
 # import logging
 # import logging.handlers
 
@@ -17,12 +16,6 @@ LOG_DIR = os.path.join(BASE_DIR.parent, 'logs')
 
 load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
 
-# Python 3.14 emits this warning from langchain_core internals; suppress in app logs.
-warnings.filterwarnings(
-    "ignore",
-    message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.",
-    category=UserWarning,
-)
 
 # Django 4.2.x + Python 3.14 compatibility:
 # BaseContext.__copy__ in Django 4.2 uses copy(super()), which fails on 3.14.
@@ -81,12 +74,11 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'rest_framework_simplejwt',
     'ckeditor',
-    'userManagement',
+    'users',
     'corsheaders',
-    'Videos',
-    'AI',
+    'ai',
     'mobile',
-    'Notification',
+    'notifications',
     'chat',
     'dashboard',
     'axes',
@@ -95,8 +87,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serves collected static files from the app itself (in Docker there is no shared disk with nginx).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'project.middleware.request_id_middleware.RequestIDMiddleware',
+    'project.middleware.api_envelope_middleware.ApiEnvelopeMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -112,10 +107,10 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
-        'userManagement.drf_authentication.OptionalOIDCAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'project.responses.exception_handler',
   
 }
 
@@ -166,7 +161,6 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 
-    "TOKEN_OBTAIN_SERIALIZER":  "userManagement.serializers.MyTokenObtainPairSerializer",
     "TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSerializer",
     "TOKEN_VERIFY_SERIALIZER": "rest_framework_simplejwt.serializers.TokenVerifySerializer",
     "TOKEN_BLACKLIST_SERIALIZER": "rest_framework_simplejwt.serializers.TokenBlacklistSerializer",
@@ -175,30 +169,9 @@ SIMPLE_JWT = {
 }
 
 AUTHENTICATION_BACKENDS = [
-    'userManagement.auth_backends.CustomOIDCAuthenticationBackend',
     'axes.backends.AxesStandaloneBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
-
-# Keycloak Configuration
-OIDC_RP_CLIENT_ID = config('OIDC_RP_CLIENT_ID', default='')
-OIDC_RP_CLIENT_SECRET = config('OIDC_RP_CLIENT_SECRET', default='')
-OIDC_OP_AUTHORIZATION_ENDPOINT = config('OIDC_OP_AUTHORIZATION_ENDPOINT', default='')
-OIDC_OP_TOKEN_ENDPOINT = config('OIDC_OP_TOKEN_ENDPOINT', default='')
-OIDC_OP_USER_ENDPOINT = config('OIDC_OP_USER_ENDPOINT', default='')
-OIDC_OP_JWKS_ENDPOINT = config('OIDC_OP_JWKS_ENDPOINT', default='')
-OIDC_OP_LOGOUT_ENDPOINT = config('OIDC_OP_LOGOUT_ENDPOINT', default='')
-OIDC_POST_LOGOUT_REDIRECT_URI = config('OIDC_POST_LOGOUT_REDIRECT_URI', default='')
-OIDC_RP_SIGN_ALGO = config('OIDC_RP_SIGN_ALGO', default='RS256')
-OIDC_STORE_ID_TOKEN = config('OIDC_STORE_ID_TOKEN', default=True, cast=bool)
-OIDC_CALLBACK_CLASS = config(
-    'OIDC_CALLBACK_CLASS',
-    default='userManagement.oidc_views.CustomOIDCAuthenticationCallbackView'
-)
-OIDC_DRF_AUTH_BACKEND = "userManagement.auth_backends.CustomOIDCAuthenticationBackend"
-
-# Optional: Automatically create a Django user if they don't exist
-OIDC_CREATE_USER = config('OIDC_CREATE_USER', default=False, cast=bool)
 
 AXES_ENABLED = True
 AXES_FAILURE_LIMIT = 7
@@ -325,6 +298,14 @@ MEDIA_URL='/media/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Compressed copies for WhiteNoise. Not the manifest variant: templates bust
+# caches with ?v= already, and a manifest fails collectstatic on any CSS url()
+# that points at a missing file.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
@@ -367,7 +348,7 @@ LOGGING = {
         "level": "INFO",
     },
     "loggers": {
-        "AI": {
+        "ai": {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
@@ -376,12 +357,7 @@ LOGGING = {
 }
 
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
-# Which assistant answers /ws/chat/ and /api/ai-chat/answer/ (see docs/ai-v2.md).
-# v2 pilot: chats owned by AI_ENGINE_V2_USERS use v2 while AI_ENGINE stays v1.
-AI_ENGINE = config("AI_ENGINE", default="v1")
-AI_ENGINE_V2_USERS = config("AI_ENGINE_V2_USERS", default="", cast=Csv())
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
-AI_MAX_RETRIEVAL_DOCS = config("AI_MAX_RETRIEVAL_DOCS", default=4, cast=int)
 AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
 AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
 
@@ -465,7 +441,7 @@ SERVER_EMAIL = os.getenv("EMAIL")
 ASGI_APPLICATION = "project.asgi.application"
 
 # DPMES2 organization-performance API (key issued to the Digital Hub)
-DPMES2_API_BASE = config('DPMES2_API_BASE', default='https://dpmes2.mopd.gov.et')
+DPMES2_API_BASE = config('DPMES2_API_BASE', default='https://dpmes.mopd.gov.et')
 DPMES2_API_KEY = config('DPMES2_API_KEY', default='')
 
 REDIS_HOST = config('REDIS_HOST', default='127.0.0.1')

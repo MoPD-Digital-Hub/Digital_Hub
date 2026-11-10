@@ -13,7 +13,7 @@ def send_chat_push(message_id):
     muted or currently focused on the conversation (see chat.presence)."""
     from chat.models import ConversationParticipant, Message
     from chat.presence import is_focused
-    from Notification.tasks.push_notification_task import send_push_to_user
+    from notifications.tasks import send_push_to_user
 
     message = (
         Message.objects.select_related("sender", "conversation")

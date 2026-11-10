@@ -3,53 +3,20 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from django.db.models import Q
 
 from chat.models import Conversation, ConversationParticipant, Message
 from chat.services import broadcast_to_users, conversation_user_ids
 from chat.tasks import send_chat_push
-from userManagement.models import CustomUser, Ministry
+from users.models import CustomUser, Ministry
 from .serializers import ChatUserSerializer, ConversationSerializer, MessageSerializer
+from project.responses import failure, success
 
 MESSAGES_PAGE_SIZE_DEFAULT = 30
 MESSAGES_PAGE_SIZE_MAX = 100
 GROUP_MEMBERS_MAX = 100
 CHANNEL_MEMBERS_MAX = 1000
-
-
-def _request_id(request):
-    return getattr(request, "request_id", None)
-
-
-def _ok(request, data=None, message="SUCCESS", status_code=status.HTTP_200_OK):
-    return Response(
-        {
-            "result": "SUCCESS",
-            "message": message,
-            "request_id": _request_id(request),
-            "data": data,
-        },
-        status=status_code,
-    )
-
-
-def _err(request, code, message, status_code, details=None):
-    return Response(
-        {
-            "result": "FAILURE",
-            "message": code,
-            "request_id": _request_id(request),
-            "error": {
-                "code": code,
-                "message": message,
-                "details": details or {},
-            },
-            "data": None,
-        },
-        status=status_code,
-    )
 
 
 def _get_membership(request, conversation_id):
@@ -85,23 +52,17 @@ def _resolve_members(request):
     if raw_user_ids:
         user_ids, error = _parse_user_ids(raw_user_ids)
         if error:
-            return None, _err(request, error, "user_ids must be a non-empty list of user ids.", status.HTTP_400_BAD_REQUEST)
+            return None, failure(request, error, status.HTTP_400_BAD_REQUEST, code=error, error_message="user_ids must be a non-empty list of user ids.")
 
     ministry_ids = []
     if raw_ministry_ids:
         ministry_ids, error = _parse_user_ids(raw_ministry_ids)
         if error:
-            return None, _err(
-                request, error.replace("USER_IDS", "MINISTRY_IDS"),
-                "ministry_ids must be a non-empty list of ministry ids.", status.HTTP_400_BAD_REQUEST,
-            )
+            return None, failure(request, error.replace("USER_IDS", "MINISTRY_IDS"), status.HTTP_400_BAD_REQUEST, code=error.replace("USER_IDS", "MINISTRY_IDS"), error_message="ministry_ids must be a non-empty list of ministry ids.")
         found = set(Ministry.objects.filter(id__in=ministry_ids).values_list("id", flat=True))
         missing = set(ministry_ids) - found
         if missing:
-            return None, _err(
-                request, "MINISTRY_NOT_FOUND", "Some ministries don't exist.",
-                status.HTTP_404_NOT_FOUND, details={"ministry_ids": sorted(missing)},
-            )
+            return None, failure(request, "MINISTRY_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="MINISTRY_NOT_FOUND", error_message="Some ministries don't exist.", details={"ministry_ids": sorted(missing)})
 
     members = list(
         CustomUser.objects.filter(is_active=True)
@@ -111,10 +72,7 @@ def _resolve_members(request):
     # Explicitly named users must exist; ministry members are best-effort.
     missing_users = set(user_ids) - {member.id for member in members} - {request.user.id}
     if missing_users:
-        return None, _err(
-            request, "USER_NOT_FOUND", "Some users don't exist.",
-            status.HTTP_404_NOT_FOUND, details={"user_ids": sorted(missing_users)},
-        )
+        return None, failure(request, "USER_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="USER_NOT_FOUND", error_message="Some users don't exist.", details={"user_ids": sorted(missing_users)})
     return members, None
 
 
@@ -169,11 +127,11 @@ def chat_users(request):
         try:
             queryset = queryset.filter(ministry_id=int(ministry))
         except (TypeError, ValueError):
-            return _err(request, "MINISTRY_INVALID", "ministry must be a ministry id.", status.HTTP_400_BAD_REQUEST)
+            return failure(request, "MINISTRY_INVALID", status.HTTP_400_BAD_REQUEST, code="MINISTRY_INVALID", error_message="ministry must be a ministry id.")
 
     queryset = queryset.order_by('first_name', 'last_name')
     serializer = ChatUserSerializer(queryset, many=True, context={"request": request})
-    return _ok(request, serializer.data)
+    return success(request, serializer.data)
 
 
 @api_view(['GET', 'POST'])
@@ -182,26 +140,26 @@ def conversations(request):
     if request.method == 'GET':
         queryset = _conversation_queryset(request.user)
         serializer = ConversationSerializer(queryset, many=True, context={"request": request})
-        return _ok(request, serializer.data)
+        return success(request, serializer.data)
 
     if request.data.get('type') in (Conversation.GROUP, Conversation.CHANNEL):
         return _create_group_or_channel(request, request.data.get('type'))
 
     user_id = request.data.get('user_id')
     if not user_id:
-        return _err(request, "USER_ID_REQUIRED", "user_id is required.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "USER_ID_REQUIRED", status.HTTP_400_BAD_REQUEST, code="USER_ID_REQUIRED", error_message="user_id is required.")
 
     try:
         user_id = int(user_id)
     except (TypeError, ValueError):
-        return _err(request, "USER_ID_INVALID", "user_id must be an integer.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "USER_ID_INVALID", status.HTTP_400_BAD_REQUEST, code="USER_ID_INVALID", error_message="user_id must be an integer.")
 
     if user_id == request.user.id:
-        return _err(request, "SELF_CONVERSATION", "Cannot start a conversation with yourself.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "SELF_CONVERSATION", status.HTTP_400_BAD_REQUEST, code="SELF_CONVERSATION", error_message="Cannot start a conversation with yourself.")
 
     other_user = CustomUser.objects.filter(id=user_id, is_active=True).first()
     if other_user is None:
-        return _err(request, "USER_NOT_FOUND", "User doesn't exist!", status.HTTP_404_NOT_FOUND)
+        return failure(request, "USER_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="USER_NOT_FOUND", error_message="User doesn't exist!")
 
     direct_key = Conversation.build_direct_key(request.user.id, other_user.id)
     try:
@@ -219,11 +177,7 @@ def conversations(request):
         conversation = Conversation.objects.get(direct_key=direct_key)
         created = False
 
-    return _ok(
-        request,
-        _serialize_for(request, conversation.id),
-        status_code=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
-    )
+    return success(request, _serialize_for(request, conversation.id), status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 def _create_group_or_channel(request, conversation_type):
@@ -231,11 +185,11 @@ def _create_group_or_channel(request, conversation_type):
     conversations) only by staff accounts."""
     is_channel = conversation_type == Conversation.CHANNEL
     if is_channel and not request.user.is_staff:
-        return _err(request, "CHANNEL_STAFF_ONLY", "Only staff accounts can create channels.", status.HTTP_403_FORBIDDEN)
+        return failure(request, "CHANNEL_STAFF_ONLY", status.HTTP_403_FORBIDDEN, code="CHANNEL_STAFF_ONLY", error_message="Only staff accounts can create channels.")
 
     title = str(request.data.get('title', '')).strip()
     if not title:
-        return _err(request, "TITLE_REQUIRED", "Group and channel conversations need a title.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "TITLE_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TITLE_REQUIRED", error_message="Group and channel conversations need a title.")
 
     members, error_response = _resolve_members(request)
     if error_response is not None:
@@ -243,11 +197,11 @@ def _create_group_or_channel(request, conversation_type):
 
     if not members and not is_channel:
         # A channel may start empty; a group needs at least one other member.
-        return _err(request, "USER_IDS_REQUIRED", "A group needs at least one other member.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "USER_IDS_REQUIRED", status.HTTP_400_BAD_REQUEST, code="USER_IDS_REQUIRED", error_message="A group needs at least one other member.")
 
     cap = _member_cap(conversation_type)
     if len(members) >= cap:
-        return _err(request, "TOO_MANY_MEMBERS", f"A {conversation_type} can have at most {cap} members.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "TOO_MANY_MEMBERS", status.HTTP_400_BAD_REQUEST, code="TOO_MANY_MEMBERS", error_message=f"A {conversation_type} can have at most {cap} members.")
 
     with transaction.atomic():
         conversation = Conversation.objects.create(
@@ -259,7 +213,7 @@ def _create_group_or_channel(request, conversation_type):
         )
 
     _notify_conversation_updated(conversation, "created")
-    return _ok(request, _serialize_for(request, conversation.id), status_code=status.HTTP_201_CREATED)
+    return success(request, _serialize_for(request, conversation.id), status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'PATCH'])
@@ -267,25 +221,25 @@ def _create_group_or_channel(request, conversation_type):
 def conversation_detail(request, conversation_id):
     membership = _get_membership(request, conversation_id)
     if membership is None:
-        return _err(request, "CONVERSATION_NOT_FOUND", "Conversation doesn't exist!", status.HTTP_404_NOT_FOUND)
+        return failure(request, "CONVERSATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="CONVERSATION_NOT_FOUND", error_message="Conversation doesn't exist!")
 
     if request.method == 'GET':
-        return _ok(request, _serialize_for(request, conversation_id))
+        return success(request, _serialize_for(request, conversation_id))
 
     conversation = membership.conversation
     if conversation.type == Conversation.DIRECT:
-        return _err(request, "NOT_GROUP", "Only group and channel conversations can be renamed.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "NOT_GROUP", status.HTTP_400_BAD_REQUEST, code="NOT_GROUP", error_message="Only group and channel conversations can be renamed.")
     if membership.role != ConversationParticipant.ADMIN:
-        return _err(request, "NOT_ADMIN", "Only admins can rename this conversation.", status.HTTP_403_FORBIDDEN)
+        return failure(request, "NOT_ADMIN", status.HTTP_403_FORBIDDEN, code="NOT_ADMIN", error_message="Only admins can rename this conversation.")
 
     title = str(request.data.get('title', '')).strip()
     if not title:
-        return _err(request, "TITLE_REQUIRED", "title is required.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "TITLE_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TITLE_REQUIRED", error_message="title is required.")
 
     conversation.title = title
     conversation.save(update_fields=["title", "updated_at"])
     _notify_conversation_updated(conversation, "renamed", extra={"title": title})
-    return _ok(request, _serialize_for(request, conversation_id))
+    return success(request, _serialize_for(request, conversation_id))
 
 
 @api_view(['POST', 'DELETE'])
@@ -293,20 +247,20 @@ def conversation_detail(request, conversation_id):
 def conversation_participants(request, conversation_id):
     membership = _get_membership(request, conversation_id)
     if membership is None:
-        return _err(request, "CONVERSATION_NOT_FOUND", "Conversation doesn't exist!", status.HTTP_404_NOT_FOUND)
+        return failure(request, "CONVERSATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="CONVERSATION_NOT_FOUND", error_message="Conversation doesn't exist!")
 
     conversation = membership.conversation
     if conversation.type == Conversation.DIRECT:
-        return _err(request, "NOT_GROUP", "Members can only be managed on group and channel conversations.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "NOT_GROUP", status.HTTP_400_BAD_REQUEST, code="NOT_GROUP", error_message="Members can only be managed on group and channel conversations.")
 
     is_admin = membership.role == ConversationParticipant.ADMIN
 
     if request.method == 'POST':
         if not is_admin:
-            return _err(request, "NOT_ADMIN", "Only group admins can add members.", status.HTTP_403_FORBIDDEN)
+            return failure(request, "NOT_ADMIN", status.HTTP_403_FORBIDDEN, code="NOT_ADMIN", error_message="Only group admins can add members.")
 
         if not request.data.get('user_ids') and not request.data.get('ministry_ids'):
-            return _err(request, "USER_IDS_REQUIRED", "Provide user_ids and/or ministry_ids.", status.HTTP_400_BAD_REQUEST)
+            return failure(request, "USER_IDS_REQUIRED", status.HTTP_400_BAD_REQUEST, code="USER_IDS_REQUIRED", error_message="Provide user_ids and/or ministry_ids.")
 
         members, error_response = _resolve_members(request)
         if error_response is not None:
@@ -316,7 +270,7 @@ def conversation_participants(request, conversation_id):
         existing_ids = set(conversation.participants.values_list("user_id", flat=True))
         new_members = [member for member in members if member.id not in existing_ids]
         if len(existing_ids) + len(new_members) > cap:
-            return _err(request, "TOO_MANY_MEMBERS", f"A {conversation.type} can have at most {cap} members.", status.HTTP_400_BAD_REQUEST)
+            return failure(request, "TOO_MANY_MEMBERS", status.HTTP_400_BAD_REQUEST, code="TOO_MANY_MEMBERS", error_message=f"A {conversation.type} can have at most {cap} members.")
 
         added = []
         for member in new_members:
@@ -329,21 +283,21 @@ def conversation_participants(request, conversation_id):
         if added:
             conversation.save(update_fields=["updated_at"])
             _notify_conversation_updated(conversation, "members_added", extra={"user_ids": added})
-        return _ok(request, _serialize_for(request, conversation_id))
+        return success(request, _serialize_for(request, conversation_id))
 
     # DELETE: remove a member (admin) or leave (self)
     try:
         target_id = int(request.data.get('user_id'))
     except (TypeError, ValueError):
-        return _err(request, "USER_ID_INVALID", "user_id must be an integer.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "USER_ID_INVALID", status.HTTP_400_BAD_REQUEST, code="USER_ID_INVALID", error_message="user_id must be an integer.")
 
     leaving = target_id == request.user.id
     if not leaving and not is_admin:
-        return _err(request, "NOT_ADMIN", "Only group admins can remove members.", status.HTTP_403_FORBIDDEN)
+        return failure(request, "NOT_ADMIN", status.HTTP_403_FORBIDDEN, code="NOT_ADMIN", error_message="Only group admins can remove members.")
 
     target = ConversationParticipant.objects.filter(conversation=conversation, user_id=target_id).first()
     if target is None:
-        return _err(request, "PARTICIPANT_NOT_FOUND", "That user is not in this group.", status.HTTP_404_NOT_FOUND)
+        return failure(request, "PARTICIPANT_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="PARTICIPANT_NOT_FOUND", error_message="That user is not in this group.")
 
     # Notify everyone including the removed user, then delete.
     affected_ids = conversation_user_ids(conversation)
@@ -368,8 +322,8 @@ def conversation_participants(request, conversation_id):
     )
 
     if leaving:
-        return _ok(request, None, message="LEFT_GROUP")
-    return _ok(request, _serialize_for(request, conversation_id))
+        return success(request, None, message="LEFT_GROUP")
+    return success(request, _serialize_for(request, conversation_id))
 
 
 @api_view(['GET', 'POST'])
@@ -377,7 +331,7 @@ def conversation_participants(request, conversation_id):
 def conversation_messages(request, conversation_id):
     membership = _get_membership(request, conversation_id)
     if membership is None:
-        return _err(request, "CONVERSATION_NOT_FOUND", "Conversation doesn't exist!", status.HTTP_404_NOT_FOUND)
+        return failure(request, "CONVERSATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="CONVERSATION_NOT_FOUND", error_message="Conversation doesn't exist!")
 
     if request.method == 'GET':
         try:
@@ -394,29 +348,26 @@ def conversation_messages(request, conversation_id):
             try:
                 queryset = queryset.filter(id__lt=int(before))
             except (TypeError, ValueError):
-                return _err(request, "BEFORE_INVALID", "before must be a message id.", status.HTTP_400_BAD_REQUEST)
+                return failure(request, "BEFORE_INVALID", status.HTTP_400_BAD_REQUEST, code="BEFORE_INVALID", error_message="before must be a message id.")
 
         messages = list(queryset[:limit + 1])
         has_more = len(messages) > limit
         messages = messages[:limit]
         serializer = MessageSerializer(messages, many=True, context={"request": request})
-        return _ok(
-            request,
-            {
+        return success(request, {
                 "messages": serializer.data,
                 "has_more": has_more,
                 "next_before": messages[-1].id if has_more and messages else None,
-            },
-        )
+            })
 
     conversation = membership.conversation
     if conversation.type == Conversation.CHANNEL and membership.role != ConversationParticipant.ADMIN:
-        return _err(request, "READ_ONLY_CHANNEL", "Only channel admins can post in a channel.", status.HTTP_403_FORBIDDEN)
+        return failure(request, "READ_ONLY_CHANNEL", status.HTTP_403_FORBIDDEN, code="READ_ONLY_CHANNEL", error_message="Only channel admins can post in a channel.")
 
     body = str(request.data.get('body', '')).strip()
     attachment = request.FILES.get('attachment')
     if not body and not attachment:
-        return _err(request, "EMPTY_MESSAGE", "Message body or attachment is required.", status.HTTP_400_BAD_REQUEST)
+        return failure(request, "EMPTY_MESSAGE", status.HTTP_400_BAD_REQUEST, code="EMPTY_MESSAGE", error_message="Message body or attachment is required.")
     message = Message.objects.create(
         conversation=conversation,
         sender=request.user,
@@ -440,7 +391,7 @@ def conversation_messages(request, conversation_id):
     )
     send_chat_push.delay(message.id)
 
-    return _ok(request, serializer.data, status_code=status.HTTP_201_CREATED)
+    return success(request, serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
@@ -448,7 +399,7 @@ def conversation_messages(request, conversation_id):
 def mark_conversation_read(request, conversation_id):
     membership = _get_membership(request, conversation_id)
     if membership is None:
-        return _err(request, "CONVERSATION_NOT_FOUND", "Conversation doesn't exist!", status.HTTP_404_NOT_FOUND)
+        return failure(request, "CONVERSATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, code="CONVERSATION_NOT_FOUND", error_message="Conversation doesn't exist!")
 
     now = timezone.now()
     membership.last_read_at = now
@@ -467,4 +418,4 @@ def mark_conversation_read(request, conversation_id):
                 "last_read_at": now.isoformat(),
             },
         )
-    return _ok(request, {"last_read_at": now.isoformat()})
+    return success(request, {"last_read_at": now.isoformat()})

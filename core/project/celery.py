@@ -10,10 +10,6 @@ app.autodiscover_tasks()
 
 # Keep default routing unless explicit Celery tasks are added.
 app.conf.task_routes = {
-    "AI.tasks.generate_answer_task": {"queue": "ai_queue"},
+    "ai.tasks.generate_answer_task": {"queue": "ai_queue"},
 }
 
-
-@app.task(bind=True)
-def debug_task(self):
-    print(f'Request: {self.request!r}')

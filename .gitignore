@@ -22,9 +22,6 @@ core/media/
 milvus-gpu-setup/volumes/
 core/conf/
 
-**/migrations/
-**/migrations/*.py
-!**/migrations/__init__.py
 
 # collectstatic output. Committed copies make deploys serve stale assets: a
 # `git reset --hard` rewrites them with a fresh mtime and collectstatic then
@@ -195,3 +192,8 @@ cython_debug/
 core/conf/
 db.sqlite3-shm
 db.sqlite3-wal
+
+.DS_Store
+
+# Service-account keys and other credential files (see docs/deploy.md)
+secrets/

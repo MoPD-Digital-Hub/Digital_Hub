@@ -768,7 +768,8 @@ async function loadPublicBodyDetail() {
       ]);
 
       const detailItems = Array.isArray(detailPayload?.data) ? detailPayload.data : [];
-      const performanceDetail = performancePayload && typeof performancePayload === "object" ? performancePayload : {};
+      const performanceBody = performancePayload?.data ?? performancePayload;
+      const performanceDetail = performanceBody && typeof performanceBody === "object" ? performanceBody : {};
 
       hero.innerHTML = renderHero(selectedOverview, detailItems, state);
       body.innerHTML = detailItems.length
