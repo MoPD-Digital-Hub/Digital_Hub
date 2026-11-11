@@ -11,7 +11,7 @@ PROD_MANAGE  := $(PROD_COMPOSE) exec web python manage.py
 .DEFAULT_GOAL := help
 .PHONY: help env up start down stop restart build rebuild ps logs shell dbshell manage migrate \
         migrations adopt-migrations superuser test check lint ci sync-catalog eval-ai ask-ai lock clean \
-        prod-deploy prod-rollback prod-ps prod-logs prod-shell prod-manage prod-adopt-migrations prod-sync-catalog
+        prod-deploy prod-rollback prod-restart prod-ps prod-logs prod-shell prod-manage prod-adopt-migrations prod-sync-catalog
 
 help: ## List the commands
 	@awk 'BEGIN {FS = ":.*##"} /^##@/ {printf "\n\033[1m%s\033[0m\n", substr($$0, 5)} \
@@ -116,6 +116,9 @@ prod-deploy: ## Pull origin/production, build, migrate, restart
 
 prod-rollback: ## Go back to the previous image
 	bash deploy/deploy.sh --rollback
+
+prod-restart: ## Restart production containers (e.g. after editing .env)
+	$(PROD_COMPOSE) restart
 
 prod-ps: ## Show production container status
 	$(PROD_COMPOSE) ps

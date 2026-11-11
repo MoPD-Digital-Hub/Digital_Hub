@@ -16,12 +16,15 @@ x-app: &app
       APP_UID: ${APP_UID:-1000}
   network_mode: host
   restart: unless-stopped
-  env_file:
-    - ../.env
   environment:
     DEBUG: "False"
     WEB_PORT: ${WEB_PORT:-8000}
   volumes:
+    # Django reads the server's .env itself (python-dotenv), exactly as it did
+    # before Docker. Passing it through Compose's env_file would re-parse it
+    # with different quoting and `$` rules, which could change SECRET_KEY and
+    # sign every user out.
+    - ../.env:/app/.env:ro
     # Uploaded files live on the server, as before.
     - ../core/media:/app/core/media
     # Key files (Firebase), kept on the server only, never in git or the image.

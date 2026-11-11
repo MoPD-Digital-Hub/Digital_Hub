@@ -40,6 +40,7 @@ containers, using the host network, so `DATABASE_HOST=127.0.0.1` and `REDIS_HOST
 |---|---|
 | `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`), `worker` and `beat`, restart automatically |
 | `deploy/deploy.sh` | Pull, build, migrate, restart, wait for health, keep the last 5 images |
+| `deploy/switch-to-docker.sh` | The one-time move of an existing systemd server to Docker (below) |
 | `deploy/nginx/data-hub.conf` | nginx site: TLS, `/media/` from disk, everything else to `127.0.0.1:8000` |
 | `.github/workflows/ci.yml` | Lint and tests on every push and pull request |
 | `.github/workflows/production.yml` | On push to `production`: run `ci.yml`; if it passes, SSH in, update the checkout, run `deploy.sh` |
@@ -72,57 +73,37 @@ follows. `deploy.sh` refuses to migrate until the adoption has been done.
 
 ### One-time switch from systemd to Docker
 
-Run on the server as the user that owns `/mnt/data/Digital_Hub` (`mopd`). Do step 1 **before** the new code
-reaches the server, because updating the checkout removes the key file from `core/`.
+`deploy/switch-to-docker.sh` does the whole switch and keeps the database, uploads and `.env`. Run it on the
+server as the user that owns `/mnt/data/Digital_Hub`, from a copy outside the checkout:
 
-1. Keep the Firebase key outside git:
-   ```bash
-   cd /mnt/data/Digital_Hub && mkdir -p secrets && cp core/Notification/push_notification/admas-9e2c7-9bcdd20b9461.json secrets/firebase-service-account.json && chmod 600 secrets/*.json
-   ```
-   (If it is already gone: `git show d838978:core/Notification/push_notification/admas-9e2c7-9bcdd20b9461.json > secrets/firebase-service-account.json`.)
-2. Back up the database:
-   ```bash
-   cd /mnt/data/Digital_Hub && set -a && . ./.env && set +a && PGPASSWORD="$DATABASE_PASSWORD" pg_dump -h "${DATABASE_HOST:-127.0.0.1}" -U "$DATABASE_USER" -Fc "$DATABASE_NAME" > ~/digital-hub-$(date +%F).dump && ls -lh ~/digital-hub-*.dump
-   ```
-3. Let the user run Docker, then log out and back in:
-   ```bash
-   sudo usermod -aG docker "$USER"
-   ```
-4. Update the checkout and build the image:
-   ```bash
-   cd /mnt/data/Digital_Hub && git fetch origin production && git reset --hard origin/production && docker compose -f deploy/compose.production.yaml build
-   ```
-5. Adopt the committed migrations (reports first; `--apply` only rewrites the history):
-   ```bash
-   docker compose -f deploy/compose.production.yaml run --rm --no-deps web python manage.py adopt_migrations
-   ```
-   ```bash
-   docker compose -f deploy/compose.production.yaml run --rm --no-deps web python manage.py adopt_migrations --apply
-   ```
-6. Deploy. The site keeps running on the old systemd Daphne meanwhile:
-   ```bash
-   bash deploy/deploy.sh --no-pull
-   ```
-7. Point nginx at the container: in the site file, replace the `domains.sock` upstream with
-   `server 127.0.0.1:8000;` (see `deploy/nginx/data-hub.conf`, keep your certificate lines), then:
-   ```bash
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-8. Stop the old services so they don't start again on boot:
-   ```bash
-   sudo systemctl disable --now daphne.service celery.service uwsgi.service
-   ```
-9. Schedule the daily AI catalog refresh (`crontab -e`):
-   ```
-   15 2 * * * cd /mnt/data/Digital_Hub && docker compose -f deploy/compose.production.yaml run --rm --no-deps web python manage.py sync_ai_catalog >> /tmp/ai-catalog.log 2>&1
-   ```
-10. Remove the folders left from the old layout (only old generated files remain in them):
-    ```bash
-    cd /mnt/data/Digital_Hub/core && rm -rf AI Notification userManagement Videos ../google-env
-    ```
+```bash
+cd /mnt/data/Digital_Hub && git fetch origin production && git show FETCH_HEAD:deploy/switch-to-docker.sh > /tmp/switch-to-docker.sh
+```
 
-To undo the switch: `docker compose -f deploy/compose.production.yaml down`, put the `domains.sock` upstream
-back, `sudo systemctl enable --now daphne.service celery.service`, reload nginx.
+```bash
+bash /tmp/switch-to-docker.sh prepare production
+```
+
+```bash
+bash /tmp/switch-to-docker.sh cutover
+```
+
+- `prepare` changes nothing the live site uses. It copies the Firebase key to `secrets/`, backs up the database,
+  `.env` and uploads to `/mnt/data/backups/digital-hub/`, builds the image, and checks the new image against
+  the live database: Django checks, the same `SECRET_KEY` and database settings as the running site, and the
+  schema the committed migrations expect.
+- `cutover` takes a final backup, adopts the committed migrations and migrates, stops the old Celery worker,
+  replaces the code, starts the containers, checks them, points nginx at `127.0.0.1:8000` (static files are
+  then served by the app), checks the public site, and disables the old `daphne`, `celery` and `uwsgi`
+  services. Downtime is the nginx reload. It stops, leaving the old site serving, if a check fails.
+- `bash /tmp/switch-to-docker.sh rollback` restores nginx, the old code, its migration history and the old
+  services.
+
+Afterwards, schedule the daily AI catalog refresh (`crontab -e`):
+
+```
+15 2 * * * cd /mnt/data/Digital_Hub && docker compose -f deploy/compose.production.yaml run --rm --no-deps web python manage.py sync_ai_catalog >> /tmp/ai-catalog.log 2>&1
+```
 
 ### Everyday operations
 
@@ -138,8 +119,8 @@ docker compose -f deploy/compose.production.yaml logs -f --tail 100 web
 docker compose -f deploy/compose.production.yaml exec web python manage.py shell
 ```
 
-After editing `.env`, run `docker compose -f deploy/compose.production.yaml up -d` to restart with the new
-values (a plain `restart` does not reload `.env`).
+After editing `.env`, run `docker compose -f deploy/compose.production.yaml restart` (or `make prod-restart`).
+The file is mounted into the containers and read by Django at start-up, exactly as it was before Docker.
 
 ## Dependencies
 
