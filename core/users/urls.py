@@ -1,5 +1,6 @@
-from django.urls import path, include
-from .views import user, reset_password, generate_login_opt, validate_login_opt, password_login, ministries
+from django.urls import path
+
+from users.api.views import generate_login_opt, ministries, password_login, reset_password, user, validate_login_opt
 
 urlpatterns = [
     path('', user),

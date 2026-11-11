@@ -1,23 +1,25 @@
 import hashlib
 import logging
-import requests
 
-from django.http import HttpResponse
+import requests
+from celery.result import AsyncResult
+from django.conf import settings
 from django.core.cache import cache
+from django.http import HttpResponse
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
-from ai.models import QuestionHistory, ChatInstance
-from .serializers import ChatInstanceSerializer, QuestionHistorySerializer
+from rest_framework.permissions import IsAuthenticated
+
+from ai.engine import compat
 from ai.infrastructure.health import run_dependency_checks
 from ai.infrastructure.translation import translate_text_with_gemini
 from ai.infrastructure.tts import synthesize_gemini_tts
-from celery.result import AsyncResult
-from project.celery import app as celery_app
-from django.conf import settings
+from ai.models import ChatInstance, QuestionHistory
 from ai.tasks import generate_answer_task
-from ai.engine import compat
-from project.responses import failure, success
+from project.celery import app as celery_app
+from project.responses import failure, request_id, success
+
+from .serializers import ChatInstanceSerializer, QuestionHistorySerializer
 
 LOGGER = logging.getLogger("ai.api")
 
@@ -95,7 +97,7 @@ def answer(request, chat_instance_id):
     mode = request.query_params.get("mode", "").lower()
     if settings.AI_USE_ASYNC_QUEUE or mode == "async":
         try:
-            task = generate_answer_task.delay(chat_instance.id, question, _request_id(request))
+            task = generate_answer_task.delay(chat_instance.id, question, request_id(request))
             return success(request, {
                     "task_id": task.id,
                     "chat_instance_id": chat_instance.id,

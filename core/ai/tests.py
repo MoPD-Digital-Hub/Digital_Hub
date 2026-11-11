@@ -1,5 +1,4 @@
 import json
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -8,10 +7,10 @@ from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase, TransactionTestCase
 
-from ai.models import AnswerTrace, CatalogEntity, ChatInstance, QuestionHistory
 from ai.engine import catalog, planner, render, verify
 from ai.engine.catalog import CatalogIndex, Match
 from ai.engine.llm import LLMError
+from ai.models import AnswerTrace, CatalogEntity, ChatInstance, QuestionHistory
 
 
 def entity(kind, external_id, name, code="", context="", aliases=(), vector=(1.0, 0.0)):
@@ -52,7 +51,7 @@ class CatalogSyncTests(TestCase):
 
         def run(rows):
             embed = lambda texts: [np.array([1.0, 0.0])] * len(texts)
-            with patch.object(catalog, "fetch_time_series_topics", return_value=[]), \
+            with patch.object(catalog.time_series_client, "fetch_topics", return_value=[]), \
                     patch.object(catalog, "_indicator_rows", return_value=[dict(r) for r in rows]), \
                     patch.object(catalog.llm, "embed_documents", side_effect=embed) as embedded:
                 return catalog.sync(include_dpmes=False, log=lambda *_: None), embedded.call_count
@@ -403,6 +402,20 @@ class ChatEndpointTests(TransactionTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["data"], {"chat_instance_id": chat.id, "question": "GDP?", "answer": "<p>7.7%</p>",
                                                  "route": "get_time_series_context", "token_usage": None})
+
+    def test_async_mode_queues_the_answer_with_the_request_id(self):
+        from rest_framework.test import APIClient
+
+        user, chat = self.make_chat()
+        client = APIClient()
+        client.force_authenticate(user)
+        with patch("ai.api.views.generate_answer_task") as task:
+            task.delay.return_value.id = "task-1"
+            response = client.post(f"/api/ai-chat/answer/{chat.id}/?mode=async", {"question": "GDP?"}, format="json",
+                                   HTTP_X_REQUEST_ID="req-9")
+        self.assertEqual(response.status_code, 202)
+        task.delay.assert_called_once_with(chat.id, "GDP?", "req-9")
+        self.assertEqual(response.data["data"]["status_url"], "/api/ai-chat/task-status/task-1/")
 
     def test_history_is_only_for_the_owner(self):
         from rest_framework.test import APIClient

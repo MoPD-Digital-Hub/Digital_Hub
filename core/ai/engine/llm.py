@@ -8,7 +8,6 @@ import asyncio
 import json
 import os
 import weakref
-
 from urllib.parse import urlparse
 
 import numpy as np

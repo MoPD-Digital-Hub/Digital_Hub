@@ -19,10 +19,12 @@
 - `core/ai/` (app label `AI`): Admas AI: the answer pipeline (`engine/`), chat WebSockets, REST endpoints, translate and TTS.
 - `core/users/` (app label `userManagement`): custom user model, OTP and password login, password reset, JWT refresh.
 - `core/dashboard/`: server-rendered dashboard pages and account pages.
-- `core/mobile/`: mobile app content and time-series APIs, app version checks.
+- `core/mobile/`: mobile app content (apps, settings, FAQ, contact) and app version checks.
 - `core/notifications/` (app label `Notification`): notification models, API, Firebase push tasks.
 - `core/chat/`: user-to-user messaging (REST + WebSockets).
-- `core/integrations/dpmes/`: DPMES API client, response mapping, and the `/api/mobile/` scorecard endpoints the website uses.
+- `core/integrations/`: one package per external service, each with `client.py` (the calls), `views.py` + `urls.py` (the `/api/mobile/` endpoints that serve its data).
+- `core/integrations/dpmes/`: DPMES client, response mapping (`compat.py`), and the scorecard endpoints the website uses.
+- `core/integrations/time_series/`: time-series service client (address from `TIME_SERIES_API_BASE`), the pass-through endpoints for the app and website, and their OpenAPI docs.
 - Every app: REST views in `api/views.py`, serializers in `api/serializers.py`, Celery tasks in `tasks.py`, routes in `urls.py`.
 - API responses: build them with `project.responses.success()` / `failure()` (docs/api.md). Every `/api/` JSON response is completed to the standard shape by middleware; it must stay backward compatible with the installed mobile app (add fields, never rename, retype or remove).
 - App labels keep the old names so tables, migrations and admin URLs are unchanged; import by package name (`ai`, `users`, `notifications`).
@@ -62,10 +64,11 @@
 - `django-axes` is enabled for lockout/rate limiting.
 
 ## Other App Responsibilities
-- `mobile`: app metadata, FAQ/settings/contact info, app version enforcement, time-series APIs.
+- `mobile`: app metadata, FAQ/settings/contact info, app version enforcement.
+- `integrations/time_series`: indicator data passed through from the time-series service; also used by the AI (catalog sync, indicator values).
 - `notifications`: categories + notifications, sends Firebase push via Celery on save when eligible.
 - `integrations/dpmes`: DPMES scorecards for the website (the browser cannot call DPMES directly: it needs the API key and sends no CORS headers).
-- `dashboard`: HTML pages for dashboard, stats, SDG pages, profile/password pages, Admas AI page.
+- `dashboard`: HTML pages for dashboard, stats, SDG pages, profile/password pages, Admas AI page, and the app's public privacy policy.
 
 ## Important Environment Variables
 - Core:
@@ -93,21 +96,19 @@
 - Start by checking `git status --short` because this repo often has ongoing local edits.
 - Read `core/project/settings.py`, `core/project/urls.py`, and the relevant app `urls.py` before changing behavior.
 - For AI work, read `docs/ai.md`, then `core/ai/engine/pipeline.py` and `core/ai/consumers.py`.
-- For auth work, inspect `core/users/views.py`, `core/users/drf_authentication.py`, and `core/users/auth_backends.py`.
-- For mobile/data APIs, inspect `core/mobile/api/`.
+- For auth work, inspect `core/users/api/views.py` (sign-in, OTP, password reset, token refresh) and `core/users/models.py`.
+- For mobile/data APIs, inspect `core/mobile/api/` and `core/integrations/`.
 - For dashboard UI changes, inspect `core/dashboard/views.py` plus templates/static assets.
 
 ## Tests
-- Existing tests are concentrated in:
-- `core/ai/tests.py`
-- `core/users/tests.py`
-- Small placeholder test files also exist in other apps.
-- Preferred verification:
-- `docker compose exec web python manage.py test`
+- Every package has a `tests.py`: `ai`, `users`, `chat`, `notifications`, `mobile`, `dashboard`, `project` (API response shape), `integrations/dpmes`, `integrations/time_series`.
+- Tests never call the real services: patch the LLM gateway, DPMES, time-series and Firebase. Saving a `Notification` queues a push to every device, so tests that create one must patch `notifications.models.send_to_all` (see `notifications/tests.py`).
+- Before finishing a change: `make ci` (lint + Django checks + missing-migration check + tests). GitHub runs the same on every push (`.github/workflows/ci.yml`), and a push to `production` deploys only if it passes.
+- Lint rules are in `ruff.toml`; `make lint fix=1` applies the safe fixes.
 
 ## Common Commands
 - Everything goes through `make` (run `make` to list targets): `make up`, `make test`, `make logs`, `make prod-deploy`; see `docs/deploy.md`
-- Run tests: `docker compose exec web python manage.py test`
+- Lint, checks and tests together: `make ci`
 - Deploy: push to `production`, or on the server `bash deploy/deploy.sh`
 
 ## First Read For Future Sessions
@@ -116,5 +117,5 @@
 - `core/project/urls.py`
 - `core/ai/README.md`
 - `docs/ai.md`
-- `core/users/views.py`
+- `core/users/api/views.py`
 

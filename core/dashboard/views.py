@@ -9,10 +9,10 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
+
 from ai.models import ChatInstance, QuestionHistory
 
 from .forms import DashboardPasswordChangeForm, DashboardProfileForm
-
 
 SDG_DATA_TEMPLATE = "https://sdg.mopd.gov.et/_next/data/IKzAUZqfiBSFdEHfm_tML/goals/sdg/{goal_id}.json"
 
@@ -353,3 +353,8 @@ def sdg_detail_data(request, goal_id):
         return JsonResponse({"detail": "SDG goal not found."}, status=404)
 
     return JsonResponse(payload)
+
+
+def privacy_policy(request):
+    """The ADMAS mobile app's privacy policy (public; linked from the app stores)."""
+    return render(request, 'privacy_policy.html')

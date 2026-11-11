@@ -1,20 +1,12 @@
 """Fetch the indicator and organization lists the catalog is built from."""
 
-import os
 import re
-
-import requests
 
 from integrations.dpmes import client as dpmes_client
 
-REQUEST_TIMEOUT = 60
 # Long technical descriptions drown out the indicator name in the embedding,
 # so the catalog keeps only their opening.
 MAX_DESCRIPTION_CHARS = 220
-
-
-def time_series_base_url():
-    return os.getenv("TIME_SERIES_API_BASE", "https://time-series.mopd.gov.et/api/mobile").rstrip("/")
 
 
 def lead_sentence(text):
@@ -24,20 +16,6 @@ def lead_sentence(text):
     if len(sentence) > MAX_DESCRIPTION_CHARS:
         sentence = sentence[: MAX_DESCRIPTION_CHARS - 1].rstrip() + "…"
     return sentence
-
-
-def fetch_time_series_topics(session=None):
-    """Every topic with its categories and (nested) indicators."""
-    session = session or requests.Session()
-    base = time_series_base_url()
-    response = session.get(f"{base}/topic-list/", timeout=REQUEST_TIMEOUT)
-    response.raise_for_status()
-    topics = []
-    for topic in response.json().get("data") or []:
-        detail = session.get(f"{base}/topic-detail/{topic['id']}/", timeout=REQUEST_TIMEOUT)
-        detail.raise_for_status()
-        topics.append(detail.json().get("data") or {})
-    return topics
 
 
 def fetch_dpmes(period):

@@ -1,17 +1,14 @@
 import os
-import logging
-from pathlib import Path
 from datetime import timedelta
-from dotenv import load_dotenv
-from decouple import Csv, config
-from ai.config import validate_ai_config
-# import logging
-# import logging.handlers
+from pathlib import Path
 
+from decouple import Csv, config
+from dotenv import load_dotenv
+
+from ai.config import validate_ai_config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-LOG_DIR = os.path.join(BASE_DIR.parent, 'logs')
 
 
 load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
@@ -20,6 +17,7 @@ load_dotenv(os.path.join(BASE_DIR.parent, '.env'))
 # Django 4.2.x + Python 3.14 compatibility:
 # BaseContext.__copy__ in Django 4.2 uses copy(super()), which fails on 3.14.
 from django.template.context import BaseContext  # noqa: E402
+
 
 def _patched_base_context_copy(self):
     duplicate = self.__class__.__new__(self.__class__)
@@ -360,65 +358,6 @@ AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
 AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
 AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
-
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-
-#     'formatters': {
-#         'uwsgi_style': {
-#             'format': '[{asctime}] {levelname} {name}: {message}',
-#             'style': '{',
-#         },
-#     },
-
-#     'handlers': {
-#         'daphne_file': {
-#             'level': 'DEBUG',
-#             'class': 'logging.FileHandler',
-#             'filename': '/mnt/data/Digital_Hub/core/daphne.log',
-#             'formatter': 'uwsgi_style',
-#         },
-#     },
-
-#     'loggers': {
-#         # Django core
-#         'django': {
-#             'handlers': ['daphne_file'],
-#             'level': 'DEBUG',
-#             'propagate': True,
-#         },
-
-#         # Django requests
-#         'django.request': {
-#             'handlers': ['daphne_file'],
-#             'level': 'DEBUG',
-#             'propagate': False,
-#         },
-
-#         # Channels
-#         'channels': {
-#             'handlers': ['daphne_file'],
-#             'level': 'DEBUG',
-#             'propagate': True,
-#         },
-
-#         # Daphne server
-#         'daphne': {
-#             'handlers': ['daphne_file'],
-#             'level': 'DEBUG',
-#             'propagate': True,
-#         },
-
-#         # Your project apps
-#         'project': {   # 🔴 replace with your real project name
-#             'handlers': ['daphne_file'],
-#             'level': 'DEBUG',
-#             'propagate': True,
-#         },
-#     },
-# }
-
 
 # Email settings
 EMAIL_BACKEND = os.getenv(

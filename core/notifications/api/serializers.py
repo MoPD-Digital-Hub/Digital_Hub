@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from notifications.models import NotificationCategory, Notification
+
+from notifications.models import Notification, NotificationCategory
+
 
 class NotificationCategorySerializer(serializers.ModelSerializer):
     class Meta:

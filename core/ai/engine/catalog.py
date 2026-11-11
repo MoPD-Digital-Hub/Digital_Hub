@@ -18,9 +18,10 @@ import numpy as np
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
-from ai.engine.sources import fetch_dpmes, fetch_time_series_topics, lead_sentence
-from ai.models import CatalogEntity
 from ai.engine import llm
+from ai.engine.sources import fetch_dpmes, lead_sentence
+from ai.models import CatalogEntity
+from integrations.time_series import client as time_series_client
 
 LOGGER = logging.getLogger(__name__)
 EMBED_BATCH = 64
@@ -176,7 +177,7 @@ def sync(*, include_dpmes=True, period=None, log=LOGGER.info):
     from integrations.dpmes import client as dpmes_client
 
     log("Fetching time-series topics…")
-    rows = _indicator_rows(fetch_time_series_topics())
+    rows = _indicator_rows(time_series_client.fetch_topics())
     log(f"  {len(rows)} indicators")
     if include_dpmes:
         period = period or {"year": dpmes_client.current_ethiopian_year() - 1}

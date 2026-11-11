@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
 from notifications.tasks import send_to_all
 
 

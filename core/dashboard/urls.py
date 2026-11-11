@@ -1,13 +1,13 @@
 from django.urls import path
 
-from .api import organization_overview
+from dashboard.api.views import organization_overview
 
 from .views import (
-    admas_ai_page,
     about_dpmes_page,
+    admas_ai_page,
     change_password_page,
-    dashboard_logout,
     dashboard_login,
+    dashboard_logout,
     data_categories_page,
     data_indicator_detail_page,
     data_topic_detail_page,
@@ -20,6 +20,7 @@ from .views import (
     policy_area_list_page,
     public_body_detail_page,
     public_body_list_page,
+    sample_dashboard,
     sdg_data_page,
     sdg_detail_data,
     sdg_detail_page,
@@ -27,7 +28,6 @@ from .views import (
     sdg_list_page,
     sector_project_detail_page,
     sector_project_list_page,
-    sample_dashboard,
 )
 
 urlpatterns = [

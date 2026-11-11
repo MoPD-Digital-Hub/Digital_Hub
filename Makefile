@@ -10,7 +10,7 @@ PROD_MANAGE  := $(PROD_COMPOSE) exec web python manage.py
 
 .DEFAULT_GOAL := help
 .PHONY: help env up start down stop restart build rebuild ps logs shell dbshell manage migrate \
-        migrations adopt-migrations superuser test check sync-catalog eval-ai ask-ai lock clean \
+        migrations adopt-migrations superuser test check lint ci sync-catalog eval-ai ask-ai lock clean \
         prod-deploy prod-rollback prod-ps prod-logs prod-shell prod-manage prod-adopt-migrations prod-sync-catalog
 
 help: ## List the commands
@@ -18,7 +18,7 @@ help: ## List the commands
 	  /^[a-zA-Z_-]+:.*##/ {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
 	@echo "  Arguments: make manage cmd=\"showmigrations AI\"   make ask-ai q=\"What is GDP growth?\""
-	@echo "             make logs s=worker                      make test app=AI"
+	@echo "             make logs s=worker                      make test app=ai"
 
 ##@ Local development
 
@@ -74,12 +74,17 @@ adopt-migrations: ## One-time: move an old database to the committed migrations 
 superuser: ## Create an admin user
 	$(MANAGE) createsuperuser
 
-test: ## Run the tests (app=AI to run one app)
+test: ## Run the tests (app=ai to run one app)
 	$(MANAGE) test $(app)
 
 check: ## Django checks plus a check for missing migrations
 	$(MANAGE) check
 	$(MANAGE) makemigrations --check --dry-run
+
+lint: ## Lint the code with ruff (fix=1 applies the safe fixes)
+	docker run --rm -v "$(CURDIR)":/src -w /src ghcr.io/astral-sh/ruff:0.8.4 check core $(if $(fix),--fix)
+
+ci: lint check test ## Everything CI runs: lint, checks, tests
 
 ##@ AI
 

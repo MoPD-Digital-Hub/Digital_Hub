@@ -1,4 +1,3 @@
-from rest_framework import serializers
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -6,6 +5,7 @@ from drf_spectacular.utils import (
     OpenApiTypes,
     extend_schema,
 )
+from rest_framework import serializers
 
 
 class SuccessEnvelopeSerializer(serializers.Serializer):
@@ -16,19 +16,6 @@ class SuccessEnvelopeSerializer(serializers.Serializer):
 
 class ErrorEnvelopeSerializer(serializers.Serializer):
     detail = serializers.CharField()
-
-
-class UpdateCheckDataSerializer(serializers.Serializer):
-    force_update = serializers.BooleanField()
-    optional_update = serializers.BooleanField()
-    latest_version = serializers.CharField()
-    message = serializers.CharField(allow_blank=True)
-
-
-class UpdateCheckResponseSerializer(serializers.Serializer):
-    result = serializers.CharField()
-    message = serializers.CharField()
-    data = UpdateCheckDataSerializer()
 
 
 class TopicListItemSerializer(serializers.Serializer):
@@ -491,14 +478,6 @@ YEAR_LIST_RESPONSE_EXAMPLE = OpenApiExample(
     response_only=True,
 )
 
-
-VERSION_PARAMETER = OpenApiParameter(
-    name="version",
-    type=OpenApiTypes.STR,
-    location=OpenApiParameter.QUERY,
-    required=True,
-    description="Current mobile app semantic version, for example 2.1.0.",
-)
 
 EXPORT_DATA_TYPE_PARAMETER = OpenApiParameter(
     name="data_type",

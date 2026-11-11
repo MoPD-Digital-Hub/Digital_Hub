@@ -1,5 +1,7 @@
 from django.db import models
+
 from users.models import CustomUser as User
+
 
 class Document(models.Model):
     name = models.CharField(null=True, blank=True, max_length=100)

@@ -3,8 +3,8 @@ import json
 from asgiref.sync import async_to_sync
 from django.core.management.base import BaseCommand
 
-from ai.models import AnswerTrace
 from ai.engine.pipeline import answer
+from ai.models import AnswerTrace
 
 
 class Command(BaseCommand):

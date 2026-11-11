@@ -1,10 +1,11 @@
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
+from dashboard.views import privacy_policy
 from users.api.views import CustomTokenRefreshView
-from mobile.views import privacy_policy
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,6 +15,7 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('api/mobile/', include('mobile.urls')),
     path('api/mobile/', include('integrations.dpmes.urls')),
+    path('api/mobile/', include('integrations.time_series.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs-swagger'),
     path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='api-schema'), name='api-docs-redoc'),

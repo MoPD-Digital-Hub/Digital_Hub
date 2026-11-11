@@ -25,7 +25,7 @@ class PasswordLoginTests(TestCase):
             password="Str0ng!Pass",
         )
 
-    @patch("users.views.send_email")
+    @patch("users.api.views.send_email")
     def test_valid_credentials_return_tokens_without_email(self, mock_send_email):
         response = self.client.post(self.url, {"email": "Person@Example.com", "password": "Str0ng!Pass"}, format="json")
 

@@ -40,7 +40,8 @@ containers, using the host network, so `DATABASE_HOST=127.0.0.1` and `REDIS_HOST
 | `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`) and `worker`, restart automatically |
 | `deploy/deploy.sh` | Pull, build, migrate, restart, wait for health, keep the last 5 images |
 | `deploy/nginx/data-hub.conf` | nginx site: TLS, `/media/` from disk, everything else to `127.0.0.1:8000` |
-| `.github/workflows/production.yml` | On push to `production`: SSH in, update the checkout, run `deploy.sh` |
+| `.github/workflows/ci.yml` | Lint and tests on every push and pull request |
+| `.github/workflows/production.yml` | On push to `production`: run `ci.yml`; if it passes, SSH in, update the checkout, run `deploy.sh` |
 
 Mounted from the server into the containers: `core/media/` (uploads) and `secrets/` (key files, read-only).
 Migrations are committed and built into the image; `deploy.sh` applies them.

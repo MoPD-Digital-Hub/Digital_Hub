@@ -1,0 +1,36 @@
+name: CI
+
+# Lint and tests. Runs on every branch and pull request, and is called by the
+# production workflow so nothing deploys unless it passes.
+on:
+  push:
+    branches-ignore:
+      - production
+  pull_request:
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint (ruff.toml)
+        run: docker run --rm -v "$PWD":/src -w /src ghcr.io/astral-sh/ruff:0.8.4 check core
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test configuration
+        # The tests never call the real services (LLM gateway, DPMES, time-series, Firebase).
+        run: printf 'DEBUG=True\nSECRET_KEY=ci-only-not-a-secret\n' > .env
+      - name: Build the image
+        run: docker compose build web
+      - name: Django checks, missing migrations, tests
+        run: >
+          docker compose run --rm web sh -c
+          "python manage.py check &&
+          python manage.py makemigrations --check --dry-run &&
+          python manage.py test"

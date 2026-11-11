@@ -1,0 +1,16 @@
+# Lint rules for `make lint` and CI. Kept to checks that find real mistakes
+# (undefined names, unused imports and variables, syntax errors) plus import order.
+target-version = "py312"
+line-length = 120
+extend-exclude = ["core/static", "core/staticfiles", "core/media", "**/migrations"]
+
+[lint]
+select = ["F", "E9", "I"]
+
+[lint.isort]
+known-first-party = ["ai", "chat", "dashboard", "integrations", "mobile", "notifications", "project", "users"]
+
+[lint.per-file-ignores]
+# Django loads these for their side effects / re-exports.
+"**/admin.py" = ["F403", "F405"]
+"core/project/asgi.py" = ["E402"]

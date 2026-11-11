@@ -1,5 +1,5 @@
-from rest_framework import serializers
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from rest_framework import serializers
 
 from users.api.serializers import (
     EmailSerializer,

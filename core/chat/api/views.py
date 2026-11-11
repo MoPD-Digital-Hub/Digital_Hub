@@ -1,17 +1,17 @@
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
-from django.db.models import Q
-
 from chat.models import Conversation, ConversationParticipant, Message
 from chat.services import broadcast_to_users, conversation_user_ids
 from chat.tasks import send_chat_push
-from users.models import CustomUser, Ministry
-from .serializers import ChatUserSerializer, ConversationSerializer, MessageSerializer
 from project.responses import failure, success
+from users.models import CustomUser, Ministry
+
+from .serializers import ChatUserSerializer, ConversationSerializer, MessageSerializer
 
 MESSAGES_PAGE_SIZE_DEFAULT = 30
 MESSAGES_PAGE_SIZE_MAX = 100

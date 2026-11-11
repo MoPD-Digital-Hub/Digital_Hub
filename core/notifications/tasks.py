@@ -1,8 +1,8 @@
-from firebase_admin import messaging
-from notifications.firebase import initialize_firebase
 from celery import shared_task
 from django.utils import timezone
+from firebase_admin import messaging
 
+from notifications.firebase import initialize_firebase
 
 
 @shared_task

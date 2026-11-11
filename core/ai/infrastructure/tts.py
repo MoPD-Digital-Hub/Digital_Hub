@@ -8,7 +8,6 @@ import requests
 
 from ai.infrastructure.text_utils import compact_text
 
-
 GEMINI_TTS_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 

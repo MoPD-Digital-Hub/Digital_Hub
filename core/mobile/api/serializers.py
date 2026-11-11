@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from mobile.models import App , ContactUs , FAQ , Setting
+
+from mobile.models import FAQ, App, ContactUs, Setting
+
 
 class AppSerializer(serializers.ModelSerializer):
     class Meta:

@@ -16,7 +16,7 @@ question
  6. Check     no model: numbers in the explanation must exist in the data; foreign-script detection
 ```
 
-Code: `core/ai/engine/` — `planner.py`, `catalog.py` (built from `sources.py`), `tools.py`, `compose.py`, `render.py`,
+Code: `core/ai/engine/` — `planner.py`, `catalog.py` (built from `sources.py`, which reads the time-series and DPMES clients in `core/integrations/`), `tools.py`, `compose.py`, `render.py`,
 `verify.py`, `pipeline.py`; `llm.py` is the gateway client.
 
 Every answer writes a `QuestionHistory` row (the chat history) and an `AnswerTrace`

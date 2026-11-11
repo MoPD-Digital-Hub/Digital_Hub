@@ -1,9 +1,9 @@
 import asyncio
-import os
 import json
 import logging
-import ssl
+import os
 import re
+import ssl
 from html import unescape
 
 import aiohttp
@@ -12,8 +12,8 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
 
-from ai.infrastructure.translation import translate_text_with_gemini
 from ai.engine import compat
+from ai.infrastructure.translation import translate_text_with_gemini
 
 LOGGER = logging.getLogger("ai.consumers")
 WS_SEMAPHORE = asyncio.Semaphore(max(1, getattr(settings, "AI_WS_MAX_CONCURRENCY", 20)))

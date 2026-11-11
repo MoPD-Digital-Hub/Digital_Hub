@@ -1,4 +1,5 @@
 from django.urls import path
+
 from ai.api.views import (
     answer,
     chat,
@@ -8,9 +9,9 @@ from ai.api.views import (
     get_chat_list,
     health,
     task_status,
-    tts_prefetch,
     translate,
     tts,
+    tts_prefetch,
     update_chat_instance,
 )
 

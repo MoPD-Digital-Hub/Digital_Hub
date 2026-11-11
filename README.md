@@ -22,7 +22,7 @@ Digital_Hub/
 ├── core/                  # Django project (manage.py)
 │   ├── project/           # settings, urls, ASGI, Celery
 │   ├── ai/  users/  dashboard/  mobile/  chat/  notifications/
-│   ├── integrations/      # external APIs (DPMES)
+│   ├── integrations/      # external services: dpmes/, time_series/
 │   ├── templates/  static/
 ├── deploy/                # production compose file, deploy script, nginx site
 ├── secrets/               # key files, git-ignored (docs/deploy.md)
@@ -49,8 +49,10 @@ every command; the common ones:
 | Command | Does |
 |---|---|
 | `make logs` | Follow web and worker logs (`s=db` for another service) |
-| `make test` | Run the tests (`app=AI` for one app) |
+| `make test` | Run the tests (`app=ai` for one app) |
 | `make check` | Django checks and missing-migration check |
+| `make lint` | Lint with ruff (`fix=1` applies the safe fixes) |
+| `make ci` | Everything GitHub runs before a deploy: lint, checks, tests |
 | `make shell` / `make dbshell` | Django shell / psql |
 | `make manage cmd="..."` | Any `manage.py` command |
 | `make ask-ai q="..."` | Ask the AI one question and see its trace |

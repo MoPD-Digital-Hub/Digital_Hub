@@ -1,8 +1,8 @@
 import requests
 
 from ai.engine import llm
-from ai.engine.sources import time_series_base_url
 from integrations.dpmes import client as dpmes_client
+from integrations.time_series import client as time_series_client
 
 
 def _http_up(url: str, timeout: float = 2.5) -> bool:
@@ -34,7 +34,7 @@ def check_embeddings():
 
 
 def check_time_series_api():
-    return _http_up(f"{time_series_base_url()}/annual_value/?code=EG-GDPCP-01")
+    return _http_up(f"{time_series_client.base_url()}/annual_value/?code=EG-GDPCP-01")
 
 
 def _dpmes_answers(path, params=None):

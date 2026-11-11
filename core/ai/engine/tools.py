@@ -13,11 +13,11 @@ from typing import Callable
 import requests
 from django.core.cache import cache
 
-from ai.engine.sources import time_series_base_url
-from ai.models import CatalogEntity
 from ai.engine import periods
+from ai.models import CatalogEntity
 from integrations.dpmes import client as dpmes_client
 from integrations.dpmes import compat as dpmes_compat
+from integrations.time_series import client as time_series_client
 
 CACHE_SECONDS = 300
 MAX_KPIS = 25
@@ -78,7 +78,7 @@ def indicator_series(*, indicator, year=None, **_):
 
     def load():
         try:
-            response = requests.get(f"{time_series_base_url()}/annual_value/", params={"code": code}, timeout=20)
+            response = time_series_client.annual_value(code)
         except requests.RequestException as exc:
             raise ToolError(f"The time-series service is unreachable ({exc}).") from exc
         if response.status_code == 400:

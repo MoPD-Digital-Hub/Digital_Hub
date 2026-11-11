@@ -1,12 +1,16 @@
-from .serializers import AppSerializer , SettingSerializer , FAQSerializer , ContactUsSerializer
-from mobile.models import App , Setting , FAQ , ContactUs,AppVersion
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from collections import defaultdict
-from packaging import version as v
+
 from drf_spectacular.utils import extend_schema
+from packaging import version as v
+from rest_framework import status
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+
+from mobile.models import FAQ, App, AppVersion, ContactUs, Setting
 from project.responses import LEGACY_SUCCESS, failure, success
+
+from .serializers import AppSerializer, ContactUsSerializer, FAQSerializer, SettingSerializer
+
 
 @extend_schema(exclude=True)
 @api_view(['GET'])
@@ -66,7 +70,11 @@ def check_update(request):
         return failure(request, "No version info found", status.HTTP_404_NOT_FOUND,
                        code="NO_VERSION_INFO", detail="No version info found")
 
-    current = v.parse(user_version)
+    try:
+        current = v.parse(user_version)
+    except v.InvalidVersion:
+        return failure(request, "version must look like 2.1.0", status.HTTP_400_BAD_REQUEST,
+                       code="VERSION_INVALID", detail="version must look like 2.1.0")
     min_supported = v.parse(app_version.min_supported_version)
     latest = v.parse(app_version.latest_version)
 

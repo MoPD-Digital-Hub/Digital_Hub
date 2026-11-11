@@ -6,12 +6,11 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.urls import Resolver404, resolve
 from django.utils import timezone
-from rest_framework_simplejwt import authentication
-from rest_framework_simplejwt.tokens import AccessToken
-
 from drf_user_activity_tracker import ACTIVITY_TRACKER_SIGNAL
 from drf_user_activity_tracker.start_logger_when_server_starts import LOGGER_THREAD
 from drf_user_activity_tracker.utils import get_client_ip, get_headers, mask_sensitive_data
+from rest_framework_simplejwt import authentication
+from rest_framework_simplejwt.tokens import AccessToken
 
 User = get_user_model()
 

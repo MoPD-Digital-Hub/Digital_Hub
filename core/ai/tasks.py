@@ -1,7 +1,7 @@
 from celery import shared_task
 
-from ai.models import ChatInstance
 from ai.engine import compat
+from ai.models import ChatInstance
 
 
 @shared_task(bind=True)

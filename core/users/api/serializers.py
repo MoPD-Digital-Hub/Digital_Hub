@@ -1,8 +1,10 @@
-from users.models import CustomUser
-from rest_framework import serializers
 import re
-from rest_framework import serializers
+
 from django.contrib.auth.hashers import make_password
+from rest_framework import serializers
+
+from users.models import CustomUser
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

@@ -15,10 +15,10 @@ import time
 
 from asgiref.sync import sync_to_async
 
-from ai.models import AnswerTrace, CatalogEntity, QuestionHistory
 from ai.engine import catalog, compose, planner, render, verify
 from ai.engine.llm import LLMError
 from ai.engine.tools import TOOLS, ToolError
+from ai.models import AnswerTrace, CatalogEntity, QuestionHistory
 
 LOGGER = logging.getLogger(__name__)
 # Below this blended similarity a match is more likely wrong than right.

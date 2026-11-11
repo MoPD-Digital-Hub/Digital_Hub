@@ -1,35 +1,34 @@
 import requests
+from django.http import HttpResponse
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.http import HttpResponse
-from rest_framework import status
-from drf_spectacular.utils import extend_schema
-from mobile.api.docs import (
+
+from integrations.time_series import client
+from integrations.time_series.docs import (
     CATEGORY_LIST_RESPONSE_EXAMPLE,
-    CategoryListResponseSerializer,
     EXPORT_DATA_TYPE_PARAMETER,
     EXPORT_FILE_TYPE_PARAMETER,
     HIGH_FREQUENCY_RESPONSE_EXAMPLE,
-    HighFrequencyResponseSerializer,
     INDICATOR_DETAIL_RESPONSE_EXAMPLE,
-    IndicatorDetailResponseSerializer,
     MONTH_LIST_RESPONSE_EXAMPLE,
-    MonthListResponseSerializer,
     TIME_SERIES_ERROR_EXAMPLE,
     TOPIC_LIST_ERROR_EXAMPLE,
     TOPIC_LIST_RESPONSE_EXAMPLE,
+    YEAR_LIST_RESPONSE_EXAMPLE,
+    CategoryListResponseSerializer,
+    HighFrequencyResponseSerializer,
+    IndicatorDetailResponseSerializer,
+    MonthListResponseSerializer,
     TimeSeriesErrorResponseSerializer,
     TopicListResponseSerializer,
-    YEAR_LIST_RESPONSE_EXAMPLE,
     YearListResponseSerializer,
     mobile_export_schema,
     mobile_json_schema,
 )
-from drf_spectacular.utils import OpenApiResponse
 
-
-TIMESERIES_URL = "https://time-series.mopd.gov.et/"
 
 @mobile_json_schema(
     "List time-series topics",
@@ -47,7 +46,7 @@ def topic_list(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/topic-list/",
+            f"{client.base_url()}/topic-list/",
             params=params,
             timeout=10
         )
@@ -68,7 +67,7 @@ def topic_detail(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/topic-detail/{id}/",
+            f"{client.base_url()}/topic-detail/{id}/",
             params=params,
             timeout=10
         )
@@ -99,7 +98,7 @@ def indicator_detail(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/indicator-detail/{id}/",
+            f"{client.base_url()}/indicator-detail/{id}/",
             params=params,
             timeout=10
         )
@@ -121,7 +120,7 @@ def topic_categories_auto_complete(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/search-auto-complete/{id}/",
+            f"{client.base_url()}/search-auto-complete/{id}/",
             params=params,
             timeout=10
         )
@@ -143,7 +142,7 @@ def general_search(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/general_search",
+            f"{client.base_url()}/general_search",
             params=params,
             timeout=10
         )
@@ -165,7 +164,7 @@ def trending(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/trending/",
+            f"{client.base_url()}/trending/",
             params=params,
             timeout=10
         )
@@ -195,7 +194,7 @@ def month_lists(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/month-lists/",
+            f"{client.base_url()}/month-lists/",
             params=params,
             timeout=10
         )
@@ -224,7 +223,7 @@ def year_lists(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/year-lists/",
+            f"{client.base_url()}/year-lists/",
             params=params,
             timeout=10
         )
@@ -246,7 +245,7 @@ def initiatives(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/initiatives/",
+            f"{client.base_url()}/initiatives/",
             params=params,
             timeout=10
         )
@@ -268,7 +267,7 @@ def project_list(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/project-list/",
+            f"{client.base_url()}/project-list/",
             params=params,
             timeout=10
         )
@@ -290,7 +289,7 @@ def project_detail(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/project-detail/{id}/",
+            f"{client.base_url()}/project-detail/{id}/",
             params=params,
             timeout=10
         )
@@ -313,7 +312,7 @@ def overview(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/dashboard/overview",
+            f"{client.base_url()}/dashboard/overview",
             params=params,
             timeout=10
         )
@@ -335,7 +334,7 @@ def filter_initiative_indicator_by_region(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/indicators_filter/",
+            f"{client.base_url()}/indicators_filter/",
             params=params,
             timeout=10
         )
@@ -365,7 +364,7 @@ def categories(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/categories/{id}",
+            f"{client.base_url()}/categories/{id}",
             params=params,
             timeout=10
         )
@@ -395,7 +394,7 @@ def kpis(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/kpis/{id}",
+            f"{client.base_url()}/kpis/{id}",
             params=params,
             timeout=10
         )
@@ -425,7 +424,7 @@ def high_frequency(request):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/high-frequency/",
+            f"{client.base_url()}/high-frequency/",
             params=params,
             timeout=10
         )
@@ -452,7 +451,7 @@ def export_topic_data(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/export-topic-data/{id}/",
+            f"{client.base_url()}/export-topic-data/{id}/",
             params=params,
             timeout=30
         )
@@ -492,7 +491,7 @@ def export_category_data(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/export-category-data/{id}/",
+            f"{client.base_url()}/export-category-data/{id}/",
             params=params,
             timeout=30
         )
@@ -532,7 +531,7 @@ def export_indicator_data(request, id):
         params = request.query_params.dict()
 
         res = requests.get(
-            f"{TIMESERIES_URL}/api/mobile/export-indicator-data/{id}/",
+            f"{client.base_url()}/export-indicator-data/{id}/",
             params=params,
             timeout=30
         )

@@ -1,8 +1,8 @@
+from drf_spectacular.utils import extend_schema
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status
-from drf_spectacular.utils import extend_schema
 
 from integrations.dpmes import client as dpmes_client
 from integrations.dpmes import compat as dpmes_compat

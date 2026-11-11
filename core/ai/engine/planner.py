@@ -4,9 +4,9 @@ import re
 from dataclasses import dataclass, field
 from html import unescape
 
-from ai.infrastructure.translation import detect_request_language
 from ai.engine import llm
 from ai.engine.tools import TOOLS
+from ai.infrastructure.translation import detect_request_language
 
 MAX_CALLS = 4
 HISTORY_TURNS = 3

@@ -1,5 +1,6 @@
-from ai.models import ChatInstance, QuestionHistory
 from rest_framework import serializers
+
+from ai.models import ChatInstance, QuestionHistory
 
 
 class ChatInstanceSerializer(serializers.ModelSerializer):

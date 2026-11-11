@@ -1,10 +1,12 @@
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status
 
 from notifications.models import DeviceToken, Notification, NotificationCategory
-from .serializers import NotificationSerializer, NotificationCategorySerializer
 from project.responses import failure, success
+
+from .serializers import NotificationCategorySerializer, NotificationSerializer
+
 
 @api_view(['GET'])
 def categories(request):
