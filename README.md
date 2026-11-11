@@ -38,7 +38,7 @@ The project runs in Docker; the only thing to install is
 
 ```bash
 make env            # creates .env from .env.example: set DEBUG=True and fill in the keys you have
-make up             # PostgreSQL, Redis, web and Celery worker on http://localhost:8000
+make up             # PostgreSQL, Redis, web, Celery worker and scheduler on http://localhost:8000
 make superuser      # an admin login
 make sync-catalog   # once, so the AI can answer data questions
 ```

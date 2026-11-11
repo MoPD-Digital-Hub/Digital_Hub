@@ -1,14 +1,15 @@
 # Running and deploying the Digital Hub with Docker
 
-One image (`Dockerfile`) runs both processes:
+One image (`Dockerfile`) runs all three processes:
 
 | Process | Command | Does |
 |---|---|---|
 | `web` | Daphne (ASGI) | Pages, REST API, WebSockets (AI chat, messaging), static files (WhiteNoise) |
 | `worker` | Celery, queues `celery` and `ai_queue` | Emails, push notifications, queued AI answers |
+| `beat` | Celery beat | Starts the periodic tasks; today: sending scheduled notifications, every minute. Exactly one may run. |
 
 Configuration is environment variables only: `.env` in the repository root, documented in `.env.example`.
-The image contains no secrets, media or migrations.
+The image contains no secrets or uploaded media.
 
 ## Local development
 
@@ -17,7 +18,7 @@ cp .env.example .env          # set DEBUG=True and fill in the keys you have
 docker compose up --build     # http://localhost:8000
 ```
 
-`compose.yaml` runs PostgreSQL, Redis, web and worker. `./core` is mounted, so code edits reload without a
+`compose.yaml` runs PostgreSQL, Redis, web, worker and beat. `./core` is mounted, so code edits reload without a
 rebuild. The `Makefile` wraps the usual commands (`make` lists them: `make up`, `make test`, `make logs`,
 `make sync-catalog`, …); underneath they are:
 
@@ -25,7 +26,7 @@ rebuild. The `Makefile` wraps the usual commands (`make` lists them: `make up`, 
 docker compose exec web python manage.py createsuperuser
 docker compose exec web python manage.py sync_ai_catalog     # needed once for the AI to answer data questions
 docker compose exec web python manage.py test
-docker compose logs -f web worker
+docker compose logs -f web worker beat
 docker compose down            # add -v to also delete the local database
 ```
 
@@ -37,7 +38,7 @@ containers, using the host network, so `DATABASE_HOST=127.0.0.1` and `REDIS_HOST
 
 | File | Purpose |
 |---|---|
-| `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`) and `worker`, restart automatically |
+| `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`), `worker` and `beat`, restart automatically |
 | `deploy/deploy.sh` | Pull, build, migrate, restart, wait for health, keep the last 5 images |
 | `deploy/nginx/data-hub.conf` | nginx site: TLS, `/media/` from disk, everything else to `127.0.0.1:8000` |
 | `.github/workflows/ci.yml` | Lint and tests on every push and pull request |
@@ -64,9 +65,10 @@ Migrations are committed like code. After changing a model, run `make migrations
 commit it. Do not generate migrations on a server.
 
 Databases created before this change have a migration history from files that were generated per machine.
-`manage.py adopt_migrations` switches such a database to the committed files: it first checks that every table
-and column the models need exists, then rewrites the history only (no table is changed). `deploy.sh` refuses
-to migrate until this has been done.
+`manage.py adopt_migrations` switches such a database to the committed files: it checks that every table and
+column of the baseline schema (the first committed migrations) exists, then rewrites the history to that
+baseline only; no table is changed. Migrations added since then are applied by the normal `migrate` that
+follows. `deploy.sh` refuses to migrate until the adoption has been done.
 
 ### One-time switch from systemd to Docker
 

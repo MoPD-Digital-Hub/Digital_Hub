@@ -38,7 +38,7 @@ carry older extras, which new code should not rely on:
 | `"result": "SUCCUSS"` (misspelled) | a few `/api/mobile/` and `/api/user/` endpoints, and data from the time-series service | the HTTP status |
 | `"result": "FAILED"` | failures from the time-series service | the HTTP status, `error.code` |
 | `"detail"`, `"code"` | framework errors | `message`, `error.code` |
-| `"errors"` | invalid input on sign-in endpoints | `error.details` |
+| `"errors"` | invalid input on the sign-in endpoint | `error.details` |
 | `"error": "…"` as text | one time-series error (`filter-initiative-indicator-by-region`) | `message` |
 | top-level `years` / bucket fields | `/api/mobile/dpmes-year-lists/`, `/api/mobile/ministry-performance/…` | `data` |
 

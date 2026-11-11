@@ -388,6 +388,13 @@ REDIS_PORT = config('REDIS_PORT', default=6379, cast=int)
 USE_REDIS_CHANNELS = config('USE_REDIS_CHANNELS', default=not DEBUG, cast=bool)
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=f"redis://{REDIS_HOST}:{REDIS_PORT}/0")
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=f"redis://{REDIS_HOST}:{REDIS_PORT}/1")
+# Run by the `beat` service (celery beat); exactly one beat process may run.
+CELERY_BEAT_SCHEDULE = {
+    "send-due-notifications": {
+        "task": "notifications.tasks.send_due_notifications",
+        "schedule": 60.0,
+    },
+}
 
 if USE_REDIS_CHANNELS:
     CHANNEL_LAYERS = {

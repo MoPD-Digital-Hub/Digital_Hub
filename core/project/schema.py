@@ -1,8 +1,6 @@
 def mobile_only_schema_endpoints(endpoints, **kwargs):
     allowed_prefixes = (
         "/api/mobile/",
-        "/api/user/auth/login/",
-        "/api/user/auth/verify-otp/",
         "/api/user/auth/password-login/",
         "/api/user/reset-password/",
         "/api/auth/token/refresh/",

@@ -10,14 +10,14 @@
 - Django `4.2.6`
 - Django REST Framework + SimpleJWT
 - Channels + Daphne for WebSockets
-- Celery for async jobs
+- Celery for async jobs (worker) and periodic ones (beat, `CELERY_BEAT_SCHEDULE` in settings)
 - Admas AI on the Ministry LLM gateway (OpenAI-compatible chat + embeddings); Gemini only for translate and read-aloud
 - Postgres in non-dev environments, SQLite in local/dev when `USE_SQLITE=True`
 
 ## Layout
 - `core/project/`: Django project config, ASGI/WSGI, Celery, middleware.
 - `core/ai/` (app label `AI`): Admas AI: the answer pipeline (`engine/`), chat WebSockets, REST endpoints, translate and TTS.
-- `core/users/` (app label `userManagement`): custom user model, OTP and password login, password reset, JWT refresh.
+- `core/users/` (app label `userManagement`): custom user model, email + password sign-in, password reset, JWT refresh.
 - `core/dashboard/`: server-rendered dashboard pages and account pages.
 - `core/mobile/`: mobile app content (apps, settings, FAQ, contact) and app version checks.
 - `core/notifications/` (app label `Notification`): notification models, API, Firebase push tasks.
@@ -28,7 +28,7 @@
 - Every app: REST views in `api/views.py`, serializers in `api/serializers.py`, Celery tasks in `tasks.py`, routes in `urls.py`.
 - API responses: build them with `project.responses.success()` / `failure()` (docs/api.md). Every `/api/` JSON response is completed to the standard shape by middleware; it must stay backward compatible with the installed mobile app (add fields, never rename, retype or remove).
 - App labels keep the old names so tables, migrations and admin URLs are unchanged; import by package name (`ai`, `users`, `notifications`).
-- Migrations are committed. After a model change: `make migrations`, review, commit. Never generate migrations on a server.
+- Migrations are committed. After a model change: `make migrations`, review, commit. Never generate migrations on a server. `users/management/commands/adopt_migrations.py` lists the baseline migrations old databases are switched to; never add later migrations to that list.
 - Key files live in `secrets/` (git-ignored), never in the repository.
 
 ## Entry Points
@@ -57,16 +57,15 @@
 - Language follows the question's script: Amharic script gets an Amharic answer, otherwise English.
 
 ## Auth And User Flow
-- Login is OTP-based:
-- `POST /api/user/auth/login/` checks credentials and issues an OTP.
-- `POST /api/user/auth/verify-otp/` validates OTP and returns JWT refresh/access tokens.
-- Password reset is under `/api/user/reset-password/`.
+- Sign-in is email + password: `POST /api/user/auth/password-login/` returns the user and JWT refresh/access tokens. There is no sign-in OTP.
+- `POST /api/auth/token/refresh/` renews the access token.
+- Password reset is under `/api/user/reset-password/`: POST emails a random 6-digit code valid for 20 minutes; PUT sets the new password with it. Five wrong codes cancel the code.
 - `django-axes` is enabled for lockout/rate limiting.
 
 ## Other App Responsibilities
 - `mobile`: app metadata, FAQ/settings/contact info, app version enforcement.
 - `integrations/time_series`: indicator data passed through from the time-series service; also used by the AI (catalog sync, indicator values).
-- `notifications`: categories + notifications, sends Firebase push via Celery on save when eligible.
+- `notifications`: categories + notifications. A notification is pushed to all devices once (`sent_at` records it): on save when it is active and due, otherwise by the `beat` service, which runs `send_due_notifications` every minute for scheduled ones (`send_at`). Later edits do not push again.
 - `integrations/dpmes`: DPMES scorecards for the website (the browser cannot call DPMES directly: it needs the API key and sends no CORS headers).
 - `dashboard`: HTML pages for dashboard, stats, SDG pages, profile/password pages, Admas AI page, and the app's public privacy policy.
 
@@ -96,7 +95,7 @@
 - Start by checking `git status --short` because this repo often has ongoing local edits.
 - Read `core/project/settings.py`, `core/project/urls.py`, and the relevant app `urls.py` before changing behavior.
 - For AI work, read `docs/ai.md`, then `core/ai/engine/pipeline.py` and `core/ai/consumers.py`.
-- For auth work, inspect `core/users/api/views.py` (sign-in, OTP, password reset, token refresh) and `core/users/models.py`.
+- For auth work, inspect `core/users/api/views.py` (sign-in, password reset, token refresh) and `core/users/models.py`.
 - For mobile/data APIs, inspect `core/mobile/api/` and `core/integrations/`.
 - For dashboard UI changes, inspect `core/dashboard/views.py` plus templates/static assets.
 

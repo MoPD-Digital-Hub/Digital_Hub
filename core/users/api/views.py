@@ -1,13 +1,10 @@
 import logging
-import random
 import secrets
 from datetime import timedelta
 
 from axes.handlers.proxy import AxesProxyHandler
-from django.conf import settings
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from kombu.exceptions import OperationalError as KombuOperationalError
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -17,92 +14,32 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from project.responses import LEGACY_SUCCESS, failure, success
 from users.api.docs import (
-    login_schema,
     password_login_schema,
     reset_password_confirm_schema,
     reset_password_request_schema,
     token_refresh_schema,
-    verify_otp_schema,
 )
 from users.api.serializers import (
     EmailSerializer,
     LoginSerializer,
     PasswordSerializer,
     UserSerializer,
-    ValidateOTPSerializer,
 )
 from users.models import CustomUser
 from users.tasks import send_email
 
 LOGGER = logging.getLogger("users.auth")
+RESET_CODE_MINUTES = 20
+# Wrong codes allowed before a reset code is cancelled and a new one must be requested.
+RESET_CODE_ATTEMPTS = 5
 
-
-@login_schema
-@api_view(['POST'])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def generate_login_opt(request):
-    serializer = LoginSerializer(data=request.data)
-    handler = AxesProxyHandler()
-
-    if handler.is_locked(request):
-        return failure(request, "Too many failed attempts. Try again later.", status.HTTP_403_FORBIDDEN)
-
-    if serializer.is_valid():
-        email = serializer.data['email'].lower().strip()
-        password = serializer.data['password']
-        user = authenticate(request=request, email=email, password=password)
-
-        if user is not None:
-            handler.reset_attempts(username=email, ip_address=request.META.get('REMOTE_ADDR'))
-
-            if user.waiting_period and timezone.now() < user.waiting_period:
-                remaining_time = user.waiting_period - timezone.now()
-                minutes = int(remaining_time.total_seconds() // 60)
-                return failure(request, f"This account is temporarily blocked. Try again in {minutes} minutes.", status.HTTP_400_BAD_REQUEST)
-
-            otp = random.randint(100000, 999999)
-            now = timezone.now()
-            expire_date = now + timedelta(minutes=20)
-
-            if user.email in ['testuser@mopd.gov.et', 'admas@mopd.gov.et']:
-                user.token = 123456
-                user.tokenExpiration = now + timedelta(days=90)
-            else:
-                user.token = otp
-                user.tokenExpiration = expire_date
-            user.save()
-
-            if settings.DEBUG:
-                # OTPs must never reach production logs.
-                LOGGER.info("Login OTP for %s: %s", user.email, user.token)
-
-            try:
-                send_email.delay(user.email, otp)
-            except (KombuOperationalError, ConnectionRefusedError, OSError):
-                # Dev/local fallback when broker is unavailable.
-                send_email(user.email, otp)
-
-            return success(request, None, message="OTP_GENERATED")
-
-        else:
-            #user_login_failed.send(sender=None, request=request, credentials=serializer.data)
-
-            return failure(request, "LOGIN_FAILED", status.HTTP_401_UNAUTHORIZED)
-
-    else:
-        return failure(request, "INVALID_INPUT", status.HTTP_400_BAD_REQUEST, errors=serializer.errors)
 
 @password_login_schema
 @api_view(['POST'])
 @authentication_classes([])
 @permission_classes([AllowAny])
 def password_login(request):
-    """Email + password login that returns JWTs directly, without an OTP email.
-
-    The OTP endpoints stay in place for flows that need email verification
-    (signup, password reset).
-    """
+    """Sign in with email and password; returns the user and JWT refresh/access tokens."""
     serializer = LoginSerializer(data=request.data)
     handler = AxesProxyHandler()
 
@@ -133,59 +70,6 @@ def password_login(request):
             "refresh": str(refresh),
             "access": str(refresh.access_token)
         }, message="TOKEN_CREATED")
-
-
-@verify_otp_schema
-@api_view(['POST'])
-@authentication_classes([])
-@permission_classes([AllowAny])
-def validate_login_opt(request):
-    serializer = ValidateOTPSerializer(data=request.data)
-    if serializer.is_valid():
-        email = serializer.validated_data['email'].strip()
-        otp = serializer.validated_data['otp']
-
-        try:
-            user = CustomUser.objects.get(email__iexact=email)
-        except CustomUser.DoesNotExist:
-            return failure(request, "USER_NOT_FOUND", status.HTTP_404_NOT_FOUND)
-
-        if user.waiting_period and timezone.now() < user.waiting_period:
-            remaining_time = user.waiting_period - timezone.now()
-            minutes = int(remaining_time.total_seconds() // 60)
-            return failure(request, f"This account is temporarily blocked. Try again in {minutes} minutes.", status.HTTP_400_BAD_REQUEST)
-
-
-        if not user.token or timezone.now() > user.tokenExpiration:
-            return failure(request, "OTP_EXPIRED", status.HTTP_400_BAD_REQUEST)
-
-        
-        if str(user.token) != str(otp):
-            user.trial += 1
-            if user.trial >= 5:
-                user.waiting_period = timezone.now() + timedelta(minutes=30)
-                user.trial = 0  
-                user.save()
-                return failure(request, "Too many invalid attempts. Account locked for 30 minutes.", status.HTTP_400_BAD_REQUEST)
-
-            user.save()
-            return failure(request, "INVALID_OTP", status.HTTP_400_BAD_REQUEST)
-
-     
-        refresh = RefreshToken.for_user(user)
-        user.token = None
-        user.tokenExpiration = None
-        user.trial = 0
-        user.waiting_period = None
-        user.save()
-
-        return success(request, {
-                "user": UserSerializer(user).data,
-                "refresh": str(refresh),
-                "access": str(refresh.access_token)
-            }, message="TOKEN_CREATED")
-
-    return failure(request, "INVALID_INPUT", status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET' , 'PUT'])
@@ -226,15 +110,13 @@ def reset_password(request):
                 return failure(request, "USER_NOT_FOUND", status.HTTP_400_BAD_REQUEST)
             
             secret_token = str(secrets.randbelow(10**6)).zfill(6)
-            
-            now = timezone.now()
-            expire_date = now + timedelta(minutes=20)
 
             user.token = secret_token
-            user.tokenExpiration = expire_date
+            user.tokenExpiration = timezone.now() + timedelta(minutes=RESET_CODE_MINUTES)
+            user.trial = 0
 
             ## send email
-            send_email(user.email, secret_token, purpose="reset")
+            send_email(user.email, secret_token)
             user.save()
 
             return success(request, None, message="EMAIL_SENT")
@@ -256,8 +138,19 @@ def reset_password(request):
         except CustomUser.DoesNotExist:
             return failure(request, "USER_NOT_FOUND", status.HTTP_400_BAD_REQUEST)
 
-        # Validate token
-        if user.token != token:
+        # No code was requested, or it was cancelled after too many wrong tries.
+        if not user.token or not user.tokenExpiration:
+            return failure(request, "INVALID_TOKEN", status.HTTP_400_BAD_REQUEST)
+
+        if not secrets.compare_digest(str(user.token), str(token)):
+            # A 6-digit code can be guessed if tries are unlimited: cancel it
+            # after a few wrong ones, so a new code has to be requested.
+            user.trial += 1
+            if user.trial >= RESET_CODE_ATTEMPTS:
+                user.token = None
+                user.tokenExpiration = None
+                user.trial = 0
+            user.save()
             return failure(request, "INVALID_TOKEN", status.HTTP_400_BAD_REQUEST)
 
         # Check token expiration
@@ -266,8 +159,9 @@ def reset_password(request):
 
         # Token is valid and active → update password
         user.set_password(new_password)
-        user.token = None  # Optional: clear token after successful reset
+        user.token = None
         user.tokenExpiration = None
+        user.trial = 0
         user.save()
 
         return success(request, None, message="PASSWORD_CHANGED")

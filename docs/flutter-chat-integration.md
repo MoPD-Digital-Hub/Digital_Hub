@@ -16,7 +16,7 @@ Flutter app ── POST message ──▶ Django ──▶ channel layer ──�
 
 ## 2. Authentication
 
-All REST calls use the existing JWT auth: `Authorization: Bearer <access_token>` (obtained via the existing OTP login flow under `/api/user/auth/`, refreshed at `POST /api/auth/token/refresh/`).
+All REST calls use the existing JWT auth: `Authorization: Bearer <access_token>` (obtained from `POST /api/user/auth/password-login/`, refreshed at `POST /api/auth/token/refresh/`).
 
 Every chat endpoint responds with the standard envelope:
 

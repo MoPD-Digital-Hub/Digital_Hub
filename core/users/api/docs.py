@@ -6,7 +6,6 @@ from users.api.serializers import (
     LoginSerializer,
     PasswordSerializer,
     UserSerializer,
-    ValidateOTPSerializer,
 )
 
 
@@ -24,16 +23,16 @@ class AuthErrorEnvelopeSerializer(serializers.Serializer):
     error = serializers.CharField(required=False)
 
 
-class OTPTokenDataSerializer(serializers.Serializer):
+class LoginDataSerializer(serializers.Serializer):
     user = UserSerializer()
     refresh = serializers.CharField()
     access = serializers.CharField()
 
 
-class OTPValidationSuccessSerializer(serializers.Serializer):
+class LoginSuccessSerializer(serializers.Serializer):
     result = serializers.CharField()
     message = serializers.CharField()
-    data = OTPTokenDataSerializer()
+    data = LoginDataSerializer()
 
 
 class TokenRefreshRequestSerializer(serializers.Serializer):
@@ -50,51 +49,24 @@ class TokenRefreshSuccessSerializer(serializers.Serializer):
     data = TokenRefreshDataSerializer()
 
 
-login_schema = extend_schema(
-    summary="Request login OTP",
-    description="Authenticates email and password, then generates and sends a one-time password.",
-    tags=["Mobile Authentication"],
-    request=LoginSerializer,
-    responses={
-        200: OpenApiResponse(response=AuthEnvelopeSerializer, description="OTP generated."),
-        400: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid input or temporarily blocked account."),
-        401: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid credentials."),
-        403: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Too many failed attempts."),
-    },
-)
-
-
 password_login_schema = extend_schema(
     summary="Log in with email and password",
-    description="Authenticates email and password and returns refresh and access tokens directly. No OTP email is sent.",
+    description="Authenticates email and password and returns the user with refresh and access tokens.",
     tags=["Mobile Authentication"],
     request=LoginSerializer,
     responses={
-        200: OpenApiResponse(response=OTPValidationSuccessSerializer, description="Credentials accepted and tokens created."),
+        200: OpenApiResponse(response=LoginSuccessSerializer, description="Credentials accepted and tokens created."),
         400: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid input or temporarily blocked account."),
         401: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid credentials."),
         403: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Too many failed attempts."),
-    },
-)
-
-
-verify_otp_schema = extend_schema(
-    summary="Verify login OTP",
-    description="Verifies the one-time password and returns refresh and access tokens.",
-    tags=["Mobile Authentication"],
-    request=ValidateOTPSerializer,
-    responses={
-        200: OpenApiResponse(response=OTPValidationSuccessSerializer, description="OTP accepted and tokens created."),
-        400: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="Invalid, expired, or blocked OTP flow."),
-        404: OpenApiResponse(response=AuthErrorEnvelopeSerializer, description="User not found."),
     },
 )
 
 
 reset_password_request_schema = extend_schema(
     methods=["POST"],
-    summary="Request password reset OTP",
-    description="Sends a reset token to the supplied email address.",
+    summary="Request a password reset code",
+    description="Emails a 6-digit reset code, valid for 20 minutes, to the supplied address.",
     tags=["Mobile Authentication"],
     request=EmailSerializer,
     responses={
@@ -107,7 +79,7 @@ reset_password_request_schema = extend_schema(
 reset_password_confirm_schema = extend_schema(
     methods=["PUT"],
     summary="Confirm password reset",
-    description="Changes the password using email, reset token, and a new password.",
+    description="Changes the password using email, the emailed reset code (as `token`), and a new password. Five wrong codes cancel the code.",
     tags=["Mobile Authentication"],
     request=PasswordSerializer,
     responses={

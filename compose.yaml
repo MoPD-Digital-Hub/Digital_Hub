@@ -49,6 +49,13 @@ services:
     healthcheck:
       disable: true
 
+  # Scheduler: queues the periodic tasks (CELERY_BEAT_SCHEDULE), e.g. scheduled notifications.
+  beat:
+    <<: *app
+    command: celery --app project beat --loglevel info --schedule /tmp/celerybeat-schedule
+    healthcheck:
+      disable: true
+
   db:
     image: postgres:16-alpine
     environment:

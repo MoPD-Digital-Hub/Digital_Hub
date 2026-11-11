@@ -38,8 +38,8 @@ down: ## Stop and remove the containers (the database is kept)
 stop: ## Stop the containers without removing them
 	$(COMPOSE) stop
 
-restart: ## Restart web and worker (e.g. after editing .env)
-	$(COMPOSE) up --detach --force-recreate web worker
+restart: ## Restart web, worker and beat (e.g. after editing .env)
+	$(COMPOSE) up --detach --force-recreate web worker beat
 
 build: ## Build the image
 	$(COMPOSE) build
@@ -50,8 +50,8 @@ rebuild: ## Build the image from scratch, without cache
 ps: ## Show container status
 	$(COMPOSE) ps
 
-logs: ## Follow logs (s=web|worker|db|redis, default web and worker)
-	$(COMPOSE) logs --follow --tail 100 $(or $(s),web worker)
+logs: ## Follow logs (s=web|worker|beat|db|redis, default the three app services)
+	$(COMPOSE) logs --follow --tail 100 $(or $(s),web worker beat)
 
 shell: ## Django shell in the web container
 	$(MANAGE) shell
@@ -120,8 +120,8 @@ prod-rollback: ## Go back to the previous image
 prod-ps: ## Show production container status
 	$(PROD_COMPOSE) ps
 
-prod-logs: ## Follow production logs (s=web|worker)
-	$(PROD_COMPOSE) logs --follow --tail 100 $(or $(s),web worker)
+prod-logs: ## Follow production logs (s=web|worker|beat)
+	$(PROD_COMPOSE) logs --follow --tail 100 $(or $(s),web worker beat)
 
 prod-shell: ## Django shell in production
 	$(PROD_MANAGE) shell

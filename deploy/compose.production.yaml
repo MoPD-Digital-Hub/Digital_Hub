@@ -43,3 +43,11 @@ services:
     command: celery --app project worker --loglevel info --queues celery,ai_queue --concurrency 2
     healthcheck:
       disable: true
+
+  # Scheduler: queues the periodic tasks (CELERY_BEAT_SCHEDULE), e.g. scheduled
+  # notifications. Run exactly one, or every scheduled task runs twice.
+  beat:
+    <<: *app
+    command: celery --app project beat --loglevel info --schedule /tmp/celerybeat-schedule
+    healthcheck:
+      disable: true

@@ -1,8 +1,13 @@
+import logging
+
 from celery import shared_task
+from django.db.models import Q
 from django.utils import timezone
 from firebase_admin import messaging
 
 from notifications.firebase import initialize_firebase
+
+LOGGER = logging.getLogger(__name__)
 
 
 @shared_task
@@ -66,6 +71,31 @@ def send_to_all(title, body, data=None, image_url=None, sound="default"):
     except Exception as e:
         print(f"❌ Failed to send notification: {e}")
         raise e
+
+
+@shared_task(ignore_result=True)
+def send_due_notifications():
+    """Push every notification that is active, due, unexpired and not yet sent.
+
+    Celery beat runs this each minute (CELERY_BEAT_SCHEDULE), which is what
+    delivers notifications scheduled with `send_at`, and retries one whose
+    push could not be queued when it was saved. Returns how many were sent.
+    """
+    from notifications.models import Notification
+
+    now = timezone.now()
+    due = Notification.objects.filter(
+        Q(is_active=True, sent_at__isnull=True),
+        Q(send_at__isnull=True) | Q(send_at__lte=now),
+        Q(expire_at__isnull=True) | Q(expire_at__gte=now),
+    )
+    sent = 0
+    for notification in due:
+        try:
+            sent += bool(notification.send_if_due())
+        except Exception:
+            LOGGER.exception("Could not queue notification %s", notification.pk)
+    return sent
 
 
 def send_push_to_user(user_id, title, body, data=None, image_url=None, sound="default"):
