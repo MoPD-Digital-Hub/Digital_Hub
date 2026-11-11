@@ -181,10 +181,14 @@ cutover() {
 
   step "Final backup"
   backup_database
-  db --command "\\copy (select app, name, applied from django_migrations where app in ($APPS)) to '$BACKUPS/migration-history-before.csv' csv" \
-    || die "could not save the migration history"
-  tar -czf "$BACKUPS/old-migration-files.tar.gz" $(ls -d core/*/migrations 2>/dev/null) 2>>"$LOG" || true
-  sudo cp -p "$NGINX_CONF" "$BACKUPS/nginx-data-hub.conf.before"
+  # Saved once: a second cutover run (after a failed first one) must not
+  # overwrite what rollback needs with the already-changed state.
+  if [[ ! -f "$BACKUPS/migration-history-before.csv" ]]; then
+    db --command "\\copy (select app, name, applied from django_migrations where app in ($APPS)) to '$BACKUPS/migration-history-before.csv' csv" \
+      || die "could not save the migration history"
+    tar -czf "$BACKUPS/old-migration-files.tar.gz" $(ls -d core/*/migrations 2>/dev/null) 2>>"$LOG" || true
+    sudo cp -p "$NGINX_CONF" "$BACKUPS/nginx-data-hub.conf.before"
+  fi
   say "saved the migration history, old migration files and the nginx site"
 
   step "Database: adopting the committed migrations, then migrating"
@@ -197,7 +201,8 @@ cutover() {
 
   step "Replacing the code in $ROOT"
   quiet git reset --hard "$sha" || die "git reset failed"
-  rm -rf "${OLD_DIRS[@]}" google-env
+  # sudo: the old services ran as www-data and left __pycache__ folders it owns.
+  sudo rm -rf "${OLD_DIRS[@]}" google-env
   quiet git clean --force -- core/chat/migrations core/mobile/migrations
   sudo chown -R "$(id -un)":www-data core/media secrets
   sudo chmod -R u+rwX,g+rwX core/media
@@ -243,7 +248,7 @@ cutover() {
 
   step "Stopping the old services for good"
   sudo systemctl disable --now "${OLD_SERVICES[@]/%/.service}" >>"$LOG" 2>&1 || true
-  rm -f core/domains.sock core/domains.sock.lock
+  sudo rm -f core/domains.sock core/domains.sock.lock
 
   step "Data check"
   row_counts > "$BACKUPS/row-counts-after"
