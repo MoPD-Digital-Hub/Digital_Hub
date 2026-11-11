@@ -7,7 +7,6 @@
 # Production uses deploy/compose.production.yaml instead (see docs/deploy.md).
 
 x-app: &app
-  build: .
   image: digital-hub:dev
   env_file:
     - path: .env
@@ -38,6 +37,8 @@ x-app: &app
 services:
   web:
     <<: *app
+    # The one image is built here only; worker and beat run the same image.
+    build: .
     # Daphne's runserver: ASGI (WebSockets work) with auto-reload.
     command: sh -c "python manage.py migrate --noinput && exec python manage.py runserver 0.0.0.0:8000"
     ports:

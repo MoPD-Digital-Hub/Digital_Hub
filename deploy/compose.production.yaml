@@ -10,10 +10,6 @@ name: digital-hub
 
 x-app: &app
   image: digital-hub:${IMAGE_TAG:-latest}
-  build:
-    context: ..
-    args:
-      APP_UID: ${APP_UID:-1000}
   network_mode: host
   restart: unless-stopped
   environment:
@@ -38,6 +34,12 @@ x-app: &app
 services:
   web:
     <<: *app
+    # The one image is built here only; worker and beat run the same image.
+    # Three services building one tag at once fail with "image already exists".
+    build:
+      context: ..
+      args:
+        APP_UID: ${APP_UID:-1000}
     # Only nginx on this machine talks to Daphne; it is not exposed publicly.
     command: sh -c "exec daphne --bind 127.0.0.1 --port $${WEB_PORT} --proxy-headers project.asgi:application"
 

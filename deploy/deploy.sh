@@ -90,7 +90,7 @@ export IMAGE_TAG="$(git rev-parse --short HEAD)"
 mkdir -p core/media
 
 log "Building digital-hub:$IMAGE_TAG"
-"${COMPOSE[@]}" build
+"${COMPOSE[@]}" build web
 docker tag "digital-hub:$IMAGE_TAG" digital-hub:latest
 
 log "Migrating the database"
@@ -104,8 +104,8 @@ if ! "${COMPOSE[@]}" run --rm --no-deps web python manage.py adopt_migrations --
 fi
 "${COMPOSE[@]}" run --rm --no-deps web python manage.py migrate --noinput
 
-log "Starting web and worker"
-"${COMPOSE[@]}" up --detach --remove-orphans
+log "Starting web, worker and beat"
+"${COMPOSE[@]}" up --detach --no-build --remove-orphans
 wait_healthy
 
 log "Removing old images (keeping the last $KEEP_IMAGES)"
