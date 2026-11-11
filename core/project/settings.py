@@ -79,6 +79,7 @@ INSTALLED_APPS = [
     'notifications',
     'chat',
     'dashboard',
+    'preferences',
     'axes',
     'drf_user_activity_tracker',
 ]

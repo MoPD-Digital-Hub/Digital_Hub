@@ -22,6 +22,7 @@
 - `core/mobile/`: mobile app content (apps, settings, FAQ, contact) and app version checks.
 - `core/notifications/` (app label `Notification`): notification models, API, Firebase push tasks.
 - `core/chat/`: user-to-user messaging (REST + WebSockets).
+- `core/preferences/`: what each user follows (organizations, policy areas, KPIs, indicators), their dashboard settings, and the personal dashboard and movers endpoints under `/api/preferences/` (docs/preferences.md).
 - `core/integrations/`: one package per external service, each with `client.py` (the calls), `views.py` + `urls.py` (the `/api/mobile/` endpoints that serve its data).
 - `core/integrations/dpmes/`: DPMES client, response mapping (`compat.py`), and the scorecard endpoints the website uses.
 - `core/integrations/time_series/`: time-series service client (address from `TIME_SERIES_API_BASE`), the pass-through endpoints for the app and website, and their OpenAPI docs.
