@@ -1,0 +1,214 @@
+{% load i18n static %}
+{% url 'edit_profile' as edit_profile_url %}
+{% url 'change_password' as change_password_url %}
+{% url 'logout' as logout_url %}
+{% url 'dashboard_home' as dashboard_home_url %}
+{% url 'dashboard_admas_ai' as admas_ai_url %}
+{% url 'data_categories' as data_categories_url %}
+{% url 'policy_area_list' as policy_area_list_url %}
+{% url 'public_body_list' as public_body_list_url %}
+{% url 'sector_project_list' as sector_project_list_url %}
+{% url 'initiative_list' as initiative_list_url %}
+{% url 'sdg_list' as sdg_list_url %}
+
+{% comment %}The hub's only frame: a bar docked at the bottom of every screen, with the logo, the sections, and the account menu (profile, password, theme, log out).{% endcomment %}
+<nav class="dh-dock" aria-label="{% trans "Main menu" %}">
+    <span class="dh-dock-lamp" aria-hidden="true"></span>
+
+    <a class="dh-dock-brand" href="{{ dashboard_home_url|default:'#' }}" title="Admas Data Hub">
+        <img src="{% static 'assets/images/logo.png' %}" alt="Admas Data Hub">
+    </a>
+    <span class="dh-dock-sep" aria-hidden="true"></span>
+    <a data-tone="home" class="dh-dock-item{% if request.path == dashboard_home_url %} is-active{% endif %}" href="{{ dashboard_home_url|default:'#' }}"{% if request.path == dashboard_home_url %} aria-current="page"{% endif %}>
+        <i class="ti ti-home" aria-hidden="true"></i>
+        <span>{% trans "Home" %}</span>
+    </a>
+
+    <a data-tone="ai" class="dh-dock-item{% if request.path == admas_ai_url %} is-active{% endif %}" href="{{ admas_ai_url|default:'#' }}"{% if request.path == admas_ai_url %} aria-current="page"{% endif %}>
+        <i class="ti ti-message-circle" aria-hidden="true"></i>
+        <span>{% trans "Admas AI" %}</span>
+    </a>
+
+    <a data-tone="data" class="dh-dock-item{% if request.path == data_categories_url or '/dashboard/data/' in request.path %} is-active{% endif %}" href="{{ data_categories_url|default:'#' }}"{% if request.path == data_categories_url %} aria-current="page"{% endif %}>
+        <i class="ti ti-database" aria-hidden="true"></i>
+        <span>{% trans "Data" %}</span>
+    </a>
+
+    <a data-tone="sdg" class="dh-dock-item{% if request.path == sdg_list_url or '/dashboard/frameworks/sdgs/' in request.path %} is-active{% endif %}" href="{{ sdg_list_url|default:'#' }}"{% if request.path == sdg_list_url %} aria-current="page"{% endif %}>
+        <i class="ti ti-world" aria-hidden="true"></i>
+        <span>{% trans "SDGs" %}</span>
+    </a>
+
+    <div class="dh-dock-group" data-dock-group data-tone="stats">
+        <button type="button" class="dh-dock-item{% if '/dashboard/statistics/' in request.path %} is-active{% endif %}" aria-expanded="false" aria-controls="dhDockStatistics">
+            <i class="ti ti-chart-bar" aria-hidden="true"></i>
+            <span>{% trans "Statistics" %}</span>
+        </button>
+        <div class="dh-dock-menu" id="dhDockStatistics" hidden>
+            <a class="{% if request.path == policy_area_list_url or '/dashboard/statistics/policy-areas/' in request.path %}is-active{% endif %}" href="{{ policy_area_list_url|default:'#' }}">
+                <i class="ti ti-layout-grid" aria-hidden="true"></i>{% trans "Policy Area" %}
+            </a>
+            <a class="{% if request.path == public_body_list_url or '/dashboard/statistics/public-bodies/' in request.path %}is-active{% endif %}" href="{{ public_body_list_url|default:'#' }}">
+                <i class="ti ti-building-community" aria-hidden="true"></i>{% trans "Public Bodies" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="dh-dock-group" data-dock-group data-tone="project">
+        <button type="button" class="dh-dock-item{% if '/dashboard/projects/' in request.path %} is-active{% endif %}" aria-expanded="false" aria-controls="dhDockProjects">
+            <i class="ti ti-briefcase" aria-hidden="true"></i>
+            <span>{% trans "Project" %}</span>
+        </button>
+        <div class="dh-dock-menu" id="dhDockProjects" hidden>
+            <a class="{% if request.path == sector_project_list_url or '/dashboard/projects/sector/' in request.path %}is-active{% endif %}" href="{{ sector_project_list_url|default:'#' }}">
+                <i class="ti ti-briefcase-2" aria-hidden="true"></i>{% trans "Sector Project" %}
+            </a>
+            <a class="{% if request.path == initiative_list_url or '/dashboard/projects/initiatives/' in request.path %}is-active{% endif %}" href="{{ initiative_list_url|default:'#' }}">
+                <i class="ti ti-flag" aria-hidden="true"></i>{% trans "National Initiatives" %}
+            </a>
+        </div>
+    </div>
+
+    <span class="dh-dock-sep" aria-hidden="true"></span>
+
+    <div class="dh-dock-group dh-dock-account" data-dock-group data-tone="account">
+        <button type="button" class="dh-dock-item{% if request.path == edit_profile_url or request.path == change_password_url %} is-active{% endif %}" aria-expanded="false" aria-controls="dhDockAccount" aria-label="{% trans "Your account" %}">
+            <span class="dh-avatar" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
+            <span class="dh-dock-label">{% if request.user.first_name %}{{ request.user.first_name }}{% else %}{% trans "Account" %}{% endif %}</span>
+        </button>
+        <div class="dh-dock-menu" id="dhDockAccount" hidden>
+            <div class="dh-account-who">
+                <span class="dh-avatar is-lg" aria-hidden="true">{% if request.user.first_name %}{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}{% else %}{{ request.user.email|first|upper }}{% endif %}</span>
+                <div>
+                    <strong>{% if request.user.first_name %}{{ request.user.first_name }} {{ request.user.last_name }}{% else %}{{ request.user.email }}{% endif %}</strong>
+                    {% if request.user.first_name %}<span>{{ request.user.email }}</span>{% endif %}
+                </div>
+            </div>
+            <a class="{% if request.path == edit_profile_url %}is-active{% endif %}" href="{{ edit_profile_url|default:'#' }}">
+                <i class="ti ti-user" aria-hidden="true"></i>{% trans "Edit profile" %}
+            </a>
+            <a class="{% if request.path == change_password_url %}is-active{% endif %}" href="{{ change_password_url|default:'#' }}">
+                <i class="ti ti-lock" aria-hidden="true"></i>{% trans "Change password" %}
+            </a>
+            <button type="button" data-bs-toggle="modal" data-bs-target="#themePickerModal" aria-haspopup="dialog">
+                <i class="ti ti-palette" aria-hidden="true"></i>{% trans "Theme" %}
+            </button>
+            <button type="button" id="gesture-control-nav-toggle" aria-pressed="false">
+                <i class="ti ti-hand-stop" aria-hidden="true"></i>{% trans "Hand gestures" %}
+                <span class="dh-menu-state" id="gesture-control-nav-label">Off</span>
+            </button>
+            <div class="dh-dock-menu-rule" role="separator"></div>
+            <a href="{{ logout_url|default:'#' }}">
+                <i class="ti ti-logout" aria-hidden="true"></i>{% trans "Log out" %}
+            </a>
+        </div>
+    </div>
+</nav>
+
+<script>
+(function () {
+    var dock = document.querySelector(".dh-dock");
+    if (!dock) {
+        return;
+    }
+    var lamp = dock.querySelector(".dh-dock-lamp");
+    var items = Array.prototype.slice.call(dock.querySelectorAll(".dh-dock-item"));
+    var groups = Array.prototype.slice.call(dock.querySelectorAll("[data-dock-group]"));
+    var current = dock.querySelector(".dh-dock-item.is-active");
+
+    /* The lamp: a lit pill that sits under the section you are in, glides to
+       whatever you point at or tab to, and takes that section's colour. */
+    function light(item) {
+        if (!lamp) {
+            return;
+        }
+        if (!item) {
+            lamp.classList.remove("is-on");
+            return;
+        }
+        var box = dock.getBoundingClientRect();
+        var rect = item.getBoundingClientRect();
+        lamp.style.setProperty("--lamp-x", (rect.left - box.left - dock.clientLeft) + "px");
+        lamp.style.setProperty("--lamp-w", rect.width + "px");
+        lamp.style.setProperty("--lamp-tone", getComputedStyle(item).getPropertyValue("--tone"));
+        lamp.classList.add("is-on");
+    }
+
+    function rest() {
+        var open = dock.querySelector('.dh-dock-item[aria-expanded="true"]');
+        light(open || current);
+    }
+
+    function setOpen(group, open) {
+        group.querySelector(".dh-dock-item").setAttribute("aria-expanded", open ? "true" : "false");
+        group.querySelector(".dh-dock-menu").hidden = !open;
+    }
+
+    function closeAll(except) {
+        groups.forEach(function (group) {
+            if (group !== except) {
+                setOpen(group, false);
+            }
+        });
+    }
+
+    items.forEach(function (item) {
+        item.addEventListener("pointerenter", function () { light(item); });
+        item.addEventListener("focus", function () { light(item); });
+    });
+    dock.addEventListener("pointerleave", rest);
+    dock.addEventListener("focusout", function (event) {
+        if (!dock.contains(event.relatedTarget)) {
+            rest();
+        }
+    });
+
+    groups.forEach(function (group) {
+        var button = group.querySelector(".dh-dock-item");
+        button.addEventListener("click", function () {
+            var open = button.getAttribute("aria-expanded") !== "true";
+            closeAll(group);
+            setOpen(group, open);
+            light(open ? button : current);
+        });
+    });
+
+    Array.prototype.forEach.call(dock.querySelectorAll('.dh-dock-menu [data-bs-toggle="modal"]'), function (button) {
+        button.addEventListener("click", function () {
+            closeAll();
+            rest();
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        if (!dock.contains(event.target)) {
+            closeAll();
+            rest();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key !== "Escape") {
+            return;
+        }
+        var open = dock.querySelector('[aria-expanded="true"]');
+        if (open) {
+            closeAll();
+            open.focus();
+            rest();
+        }
+    });
+
+    window.addEventListener("resize", rest);
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(rest);
+    }
+
+    /* Place it without a glide on load, then let it move. */
+    rest();
+    dock.classList.add("has-lamp");
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () { dock.classList.add("lamp-ready"); });
+    });
+})();
+</script>

@@ -12,10 +12,17 @@ Rules:
 - Write figures exactly as they appear in the facts, without quotation marks. Every number you write must be one of those figures or a year: do not round them into ranges ("the low 50s"), compare against round numbers ("above 95", "below 61"), or count items yourself ("14 KPIs", "10 years"). Name the items and give their values instead.
 - Start with the direct answer in one sentence. For a time series that is the latest value and its period (or the value for the year asked about); for a score it is the score and its rating.
 - Then up to three short paragraphs on what matters: the trend, highs and lows, strongest and weakest areas, and what it suggests.
-- Mention the period once and the source once. Years are in the Ethiopian calendar: {calendar}
+- Mention the period once. Say where the figures come from once, by the source given in the facts (for example "according to Ethiopia's national SDG platform" or "according to DPMES"); when the facts give original_data, you may add it briefly ("based on the Ethiopia Demographic and Health Survey").
+- Years are in the Ethiopian calendar: {calendar} Facts marked "calendar": "Gregorian" (the SDG platform) use Gregorian years: {gregorian}
 - Do not write tables, value-by-value lists or chart data; those appear below your text.
 - If the facts include notes (a converted year, a default period, a missing value), state them briefly.
+- When a conversation so far is given and the question follows on from it ("what about 2016?", "and the regions?"), connect the answer to it in a sentence where that helps, for example comparing with a figure from an earlier answer. Quote earlier figures exactly as written there; never add others.
 - Reply in {language}. Use HTML only: <p>, <ul>, <li>, <b>. No markdown."""
+
+GREGORIAN_NOTES = {
+    "English": 'write them as plain years ("2016"), never with EC.',
+    "Amharic": "write them with እ.ኤ.አ, never ዓ.ም.",
+}
 
 CALENDAR_NOTES = {
     "English": 'write them as "2018 EC".',
@@ -23,10 +30,11 @@ CALENDAR_NOTES = {
 }
 
 GENERAL_PROMPT = """You are Admas AI, the assistant of Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
-It answers questions about Ethiopia's statistics (GDP, inflation, production, trade, health, education…) and the performance of ministries, agencies, policy areas and strategic goals.
+It answers questions about Ethiopia's statistics (GDP, inflation, production, trade, health, education…), its progress on the Sustainable Development Goals, and the performance of ministries, agencies, policy areas and strategic goals.
 
 {instruction}
-Reply in {language}, briefly. Use HTML only: <p>, <ul>, <li>, <b>. No markdown. Do not state statistics or figures."""
+When a conversation so far is given and the question refers to it ("explain that simply", "why does it matter?", "summarise this for a briefing"), answer from the earlier answers, and write years exactly as they appear there (keep "EC" or "ዓ.ም").
+Reply in {language}, briefly. Use HTML only: <p>, <ul>, <li>, <b>. No markdown. Do not state statistics or figures, except ones repeated exactly as they appear in the conversation so far."""
 
 INSTRUCTIONS = {
     "general": "Answer the question conceptually. If the user wants actual figures, invite them to ask about a specific indicator or ministry.",
@@ -38,7 +46,8 @@ INSTRUCTIONS = {
 
 def facts(results, problems):
     payload = [
-        {key: result.get(key) for key in ("title", "period", "source", "notes", "data") if result.get(key) is not None}
+        {key: result.get(key) for key in ("title", "period", "calendar", "source", "original_data", "notes", "data")
+         if result.get(key) is not None}
         for result in results
     ]
     if problems:
@@ -46,24 +55,28 @@ def facts(results, problems):
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
 
 
-def messages_for(kind, question, language, results=(), problems=()):
+def messages_for(kind, question, language, results=(), problems=(), conversation=""):
+    """The writer's messages; `conversation` is planner.conversation() text (may be empty)."""
     if kind == "data" and results:
         return [
-            {"role": "system", "content": DATA_PROMPT.format(language=language, calendar=CALENDAR_NOTES.get(language, CALENDAR_NOTES["English"]))},
-            {"role": "user", "content": f"Question: {question}\n\nFacts (JSON):\n{facts(results, problems)}"},
+            {"role": "system", "content": DATA_PROMPT.format(
+                language=language,
+                calendar=CALENDAR_NOTES.get(language, CALENDAR_NOTES["English"]),
+                gregorian=GREGORIAN_NOTES.get(language, GREGORIAN_NOTES["English"]))},
+            {"role": "user", "content": f"{conversation}Question: {question}\n\nFacts (JSON):\n{facts(results, problems)}"},
         ]
     instruction = INSTRUCTIONS["no_data" if kind == "data" else kind]
     notes = f"\n\nNotes: {'; '.join(problems)}" if problems else ""
     return [
         {"role": "system", "content": GENERAL_PROMPT.format(instruction=instruction, language=language)},
-        {"role": "user", "content": f"Question: {question}{notes}"},
+        {"role": "user", "content": f"{conversation}Question: {question}{notes}"},
     ]
 
 
-async def stream(kind, question, language, results=(), problems=(), temperature=None):
+async def stream(kind, question, language, results=(), problems=(), temperature=None, conversation=""):
     if temperature is None:
         # This model drifts into other scripts mid-word when sampling Amharic.
         temperature = 0 if language == "Amharic" else 0.2
-    messages = messages_for(kind, question, language, results, problems)
+    messages = messages_for(kind, question, language, results, problems, conversation)
     async for piece in llm.stream_completion(messages, temperature=temperature):
         yield piece

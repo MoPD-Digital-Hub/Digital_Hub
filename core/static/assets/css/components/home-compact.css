@@ -1,0 +1,179 @@
+/* Home page, compact cards. With the side menu gone the page is ~280px wider,
+   so every strip shows more, smaller cards instead of a few large ones.
+   Scoped to the home page and to tablet width and up; phone layouts keep the
+   rules in each section's own stylesheet. */
+
+@media (min-width: 768px) {
+  .home-dashboard-sections {
+    gap: 30px;
+  }
+
+  /* Key development statistics */
+  .home-dashboard-sections .topic-strip-track {
+    grid-auto-columns: 192px;
+    gap: 10px;
+  }
+
+  .home-dashboard-sections .topic-strip-card,
+  .home-dashboard-sections .topic-strip-card .data-topic-card-shell {
+    min-height: 212px;
+    border-radius: 18px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-shell {
+    padding: 12px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-badge,
+  .home-dashboard-sections .topic-strip-card .data-topic-card-open {
+    min-height: 26px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-open {
+    width: 28px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-icon img {
+    width: 18px;
+    height: 18px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-body,
+  .home-dashboard-sections .topic-strip-card .data-topic-card-copy {
+    gap: 6px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-copy h3 {
+    font-size: 16.5px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-copy p {
+    font-size: 11.5px;
+  }
+
+  .home-dashboard-sections .topic-strip-card .data-topic-card-meta span {
+    min-height: 22px;
+    padding: 0 8px;
+  }
+
+  /* Ministry scorecard */
+  .home-dashboard-sections .ministry-strip-track {
+    grid-auto-columns: 168px;
+    gap: 10px;
+  }
+
+  .home-dashboard-sections .ministry-card,
+  .home-dashboard-sections .ministry-card-shell {
+    min-height: 204px;
+  }
+
+  .home-dashboard-sections .ministry-card {
+    border-radius: 18px;
+  }
+
+  .home-dashboard-sections .ministry-card-shell {
+    padding: 10px 10px 0;
+  }
+
+  .home-dashboard-sections .ministry-card-period {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .home-dashboard-sections .ministry-card-body {
+    grid-template-columns: 44px minmax(0, 1fr);
+    column-gap: 9px;
+    padding: 6px 4px 8px;
+  }
+
+  .home-dashboard-sections .ministry-card-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    border-width: 2px;
+  }
+
+  .home-dashboard-sections .ministry-card-logo img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .home-dashboard-sections .ministry-card-heading h4 {
+    font-size: 20px;
+  }
+
+  .home-dashboard-sections .ministry-card-score-panel strong {
+    font-size: 24px;
+  }
+
+  /* Program summaries */
+  .home-dashboard-sections .summary-panel {
+    min-height: 176px;
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .home-dashboard-sections .summary-slider-track,
+  .home-dashboard-sections .summary-slide {
+    min-height: 88px;
+  }
+
+  /* High frequency indicators: more per row */
+  .home-dashboard-sections .hf-grid {
+    gap: 10px;
+  }
+
+  .home-dashboard-sections .hf-card {
+    min-height: 140px;
+    border-radius: 16px;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  /* Projects */
+  .home-dashboard-sections .project-strip-track {
+    grid-auto-columns: 188px;
+    gap: 10px;
+  }
+
+  .home-dashboard-sections .project-card,
+  .home-dashboard-sections .project-card-shell {
+    min-height: 196px;
+  }
+
+  .home-dashboard-sections .project-card {
+    border-radius: 18px;
+  }
+
+  .home-dashboard-sections .project-card-body h3 {
+    font-size: 20px;
+  }
+
+  /* Initiatives */
+  .home-dashboard-sections .initiative-card,
+  .home-dashboard-sections .initiative-card-shell {
+    min-height: 196px;
+  }
+
+  .home-dashboard-sections .initiative-card {
+    border-radius: 18px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .home-dashboard-sections .hf-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1400px) {
+  .home-dashboard-sections .hf-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

@@ -33,22 +33,27 @@ class QuestionHistory(models.Model):
 
 class CatalogEntity(models.Model):
     """Something a question can be about: an indicator, organization, policy
-    area or goal. Synced from the time-series and DPMES APIs; the assistant
-    resolves names in a question to these rows before fetching any data."""
+    area, goal, SDG goal or SDG indicator. Synced from the time-series and DPMES
+    APIs and the national SDG platform; the assistant resolves names in a
+    question to these rows before fetching any data."""
 
     INDICATOR = "indicator"
     ORGANIZATION = "organization"
     POLICY_AREA = "policy_area"
     GOAL = "goal"
+    SDG_GOAL = "sdg_goal"
+    SDG_INDICATOR = "sdg_indicator"
     KIND_CHOICES = [
         (INDICATOR, "Indicator"),
         (ORGANIZATION, "Organization"),
         (POLICY_AREA, "Policy area"),
         (GOAL, "Goal"),
+        (SDG_GOAL, "SDG goal"),
+        (SDG_INDICATOR, "SDG indicator"),
     ]
 
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)
-    # Time-series indicator code, or the DPMES id for everything else.
+    # Time-series indicator code, SDG goal or indicator number, or the DPMES id.
     external_id = models.CharField(max_length=64)
     code = models.CharField(max_length=64, blank=True)
     name = models.CharField(max_length=500)

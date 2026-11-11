@@ -25,6 +25,8 @@ LOGGER = logging.getLogger(__name__)
 MIN_MATCH_SCORE = 0.45
 OPTIONAL_ENTITY_KINDS = {"organization": CatalogEntity.ORGANIZATION}
 AMHARIC_ATTEMPT_TEMPERATURES = (0, 0.4)
+# How much of each earlier answer the writer sees (the planner sees 300 characters).
+WRITER_ANSWER_CHARS = 700
 
 
 async def _resolve_call(call):
@@ -91,7 +93,11 @@ async def answer_stream(question, *, instance=None):
     pieces = []
     try:
         yield {"type": "status", "stage": "planning"}
-        plan = await planner.plan(question, await _history(instance))
+        history = await _history(instance)
+        plan = await planner.plan(question, history)
+        # The writer sees the recent turns too, so it can refer back; figures it
+        # quotes from them count as supported by the number check below.
+        context = planner.conversation(history, answer_chars=WRITER_ANSWER_CHARS)
         trace["language"], trace["plan"] = plan.language, plan.as_dict()
 
         results, problems = [], []
@@ -113,18 +119,20 @@ async def answer_stream(question, *, instance=None):
             # corruption, so the retry samples a little.
             for temperature in AMHARIC_ATTEMPT_TEMPERATURES:
                 narrative = "".join([p async for p in compose.stream(
-                    plan.kind, question, plan.language, results, problems, temperature=temperature)])
+                    plan.kind, question, plan.language, results, problems, temperature=temperature,
+                    conversation=context)])
                 if not verify.foreign_script(narrative):
                     break
             pieces.append(narrative)
             yield {"type": "delta", "text": narrative}
         else:
-            async for piece in compose.stream(plan.kind, question, plan.language, results, problems):
+            async for piece in compose.stream(plan.kind, question, plan.language, results, problems,
+                                              conversation=context):
                 pieces.append(piece)
                 yield {"type": "delta", "text": piece}
 
         narrative = "".join(pieces)
-        trace["unsupported_numbers"] = verify.unsupported_numbers(narrative, results, question)
+        trace["unsupported_numbers"] = verify.unsupported_numbers(narrative, results, f"{question}\n{context}")
         foreign = verify.foreign_script(narrative)
         if foreign:
             LOGGER.warning("AI answer contains unexpected script characters: %s", "".join(foreign))

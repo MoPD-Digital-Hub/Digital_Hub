@@ -1,6 +1,7 @@
 """The entity catalog: what questions can be about, and how names resolve to it.
 
-About a thousand rows (indicators, organizations, policy areas, goals), so the
+About fifteen hundred rows (indicators, organizations, policy areas, goals, SDG
+goals and indicators), so the
 vectors live in memory and similarity is one matrix product; no vector database
 is needed at this size.
 """
@@ -19,8 +20,9 @@ from asgiref.sync import sync_to_async
 from django.db import transaction
 
 from ai.engine import llm
-from ai.engine.sources import fetch_dpmes, lead_sentence
+from ai.engine.sources import fetch_dpmes, fetch_sdg, lead_sentence
 from ai.models import CatalogEntity
+from integrations.sdg import client as sdg_client
 from integrations.time_series import client as time_series_client
 
 LOGGER = logging.getLogger(__name__)
@@ -168,7 +170,58 @@ def _dpmes_rows(organizations, org_cards, areas, area_cards):
     return rows
 
 
-def sync(*, include_dpmes=True, period=None, log=LOGGER.info):
+def _sdg_rows(goals):
+    """SDG goals and indicators. Indicators without data stay in the catalog: their
+    proxy or additional indicators (1.1.1P1 for 1.1.1) answer for them."""
+    rows, indicators = [], {}
+    for feed in goals:
+        goal = feed.get("goal") or {}
+        goal_id = _clean(goal.get("id"))
+        if not goal_id:
+            continue
+        goal_name = _clean(goal.get("goal"))
+        goal_context = f"Sustainable Development Goal {goal_id}: {_clean(goal.get('description'))}"
+        rows.append({
+            "kind": CatalogEntity.SDG_GOAL, "external_id": goal_id, "code": f"SDG {goal_id}",
+            "name": goal_name, "name_am": "",
+            "aliases": [f"SDG {goal_id}", f"SDG{goal_id}", f"Goal {goal_id}", f"SDG goal {goal_id}"],
+            "context": goal_context[:500],
+            "details": {"description": _clean(goal.get("description"))},
+            "search_text": _search_text("Sustainable Development Goal", goal_name, "", goal_context),
+        })
+        targets = {_clean(t.get("id")): _clean(t.get("description")) for t in feed.get("targets") or []}
+        for item in feed.get("indicators") or []:
+            code = _clean(item.get("id"))
+            name = _clean(item.get("description"))
+            if not code or not name:
+                continue
+            target = _clean(item.get("target"))
+            kind_note = {"Proxy": "proxy for", "Additional": "additional indicator for", "Split": "part of"}.get(
+                item.get("type"), "")
+            parent = _clean(item.get("parentIndicator"))
+            context = f"SDG {goal_id} {goal_name}; target {target}: {targets.get(target, '')}"
+            if parent and kind_note:
+                context += f"; {kind_note} indicator {parent}"
+            # The platform lists a few indicators twice (11.b.2); keep the copy with data.
+            if code in indicators and (indicators[code]["details"]["has_data"] or not item.get("data")):
+                continue
+            indicators[code] = {
+                "kind": CatalogEntity.SDG_INDICATOR, "external_id": code, "code": code,
+                "name": name, "name_am": "", "aliases": [code, f"SDG {code}", f"indicator {code}"],
+                "context": context[:500],
+                "details": {
+                    "goal": goal_id, "goal_name": goal_name, "target": target, "type": _clean(item.get("type")),
+                    "parent": parent, "has_data": bool(item.get("data")),
+                    "sources": [_clean(s) for s in item.get("sources") or [] if _clean(s)],
+                    "providers": [_clean(s) for s in item.get("providers") or [] if _clean(s)],
+                    "definition": lead_sentence(item.get("definition")),
+                },
+                "search_text": _search_text("SDG indicator", name, "", context, lead_sentence(item.get("definition"))),
+            }
+    return rows + list(indicators.values())
+
+
+def sync(*, include_dpmes=True, include_sdg=True, period=None, log=LOGGER.info):
     """Upsert the catalog from the live APIs and embed rows whose text changed.
 
     Rows no longer present upstream are deactivated, not deleted, so traces that
@@ -185,6 +238,17 @@ def sync(*, include_dpmes=True, period=None, log=LOGGER.info):
         dpmes = _dpmes_rows(*fetch_dpmes(period))
         rows += dpmes
         log(f"  {len(dpmes)} organizations, policy areas and goals")
+    if include_sdg:
+        log("Fetching the national SDG platform…")
+        try:
+            sdg = _sdg_rows(fetch_sdg())
+        except sdg_client.SDGError as exc:
+            # Keep the SDG rows already in the catalog rather than failing the whole sync.
+            log(f"  skipped: {exc}")
+            include_sdg = False
+        else:
+            rows += sdg
+            log(f"  {len(sdg)} SDG goals and indicators")
 
     model_name = llm.embedding_model()
     existing = {(e.kind, e.external_id): e for e in CatalogEntity.objects.all()}
@@ -216,7 +280,7 @@ def sync(*, include_dpmes=True, period=None, log=LOGGER.info):
 
         include_kinds = {CatalogEntity.INDICATOR} | (
             {CatalogEntity.ORGANIZATION, CatalogEntity.POLICY_AREA, CatalogEntity.GOAL} if include_dpmes else set()
-        )
+        ) | ({CatalogEntity.SDG_GOAL, CatalogEntity.SDG_INDICATOR} if include_sdg else set())
         for key, entity in existing.items():
             if key not in seen and entity.is_active and entity.kind in include_kinds:
                 entity.is_active = False

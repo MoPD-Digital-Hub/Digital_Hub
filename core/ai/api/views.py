@@ -1,19 +1,13 @@
-import hashlib
 import logging
 
-import requests
 from celery.result import AsyncResult
 from django.conf import settings
-from django.core.cache import cache
-from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from ai.engine import compat
 from ai.infrastructure.health import run_dependency_checks
-from ai.infrastructure.translation import translate_text_with_gemini
-from ai.infrastructure.tts import synthesize_gemini_tts
 from ai.models import ChatInstance, QuestionHistory
 from ai.tasks import generate_answer_task
 from project.celery import app as celery_app
@@ -111,145 +105,6 @@ def answer(request, chat_instance_id):
     if not ok:
         return failure(request, "AI_UNAVAILABLE", status.HTTP_503_SERVICE_UNAVAILABLE, code="AI_UNAVAILABLE", error_message=data["message"])
     return success(request, data)
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def tts(request):
-    text = str((request.data or {}).get("text", "")).strip()
-    voice = str((request.data or {}).get("voice", "")).strip() or None
-    language = str((request.data or {}).get("language", "English")).strip() or "English"
-    if not text:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message="text is required")
-
-    cache_key = "ai_tts:{digest}".format(
-        digest=hashlib.sha256(
-            "{voice}:{language}:{text}".format(voice=voice or "", language=language, text=text).encode("utf-8")
-        ).hexdigest()
-    )
-    cached = cache.get(cache_key)
-    if cached:
-        audio_bytes, mime_type = cached
-        response = HttpResponse(audio_bytes, content_type=mime_type or "audio/wav")
-        response["Content-Disposition"] = 'inline; filename="admas-ai-response.wav"'
-        response["Cache-Control"] = "private, max-age=3600"
-        response["X-TTS-Cache"] = "HIT"
-        return response
-
-    try:
-        audio_bytes, mime_type = synthesize_gemini_tts(text, voice_name=voice, language_hint=language)
-    except ValueError as exc:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message=str(exc))
-    except requests.HTTPError as exc:
-        details = {}
-        if exc.response is not None:
-            try:
-                details = exc.response.json()
-            except ValueError:
-                details = {"response_text": exc.response.text[:500]}
-        LOGGER.exception("Gemini TTS provider failure", extra={"details": details})
-        return failure(request, "TTS_PROVIDER_FAILURE", status.HTTP_502_BAD_GATEWAY, code="TTS_PROVIDER_FAILURE", error_message=details.get("error", {}).get("message") or "Gemini TTS request failed.", details=details)
-    except Exception as exc:
-        return failure(request, "TTS_UNAVAILABLE", status.HTTP_503_SERVICE_UNAVAILABLE, code="TTS_UNAVAILABLE", error_message=str(exc))
-
-    cache.set(
-        cache_key,
-        (audio_bytes, mime_type),
-        timeout=int(getattr(settings, "AI_TTS_CACHE_TIMEOUT", 3600)),
-    )
-
-    response = HttpResponse(audio_bytes, content_type=mime_type or "audio/wav")
-    response["Content-Disposition"] = 'inline; filename="admas-ai-response.wav"'
-    response["Cache-Control"] = "private, max-age=3600"
-    response["X-TTS-Cache"] = "MISS"
-    return response
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def tts_prefetch(request):
-    text = str((request.data or {}).get("text", "")).strip()
-    voice = str((request.data or {}).get("voice", "")).strip() or None
-    language = str((request.data or {}).get("language", "English")).strip() or "English"
-    if not text:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message="text is required")
-
-    cache_key = "ai_tts:{digest}".format(
-        digest=hashlib.sha256(
-            "{voice}:{language}:{text}".format(voice=voice or "", language=language, text=text).encode("utf-8")
-        ).hexdigest()
-    )
-    if cache.get(cache_key):
-        return success(request, {"cached": True}, message="TTS_CACHE_HIT")
-
-    try:
-        audio_bytes, mime_type = synthesize_gemini_tts(text, voice_name=voice, language_hint=language)
-    except ValueError as exc:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message=str(exc))
-    except requests.HTTPError as exc:
-        details = {}
-        if exc.response is not None:
-            try:
-                details = exc.response.json()
-            except ValueError:
-                details = {"response_text": exc.response.text[:500]}
-        LOGGER.exception("Gemini TTS prefetch provider failure", extra={"details": details})
-        return failure(request, "TTS_PROVIDER_FAILURE", status.HTTP_502_BAD_GATEWAY, code="TTS_PROVIDER_FAILURE", error_message=details.get("error", {}).get("message") or "Gemini TTS request failed.", details=details)
-    except Exception as exc:
-        return failure(request, "TTS_UNAVAILABLE", status.HTTP_503_SERVICE_UNAVAILABLE, code="TTS_UNAVAILABLE", error_message=str(exc))
-
-    cache.set(
-        cache_key,
-        (audio_bytes, mime_type),
-        timeout=int(getattr(settings, "AI_TTS_CACHE_TIMEOUT", 3600)),
-    )
-    return success(request, {"cached": False}, message="TTS_WARMED")
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
-def translate(request):
-    text = str((request.data or {}).get("text", "")).strip()
-    target_language = str((request.data or {}).get("target_language", "Amharic")).strip() or "Amharic"
-    if not text:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message="text is required")
-
-    cache_key = "ai_translate:{lang}:{digest}".format(
-        lang=target_language.lower(),
-        digest=hashlib.sha256(text.encode("utf-8")).hexdigest(),
-    )
-    cached_translation = cache.get(cache_key)
-    if cached_translation:
-        return success(request, {
-                "translation": cached_translation,
-                "target_language": target_language,
-            }, message="TRANSLATION_CACHE_HIT")
-
-    try:
-        translated_text = translate_text_with_gemini(text, target_language=target_language)
-    except ValueError as exc:
-        return failure(request, "TEXT_REQUIRED", status.HTTP_400_BAD_REQUEST, code="TEXT_REQUIRED", error_message=str(exc))
-    except requests.HTTPError as exc:
-        details = {}
-        if exc.response is not None:
-            try:
-                details = exc.response.json()
-            except ValueError:
-                details = {"response_text": exc.response.text[:500]}
-        return failure(request, "TRANSLATION_PROVIDER_FAILURE", status.HTTP_502_BAD_GATEWAY, code="TRANSLATION_PROVIDER_FAILURE", error_message="Gemini translation request failed.", details=details)
-    except Exception as exc:
-        return failure(request, "TRANSLATION_UNAVAILABLE", status.HTTP_503_SERVICE_UNAVAILABLE, code="TRANSLATION_UNAVAILABLE", error_message=str(exc))
-
-    cache.set(
-        cache_key,
-        translated_text,
-        timeout=int(getattr(settings, "AI_TRANSLATION_CACHE_TIMEOUT", 3600)),
-    )
-
-    return success(request, {
-            "translation": translated_text,
-            "target_language": target_language,
-        }, message="TRANSLATED")
 
 
 @api_view(['GET'])

@@ -1,6 +1,10 @@
+/* Dashboard type, the same pair as the Admas AI chat: the system sans for the
+   interface, card titles and reading text, and Source Serif 4 for page and
+   section titles only (as the chat's greeting and "Admas AI" name). Ethiopic
+   falls back to the matching Noto faces. Fonts are loaded in base.html. */
 :root {
-  --dh-font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
-  --dh-font-display: "Space Grotesk", "Plus Jakarta Sans", sans-serif;
+  --dh-font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Ethiopic", sans-serif;
+  --dh-font-display: "Source Serif 4", "Noto Serif Ethiopic", Georgia, "Times New Roman", serif;
 }
 
 body {
@@ -9,23 +13,25 @@ body {
 
 h1,
 h2,
+.page-header-title {
+  font-family: var(--dh-font-display);
+  letter-spacing: -0.01em;
+}
+
 h3,
 h4,
 h5,
 h6,
-.card-title,
-.page-header-title,
-.pc-sidebar .pc-item > .pc-link .pc-mtext,
-.pc-sidebar .pc-caption,
-.btn,
-.badge {
-  font-family: var(--dh-font-display);
+.card-title {
+  font-family: var(--dh-font-body);
 }
 
 input,
 textarea,
 select,
 button,
+.btn,
+.badge,
 .form-control,
 .form-select,
 .table,
@@ -33,6 +39,8 @@ button,
 .nav-link,
 .breadcrumb,
 .pagination,
-.list-group-item {
+.list-group-item,
+.pc-sidebar .pc-item > .pc-link .pc-mtext,
+.pc-sidebar .pc-caption {
   font-family: var(--dh-font-body);
 }

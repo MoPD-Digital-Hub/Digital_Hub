@@ -17,11 +17,14 @@ from ai.engine import periods
 from ai.models import CatalogEntity
 from integrations.dpmes import client as dpmes_client
 from integrations.dpmes import compat as dpmes_compat
+from integrations.sdg import client as sdg_client
+from integrations.sdg import series as sdg_series
 from integrations.time_series import client as time_series_client
 
 CACHE_SECONDS = 300
 MAX_KPIS = 25
 MAX_RANKED = 10
+MAX_SDG_ROWS = 30
 
 
 class ToolError(Exception):
@@ -256,6 +259,117 @@ def rank_policy_areas(*, order="top", year=None, quarter=None, **_):
         "Policy areas ranked by performance score", rows, order, period, notes)}
 
 
+# --- National SDG platform ---------------------------------------------------
+
+
+def _sdg_goal(goal_id):
+    try:
+        return sdg_client.goal(goal_id)
+    except sdg_client.SDGError as exc:
+        raise ToolError(f"The national SDG platform could not provide this data ({exc}).") from exc
+
+
+def _original_data(items):
+    """The surveys or records behind the platform's figures ("Ethiopia DHS, MoH")."""
+    origins = []
+    for item in items:
+        for value in [*(item.get("sources") or []), *(item.get("providers") or [])]:
+            for part in str(value or "").split(","):
+                part = part.strip()
+                if part and part not in origins:
+                    origins.append(part)
+    return ", ".join(origins[:4])
+
+
+def sdg_indicator(*, sdg_indicator, year=None, breakdown=None, **_):
+    details = sdg_indicator.details or {}
+    feed = _sdg_goal(details.get("goal") or sdg_indicator.code.split(".")[0])
+    matches = [i for i in feed["indicators"] if str(i.get("id")) == sdg_indicator.external_id]
+    # The platform lists a few indicators twice (11.b.2); prefer the copy with data.
+    item = next((i for i in matches if i.get("data")), matches[0] if matches else None)
+    if item is None:
+        raise ToolError(f"The national SDG platform no longer lists indicator {sdg_indicator.external_id}.")
+
+    notes = []
+    if not item.get("data"):
+        # Global indicators often have no data of their own; their proxy or
+        # additional indicators (1.1.1P1 for 1.1.1) carry the figures.
+        children = [i for i in feed["indicators"] if i.get("parentIndicator") == item.get("id") and i.get("data")]
+        if not children:
+            raise ToolError(f"The national SDG platform has no data for SDG indicator {item.get('id')} yet.")
+        child = children[0]
+        notes.append(f"SDG {item.get('id')} has no data of its own; its {str(child.get('type') or 'related').lower()} "
+                     f"indicator {child.get('id')} ({child.get('description')}) is shown.")
+        item = child
+
+    shown, series_notes = sdg_series.select(item["data"], breakdown)
+    notes += series_notes
+    if not shown:
+        raise ToolError(f"The national SDG platform has no figures for SDG indicator {item.get('id')}.")
+
+    requested = None
+    if year:
+        values = [{"series": s["name"], "value": p["value"]} for s in shown for p in s["points"] if p["year"] == int(year)]
+        requested = {"year": int(year), "values": values}
+        if not values:
+            notes.append(f"There is no value for {year}; years with data: "
+                         f"{', '.join(str(y) for y in sorted({p['year'] for s in shown for p in s['points']}))}.")
+    years = sorted({p["year"] for s in shown for p in s["points"]})
+    return {
+        "tool": "sdg_indicator",
+        "title": f"{item.get('description')}: SDG {item.get('id')}",
+        "source": sdg_client.SOURCE_NAME,
+        "source_detail": sdg_client.SOURCE_SITE,
+        "original_data": _original_data([item]),
+        "calendar": "Gregorian",
+        "notes": notes,
+        "period": f"{years[0]}–{years[-1]}" if len(years) > 1 else str(years[0]),
+        "data": {
+            "indicator": {
+                "code": item.get("id"), "name": item.get("description"), "type": item.get("type"),
+                "goal": f"SDG {item.get('goal')}: {(feed.get('goal') or {}).get('goal')}",
+                "target": item.get("target"), "unit": shown[0]["unit"],
+            },
+            "breakdown": breakdown if breakdown in sdg_series.BREAKDOWNS else None,
+            "requested": requested,
+            "series": shown,
+        },
+    }
+
+
+def sdg_goal(*, sdg_goal, **_):
+    feed = _sdg_goal(sdg_goal.external_id)
+    goal = feed.get("goal") or {}
+    rows, reported = [], []
+    for item in feed["indicators"]:
+        series = sdg_series.headline(item.get("data")) if item.get("data") else None
+        if not series:
+            continue
+        latest = series["points"][-1]
+        reported.append(item)
+        rows.append({
+            "code": item.get("id"), "name": item.get("description"),
+            "series": None if series["name"] == "Total" else series["name"],
+            "value": latest["value"], "unit": series["unit"], "year": latest["year"],
+        })
+    notes = [f"Showing {MAX_SDG_ROWS} of {len(rows)} indicators with data."] if len(rows) > MAX_SDG_ROWS else []
+    return {
+        "tool": "sdg_goal",
+        "title": f"SDG {goal.get('id', sdg_goal.external_id)} {goal.get('goal') or sdg_goal.name}: latest values",
+        "source": sdg_client.SOURCE_NAME,
+        "source_detail": sdg_client.SOURCE_SITE,
+        "original_data": _original_data(reported),
+        "calendar": "Gregorian",
+        "notes": notes,
+        "data": {
+            "goal": {"id": goal.get("id"), "name": goal.get("goal"), "description": goal.get("description")},
+            "indicators_total": len(feed["indicators"]),
+            "indicators_with_data": len(rows),
+            "indicators": rows[:MAX_SDG_ROWS],
+        },
+    }
+
+
 TOOLS = {tool.name: tool for tool in (
     Tool("indicator_series", "Values over time of a national statistical indicator (GDP, inflation, "
          "production, exports, health, education…). Args: indicator, optional year.",
@@ -276,4 +390,12 @@ TOOLS = {tool.name: tool for tool in (
          "optional year, quarter.", rank_organizations),
     Tool("rank_policy_areas", "Policy areas ranked by score (best or worst). Args: order top|bottom, "
          "optional year, quarter.", rank_policy_areas),
+    Tool("sdg_indicator", "Values over the years of one SDG indicator from the national SDG platform (poverty "
+         "headcount, stunting, school completion, access to water and sanitation…), nationally or broken "
+         "down. Args: sdg_indicator (its name or number, e.g. 1.1.1), optional year, breakdown "
+         "region|sex|age|location|education|wealth.",
+         sdg_indicator, {"sdg_indicator": CatalogEntity.SDG_INDICATOR}),
+    Tool("sdg_goal", "Progress on one Sustainable Development Goal: the latest national value of each of its "
+         "indicators. Args: sdg_goal (its name or number, e.g. SDG 4 or quality education).",
+         sdg_goal, {"sdg_goal": CatalogEntity.SDG_GOAL}),
 )}

@@ -1,7 +1,11 @@
 """Tables and charts built from tool results, never by the model.
 
 Output uses the HTML the web and mobile clients already render: <h4>, <table>,
-and <chart-data> JSON blocks (bar / line / pie, and the ministry_detail button).
+<chart-data> JSON blocks (bar / line / pie, and the ministry_detail button), and
+a <p class="ai-source"> line naming where the block's figures come from.
+
+A chart-data block may also carry "series" (several named lines); clients that
+do not read it still get the first line in "labels"/"data".
 """
 
 import json
@@ -11,6 +15,8 @@ from integrations.dpmes.compat import NUMBER_TO_QUARTER
 
 FREQUENCY_ORDER = ("monthly", "quarterly", "annual")
 MAX_CHART_POINTS = 15
+# Up to this many series read best as columns by year; more (regions) as one row each.
+MAX_SERIES_COLUMNS = 4
 
 
 def _fmt(value):
@@ -132,6 +138,98 @@ def _ranking(result):
     return parts
 
 
+def _sdg_indicator(result):
+    data = result["data"]
+    series = data["series"]
+    unit = data["indicator"].get("unit")
+    unit_text = f" ({unit})" if unit else ""
+    parts = [f"<h4>{escape(result['title'])}, {escape(result.get('period', ''))}</h4>"]
+
+    if len(series) <= MAX_SERIES_COLUMNS:
+        years = sorted({p["year"] for s in series for p in s["points"]})
+        values = [{p["year"]: p["value"] for p in s["points"]} for s in series]
+        headers = ["Year"] + ([f"Value{unit_text}"] if len(series) == 1 else [f"{s['name']}{unit_text}" for s in series])
+        rows = [[str(year)] + [_fmt(v.get(year)) for v in values] for year in years]
+        parts.append(_table(headers, rows))
+        first = series[0]["points"][-MAX_CHART_POINTS:]
+        if len(years) > 1:
+            chart = {
+                "type": "line" if len(years) > 2 else "bar",
+                "label": data["indicator"]["name"] + unit_text,
+                "labels": [str(p["year"]) for p in first],
+                "data": [p["value"] for p in first],
+            }
+            if len(series) > 1:
+                chart["label"] += f" – {series[0]['name']}"
+                chart["series"] = [{"name": s["name"], "points": [[str(p["year"]), p["value"]] for p in s["points"]]}
+                                   for s in series]
+            parts.append(_chart(chart))
+        return parts
+
+    # Many series (one per region, age group…): the latest value of each.
+    label = series[0].get("dimension") or "Series"
+    latest = [(s["name"], s["points"][-1]) for s in series]
+    parts.append(_table([label, f"Latest value{unit_text}", "Year"],
+                        [[escape(name), _fmt(point["value"]), str(point["year"])] for name, point in latest]))
+    parts.append(_chart({"type": "bar", "label": data["indicator"]["name"] + unit_text + ", latest value",
+                         "labels": [name for name, _ in latest], "data": [point["value"] for _, point in latest]}))
+    return parts
+
+
+def _sdg_goal(result):
+    rows = result["data"]["indicators"]
+    if not rows:
+        return []
+    parts = [f"<h4>{escape(result['title'])}</h4>"]
+    parts.append(_table(["Indicator", "Value", "Unit", "Year"], [
+        [escape(f"{r['code']} {r['name']}" + (f" ({r['series']})" if r.get("series") else "")),
+         _fmt(r["value"]), escape(r.get("unit") or ""), str(r["year"])]
+        for r in rows
+    ]))
+    return parts
+
+
+# Which of the three sources a tool reads; clients may colour blocks by it.
+SOURCE_KINDS = {
+    "indicator_series": "time_series",
+    "organization_score": "dpmes", "organization_kpis": "dpmes", "policy_area_score": "dpmes",
+    "goal_detail": "dpmes", "rank_organizations": "dpmes", "rank_policy_areas": "dpmes",
+    "sdg_indicator": "sdg", "sdg_goal": "sdg",
+}
+
+
+def _sdg_goal_number(result):
+    """The SDG (1-17) an SDG result belongs to, as a string, or ""."""
+    data = result.get("data") or {}
+    if result.get("tool") == "sdg_goal":
+        value = (data.get("goal") or {}).get("id")
+    elif result.get("tool") == "sdg_indicator":
+        value = str((data.get("indicator") or {}).get("code") or "").split(".")[0]
+    else:
+        return ""
+    value = str(value or "").strip()
+    return value if value.isdigit() and 1 <= int(value) <= 17 else ""
+
+
+def _source(result):
+    """"Source: Ethiopia's national SDG platform (sdg.mopd.gov.et; original data: EDHS, MoH)"."""
+    source = result.get("source")
+    if not source:
+        return ""
+    detail = "; ".join(filter(None, [
+        result.get("source_detail"),
+        f"original data: {result['original_data']}" if result.get("original_data") else "",
+    ]))
+    kind = SOURCE_KINDS.get(result.get("tool"), "")
+    attribute = f' data-source="{kind}"' if kind else ""
+    goal = _sdg_goal_number(result)
+    if goal:
+        # Lets clients show the goal's icon; the mobile app ignores it.
+        attribute += f' data-sdg-goal="{goal}"'
+    return (f'<p class="ai-source"{attribute}>Source: {escape(str(source))}'
+            + (f" ({escape(detail)})" if detail else "") + "</p>")
+
+
 RENDERERS = {
     "indicator_series": _indicator_series,
     "organization_score": _organization_score,
@@ -140,6 +238,8 @@ RENDERERS = {
     "goal_detail": _goal_detail,
     "rank_organizations": _ranking,
     "rank_policy_areas": _ranking,
+    "sdg_indicator": _sdg_indicator,
+    "sdg_goal": _sdg_goal,
 }
 
 
@@ -148,6 +248,8 @@ def sections(results):
     html = []
     for result in results:
         renderer = RENDERERS.get(result.get("tool"))
-        if renderer:
-            html.extend(renderer(result))
+        parts = renderer(result) if renderer else []
+        if parts:
+            html.extend(parts)
+            html.append(_source(result))
     return "".join(html)

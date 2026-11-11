@@ -1,6 +1,7 @@
+from asgiref.sync import async_to_sync
 from celery import shared_task
 
-from ai.engine import compat
+from ai.engine import compat, titles
 from ai.models import ChatInstance
 
 
@@ -25,3 +26,9 @@ def generate_answer_task(self, chat_instance_id, question, request_id=None):
         "message": "SUCCESS" if ok else "AI_UNAVAILABLE",
         "status_code": 200 if ok else 503,
     }
+
+
+@shared_task(ignore_result=True)
+def generate_chat_title(chat_instance_id, question):
+    """Title a chat after its first REST answer (see ai.engine.titles)."""
+    return async_to_sync(titles.ensure_title)(chat_instance_id, question)

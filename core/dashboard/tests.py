@@ -8,7 +8,7 @@ from integrations.dpmes import client as dpmes_client
 from users.models import Ministry
 
 PAGES = [
-    ("dashboard_home", {}), ("dashboard_about", {}), ("dashboard_admas_ai", {}), ("data_categories", {}),
+    ("dashboard_home", {}), ("dashboard_admas_ai", {}), ("data_categories", {}),
     ("data_topic_detail", {"topic_id": 1}), ("data_indicator_detail", {"indicator_id": 1}),
     ("policy_area_list", {}), ("policy_area_detail", {"policy_area_id": 47}),
     ("public_body_list", {}), ("public_body_detail", {"ministry_id": 312}), ("goal_detail", {"goal_id": 983}),

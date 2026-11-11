@@ -69,7 +69,7 @@ Admas AI uses the Ministry LLM gateway (OpenAI-compatible) for chat and embeddin
 - `EMBEDDING_API_BASE`, `EMBEDDING_MODEL`, `EMBEDDING_API_KEY` for embeddings
 - `DPMES2_API_BASE`, `DPMES2_API_KEY` for ministry and policy-area performance
 - `TIME_SERIES_API_BASE` for indicator values
-- `GEMINI_API_KEY` only for the chat's translate button and read-aloud
+- `SDG_PLATFORM_BASE` (optional) for SDG data; defaults to https://sdg.mopd.gov.et
 
 After the first deploy, and then daily, build the catalog of indicators and organizations:
 

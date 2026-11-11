@@ -13,5 +13,6 @@ app.autodiscover_tasks()
 # Keep default routing unless explicit Celery tasks are added.
 app.conf.task_routes = {
     "ai.tasks.generate_answer_task": {"queue": "ai_queue"},
+    "ai.tasks.generate_chat_title": {"queue": "ai_queue"},
 }
 

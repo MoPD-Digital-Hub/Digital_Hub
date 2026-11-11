@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
 from asgiref.sync import async_to_sync
@@ -54,7 +54,7 @@ class CatalogSyncTests(TestCase):
             with patch.object(catalog.time_series_client, "fetch_topics", return_value=[]), \
                     patch.object(catalog, "_indicator_rows", return_value=[dict(r) for r in rows]), \
                     patch.object(catalog.llm, "embed_documents", side_effect=embed) as embedded:
-                return catalog.sync(include_dpmes=False, log=lambda *_: None), embedded.call_count
+                return catalog.sync(include_dpmes=False, include_sdg=False, log=lambda *_: None), embedded.call_count
 
         self.assertEqual(run([row])[0]["created"], 1)
         counts, embeds = run([{**row, "aliases": ["MoPD", "MoNS"]}])
@@ -126,6 +126,114 @@ class RenderTests(SimpleTestCase):
         self.assertEqual(html.count("</chart-data>"), 1)
         chart = json.loads(html.split("<chart-data>")[1].split("</chart-data>")[0])
         self.assertEqual(chart["labels"], ["</chart-data><script>x</script>"])
+
+
+SDG_FEED = {
+    "goal": {"id": "1", "goal": "No poverty", "description": "End poverty"},
+    "targets": [{"id": "1.1", "description": "Eradicate extreme poverty"}],
+    "indicators": [
+        {"id": "1.1.1", "goal": "1", "target": "1.1", "type": "Global", "description": "Population below the poverty line",
+         "data": None, "sources": [], "providers": []},
+        {"id": "1.1.1P1", "goal": "1", "target": "1.1", "type": "Proxy", "parentIndicator": "1.1.1",
+         "description": "Poverty headcount index", "sources": ["HICE survey 2015/16"], "providers": ["NPC, MoPD"],
+         "data": [
+             {"disaggregations": [{"type": "Region", "value": "NATIONAL"}],
+              "data": {"2011": {"year": 2011, "value": "29.6", "unit": "Index"},
+                       "2016": {"year": 2016, "value": "23.5", "unit": "Index"}}},
+             {"disaggregations": [{"type": "Region", "value": "Tigray"}],
+              "data": {"2016": {"year": 2016, "value": "27", "unit": "Index"}}},
+         ]},
+        # The platform lists a few indicators twice; the copy with data wins.
+        {"id": "1.1.1P1", "goal": "1", "target": "1.1", "description": "Poverty headcount index", "data": None},
+    ],
+}
+
+
+class SDGTests(SimpleTestCase):
+    def test_catalog_rows_cover_goals_and_indicators_once(self):
+        rows = catalog._sdg_rows([SDG_FEED])
+        goals = [r for r in rows if r["kind"] == CatalogEntity.SDG_GOAL]
+        indicators = {r["code"]: r for r in rows if r["kind"] == CatalogEntity.SDG_INDICATOR}
+        self.assertEqual(goals[0]["code"], "SDG 1")
+        self.assertIn("Goal 1", goals[0]["aliases"])
+        self.assertEqual(sorted(indicators), ["1.1.1", "1.1.1P1"])
+        self.assertTrue(indicators["1.1.1P1"]["details"]["has_data"])
+        self.assertIn("proxy for indicator 1.1.1", indicators["1.1.1P1"]["context"])
+
+    def run_indicator(self, code, **args):
+        from ai.engine import tools
+
+        match = Match(1, CatalogEntity.SDG_INDICATOR, code, code, "x", 1.0, "exact", {"goal": "1"})
+        with patch.object(tools.sdg_client, "goal", return_value=SDG_FEED):
+            return tools.sdg_indicator(sdg_indicator=match, **args)
+
+    def test_indicator_without_data_answers_with_its_proxy(self):
+        result = self.run_indicator("1.1.1")
+        self.assertEqual(result["data"]["indicator"]["code"], "1.1.1P1")
+        self.assertIn("proxy indicator 1.1.1P1", result["notes"][0])
+        self.assertEqual(result["calendar"], "Gregorian")
+        self.assertEqual(result["source"], "Ethiopia's national SDG platform")
+        self.assertEqual(result["original_data"], "HICE survey 2015/16, NPC, MoPD")
+        self.assertEqual([s["name"] for s in result["data"]["series"]], ["Total"])
+
+    def test_breakdown_shows_regions_as_columns_and_names_the_source(self):
+        result = self.run_indicator("1.1.1P1", breakdown="region", year=2016)
+        self.assertEqual(result["data"]["requested"]["values"][0], {"series": "Tigray", "value": 27})
+        html = render.sections([result])
+        self.assertIn("<th>Year</th><th>Tigray (Index)</th><th>National (Index)</th>", html)
+        chart = json.loads(html.split("<chart-data>")[1].split("</chart-data>")[0])
+        self.assertEqual([s["name"] for s in chart["series"]], ["Tigray", "National"])
+        self.assertTrue(html.endswith('<p class="ai-source" data-source="sdg" data-sdg-goal="1">Source: '
+                                      "Ethiopia&#x27;s national SDG platform "
+                                      "(sdg.mopd.gov.et; original data: HICE survey 2015/16, NPC, MoPD)</p>"))
+
+    def test_many_series_render_one_row_each_with_their_latest_value(self):
+        regions = ["Tigray", "Afar", "Amhara", "Oromia", "Somali"]
+        result = {"tool": "sdg_indicator", "title": "Stunting: SDG 2.2.1a", "period": "2023", "data": {
+            "indicator": {"name": "Stunting", "unit": "%"}, "breakdown": None,
+            "series": [{"name": r, "dimension": "Region", "unit": "%", "points": [{"year": 2023, "value": 30 + i}]}
+                       for i, r in enumerate(regions)]}}
+        html = render.sections([result])
+        self.assertIn("<th>Region</th><th>Latest value (%)</th><th>Year</th>", html)
+        self.assertIn("<td>Somali</td><td>34</td><td>2023</td>", html)
+        chart = json.loads(html.split("<chart-data>")[1].split("</chart-data>")[0])
+        self.assertEqual((chart["type"], chart["labels"]), ("bar", regions))
+
+    def test_single_series_renders_years_as_rows_with_a_line_chart(self):
+        html = render.sections([self.run_indicator("1.1.1P1")])
+        self.assertIn("<th>Year</th><th>Value (Index)</th>", html)
+        chart = json.loads(html.split("<chart-data>")[1].split("</chart-data>")[0])
+        self.assertEqual((chart["labels"], chart["data"]), (["2011", "2016"], [29.6, 23.5]))
+        self.assertNotIn("series", chart)
+
+    def test_goal_overview_lists_the_latest_national_value(self):
+        from ai.engine import tools
+
+        match = Match(1, CatalogEntity.SDG_GOAL, "1", "SDG 1", "No poverty", 1.0, "exact")
+        with patch.object(tools.sdg_client, "goal", return_value=SDG_FEED):
+            result = tools.sdg_goal(sdg_goal=match)
+        self.assertEqual(result["data"]["indicators"], [{
+            "code": "1.1.1P1", "name": "Poverty headcount index", "series": None, "value": 23.5, "unit": "Index",
+            "year": 2016}])
+        html = render.sections([result])
+        self.assertIn("<td>1.1.1P1 Poverty headcount index</td><td>23.5</td><td>Index</td><td>2016</td>", html)
+        self.assertIn('data-sdg-goal="1"', html)
+
+    def test_only_sdg_results_carry_a_goal_number(self):
+        self.assertEqual(render._sdg_goal_number({"tool": "sdg_indicator", "data": {"indicator": {"code": "16.2.1"}}}),
+                         "16")
+        self.assertEqual(render._sdg_goal_number({"tool": "sdg_indicator", "data": {"indicator": {"code": "x"}}}), "")
+        self.assertEqual(render._sdg_goal_number({"tool": "sdg_goal", "data": {"goal": {"id": "18"}}}), "")
+        self.assertEqual(render._sdg_goal_number({"tool": "indicator_series", "data": {}}), "")
+
+    def test_unreachable_platform_is_a_tool_error(self):
+        from ai.engine import tools
+        from integrations.sdg.client import SDGError
+
+        match = Match(1, CatalogEntity.SDG_GOAL, "1", "SDG 1", "No poverty", 1.0, "exact")
+        with patch.object(tools.sdg_client, "goal", side_effect=SDGError("down")), \
+                self.assertRaises(tools.ToolError):
+            tools.sdg_goal(sdg_goal=match)
 
 
 class VerifyTests(SimpleTestCase):
@@ -383,7 +491,8 @@ class ChatEndpointTests(TransactionTestCase):
 
     def test_the_browser_also_gets_the_final_message(self):
         _, chat = self.make_chat()
-        with patch("ai.engine.compat.answer_stream", ENGLISH):
+        with patch("ai.engine.compat.answer_stream", ENGLISH), \
+                patch("ai.engine.compat.followups.suggest", AsyncMock(return_value=[])):
             messages = self.socket_messages(chat.id, headers=[(b"origin", b"http://localhost")])
         self.assertEqual(messages[-1]["message"], "<p>GDP grew 7.7%.</p>")
         self.assertTrue(messages[-1]["is_final"])
@@ -440,6 +549,151 @@ class ChatEndpointTests(TransactionTestCase):
             result = generate_answer_task.run(chat.id, "GDP?", "req-1")
         self.assertEqual((result["status"], result["status_code"], result["error"]["message"]),
                          ("FAILURE", 503, "Try again shortly."))
+
+
+class ChatTitleTests(TestCase):
+    def chat(self, title="New Chat", questions=1):
+        chat = ChatInstance.objects.create(title=title)
+        for i in range(questions):
+            QuestionHistory.objects.create(instance=chat, question=f"q{i}", response="a")
+        return chat
+
+    def ensure(self, chat, question="What was GDP growth in 2017?", model=None):
+        from ai.engine import titles
+
+        reply = AsyncMock(return_value=model or {"title": "GDP growth in 2017."})
+        with patch.object(titles.llm, "json_completion", reply):
+            return async_to_sync(titles.ensure_title)(chat.id, question), reply
+
+    def test_first_answer_names_the_chat_without_moving_it(self):
+        chat = self.chat()
+        created = ChatInstance.objects.get(id=chat.id).created_at
+        title, _ = self.ensure(chat)
+        self.assertEqual(title, "GDP growth in 2017")
+        chat.refresh_from_db()
+        self.assertEqual((chat.title, chat.created_at), ("GDP growth in 2017", created))
+
+    def test_renamed_or_already_titled_chats_are_left_alone(self):
+        for chat in (self.chat(title="My budget notes"), self.chat(questions=2), self.chat(questions=0)):
+            title, model = self.ensure(chat)
+            self.assertIsNone(title)
+            model.assert_not_called()
+
+    def test_untitled_chats_count_as_new(self):
+        title, _ = self.ensure(self.chat(title=None))
+        self.assertEqual(title, "GDP growth in 2017")
+
+    def test_gateway_failure_or_garbled_title_falls_back_to_the_question(self):
+        from ai.engine import titles
+
+        chat = self.chat()
+        with patch.object(titles.llm, "json_completion", AsyncMock(side_effect=LLMError("down"))):
+            title = async_to_sync(titles.ensure_title)(chat.id, "How did the Ministry of Health perform in the year 2017?")
+        self.assertEqual(title, "How did the Ministry of Health…")
+        self.assertEqual(titles.fallback("የዋጋ ግሽበት ስንት ነው?"), "የዋጋ ግሽበት ስንት ነው")
+        title, _ = self.ensure(self.chat(), question="የዋጋ ግሽበት ስንት ነው?", model={"title": "የዋጋ ግሽ၀ት"})
+        self.assertEqual(title, "የዋጋ ግሽበት ስንት ነው")
+
+    def test_browser_is_told_the_new_title_and_the_app_is_not(self):
+        from ai.engine import compat
+
+        for native, expected in ((False, True), (True, False)):
+            chat = self.chat()
+            sent = []
+
+            async def send(payload):
+                sent.append(payload)
+
+            with patch("ai.engine.compat.answer_stream", ENGLISH), \
+                    patch("ai.engine.compat.titles.suggest", AsyncMock(return_value="GDP growth")), \
+                    patch("ai.engine.compat.followups.suggest", AsyncMock(return_value=[])):
+                async_to_sync(compat.stream_answer)("q", instance=chat, send=send, is_native_client=native,
+                                                   preview=lambda text: "")
+            event = {"event": "chat_title", "chat_instance_id": chat.id, "title": "GDP growth"}
+            self.assertEqual(event in sent, expected)
+            chat.refresh_from_db()
+            self.assertEqual(chat.title, "GDP growth")
+
+
+class ConversationTests(TestCase):
+    """The chat's earlier turns reach the planner and the writer."""
+
+    def test_the_last_five_turns_are_kept_and_answers_cut(self):
+        history = [{"question": f"q{i}", "response": "<p>" + "x" * 900 + "</p>"} for i in range(7)]
+        text = planner.conversation(history, answer_chars=700)
+        self.assertNotIn("User: q1\n", text)
+        self.assertIn("User: q2\n", text)
+        self.assertIn("Assistant: " + "x" * 700 + "\n", text)
+        self.assertNotIn("x" * 701, text)
+        self.assertEqual(planner.conversation([]), "")
+
+    def test_the_writer_is_given_the_conversation(self):
+        from ai.engine import compose
+
+        for kind, results in (("data", [SERIES]), ("general", [])):
+            messages = compose.messages_for(kind, "and 2016?", "English", results, conversation="Conversation so far:\nUser: GDP?\n\n")
+            self.assertTrue(messages[1]["content"].startswith("Conversation so far:\nUser: GDP?\n\nQuestion: and 2016?"))
+
+    @patch("ai.engine.pipeline.planner.plan")
+    def test_a_follow_up_may_quote_earlier_figures(self, mock_plan):
+        from ai.engine.pipeline import answer_stream
+
+        instance = ChatInstance.objects.create(title="t")
+        QuestionHistory.objects.create(instance=instance, question="Coffee exports?",
+                                       response="<p>Coffee earned 2.74 billion USD in 2018 EC.</p>")
+        mock_plan.return_value = planner.Plan("general", "English", [])
+        seen = {}
+
+        async def fake_compose(*args, conversation="", **kwargs):
+            seen["conversation"] = conversation
+            yield "<p>In short, coffee brought in 2.74 billion USD.</p>"
+
+        with patch("ai.engine.pipeline.compose.stream", fake_compose):
+            async def collect():
+                return [e async for e in answer_stream("explain that simply", instance=instance)]
+            events = async_to_sync(collect)()
+
+        self.assertIn("User: Coffee exports?\nAssistant: Coffee earned 2.74 billion USD", seen["conversation"])
+        self.assertEqual(mock_plan.call_args.args[1][0]["question"], "Coffee exports?")
+        self.assertTrue(events[-1]["verified"])
+
+
+class FollowUpTests(TestCase):
+    def test_suggestions_are_cleaned(self):
+        from ai.engine import followups
+
+        raw = ["1. Compare with 2016", "compare with 2016?", "What is GDP growth?", "", "x" * 120,
+               "- Show coffee exports by quarter", "Which ministries scored lowest?", "One more"]
+        self.assertEqual(followups.clean(raw, "What is GDP growth"), [
+            "Compare with 2016", "Show coffee exports by quarter", "Which ministries scored lowest?"])
+
+    def test_gateway_failure_gives_no_suggestions(self):
+        from ai.engine import followups
+
+        with patch.object(followups.llm, "json_completion", AsyncMock(side_effect=LLMError("down"))):
+            self.assertEqual(async_to_sync(followups.suggest)("q", "<p>a</p>"), [])
+
+    def test_browser_gets_suggestions_and_the_app_does_not(self):
+        from ai.engine import compat
+
+        chat = ChatInstance.objects.create(title="GDP")
+        for native in (False, True):
+            sent = []
+
+            async def send(payload):
+                sent.append(payload)
+
+            suggest = AsyncMock(return_value=["Compare with 2016"])
+            with patch("ai.engine.compat.answer_stream", ENGLISH), \
+                    patch("ai.engine.compat.followups.suggest", suggest):
+                async_to_sync(compat.stream_answer)("q", instance=chat, send=send, is_native_client=native,
+                                                   preview=lambda text: "")
+            event = {"event": "followups", "chat_instance_id": chat.id, "history_id": 1,
+                     "questions": ["Compare with 2016"]}
+            self.assertEqual(event in sent, not native)
+            self.assertEqual(suggest.await_count, 0 if native else 1)
+            if not native:
+                self.assertEqual(suggest.await_args.args, ("q", "<p>GDP grew 7.7%.</p>"))
 
 
 class GatewayConfigTests(SimpleTestCase):

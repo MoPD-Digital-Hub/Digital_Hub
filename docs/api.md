@@ -44,7 +44,7 @@ carry older extras, which new code should not rely on:
 
 Once no installed app version reads them, these can be removed and `result` corrected in one change.
 
-Responses that are not JSON (read-aloud audio, Excel exports) are unaffected. The WebSocket protocols are in
+Responses that are not JSON (Excel exports) are unaffected. The WebSocket protocols are in
 `docs/ai.md` and `docs/flutter-chat-integration.md`.
 
 ## In code

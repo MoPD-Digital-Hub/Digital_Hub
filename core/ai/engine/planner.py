@@ -6,12 +6,11 @@ from html import unescape
 
 from ai.engine import llm
 from ai.engine.tools import TOOLS
-from ai.infrastructure.translation import detect_request_language
 
 MAX_CALLS = 4
-HISTORY_TURNS = 3
+HISTORY_TURNS = 5
 
-ENTITY_ARGS = ("indicator", "organization", "policy_area", "goal")
+ENTITY_ARGS = ("indicator", "organization", "policy_area", "goal", "sdg_indicator", "sdg_goal")
 
 SCHEMA = {
     "type": "object",
@@ -28,6 +27,9 @@ SCHEMA = {
                     "organization": {"type": "string"},
                     "policy_area": {"type": "string"},
                     "goal": {"type": "string"},
+                    "sdg_indicator": {"type": "string"},
+                    "sdg_goal": {"type": "string"},
+                    "breakdown": {"type": "string", "enum": ["region", "sex", "age", "location", "education", "wealth"]},
                     "year": {"type": "integer"},
                     "quarter": {"type": "integer", "minimum": 1, "maximum": 4},
                     "performance": {"type": "string", "enum": ["all", "on_track", "in_progress", "weak", "no_data"]},
@@ -41,7 +43,7 @@ SCHEMA = {
 }
 
 SYSTEM_PROMPT = """You plan data lookups for Admas AI, the assistant of Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
-It answers from two sources: the national time-series database (economic and social indicators) and DPMES (performance scores of ministries/agencies, policy areas, strategic goals and their KPIs).
+It answers from three sources: the national time-series database (economic and social indicators), DPMES (performance scores of ministries/agencies, policy areas, strategic goals and their KPIs), and the national SDG platform (Ethiopia's Sustainable Development Goal indicators, mostly from surveys, with regional and sex breakdowns).
 
 Tools:
 {tools}
@@ -53,8 +55,11 @@ Return JSON with:
 Rules for calls:
 - Name entities in English, as specifically as the question allows ("GDP growth", "year-on-year general inflation", "Ministry of Health"). Translate Amharic names into English.
 - Use the conversation to resolve follow-ups like "what about 2016?" or "and the weak ones?".
+- A follow-up that only asks to explain, simplify, summarise or interpret an earlier answer ("explain that simply", "summarise this for a briefing", "what does that mean?") needs no new figures: kind "general", calls [].
 - Set year only when the question gives one, and quarter (1-4) only when it names a quarter.
 - Scores, ratings, rankings and KPIs of ministries or agencies come from DPMES tools; quantities, rates and trends of the economy or society come from indicator_series.
+- Use the SDG tools when the question mentions the SDGs, a goal or indicator number (SDG 4, 3.1.1), or asks about an SDG topic the time-series database does not cover well: poverty headcount, stunting and malnutrition, school completion and learning, access to water and sanitation, gender equality, or a breakdown by region or sex. For a topic both cover (GDP, inflation, maternal mortality, electricity access) use indicator_series unless the SDGs are mentioned. sdg_goal is for overall progress on a goal; sdg_indicator for one indicator. Name SDG indicators by what they measure, or by number when given.
+- breakdown: "region" for by region or regional differences, "sex" for male/female, "location" for urban/rural; otherwise leave it out.
 - performance: "weak" for weak, poor, failing or lagging KPIs; "on_track" for good or achieved; "in_progress"; "no_data" for missing or unreported; "all" otherwise.
 - order: "bottom" when asked for the worst or lowest, otherwise "top".
 
@@ -63,6 +68,10 @@ Q: What is Ethiopia's GDP growth?
 {{"kind": "data", "calls": [{{"tool": "indicator_series", "indicator": "GDP growth"}}]}}
 Q: How did the Ministry of Health score in 2017, and which of its KPIs are weak?
 {{"kind": "data", "calls": [{{"tool": "organization_score", "organization": "Ministry of Health", "year": 2017}}, {{"tool": "organization_kpis", "organization": "Ministry of Health", "performance": "weak", "year": 2017}}]}}
+Q: How is Ethiopia progressing on SDG 4?
+{{"kind": "data", "calls": [{{"tool": "sdg_goal", "sdg_goal": "SDG 4"}}]}}
+Q: What is the poverty rate by region?
+{{"kind": "data", "calls": [{{"tool": "sdg_indicator", "sdg_indicator": "poverty headcount index", "breakdown": "region"}}]}}
 Q: Which ministries performed worst?
 {{"kind": "data", "calls": [{{"tool": "rank_organizations", "order": "bottom"}}]}}
 Q: What does inflation mean?
@@ -79,11 +88,24 @@ class Plan:
         return {"kind": self.kind, "language": self.language, "calls": self.calls}
 
 
+AMHARIC_SCRIPT = re.compile(r"[\u1200-\u137F]")
+
+
+def detect_request_language(text):
+    """Amharic script gets an Amharic answer; anything else, English."""
+    return "Amharic" if AMHARIC_SCRIPT.search(str(text or "")) else "English"
+
+
 def _plain(html):
     return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", str(html or "")))).strip()
 
 
-def _conversation(history):
+def conversation(history, answer_chars=300):
+    """The chat's recent turns as plain text, for the planner and the writer.
+
+    Each earlier answer is cut to `answer_chars`: the planner needs only the
+    topic, the writer a little more (its first figures) to refer back to.
+    """
     turns = [t for t in history if t.get("question")][-HISTORY_TURNS:]
     if not turns:
         return ""
@@ -91,7 +113,7 @@ def _conversation(history):
     for turn in turns:
         lines.append(f"User: {turn['question']}")
         if turn.get("response"):
-            lines.append(f"Assistant: {_plain(turn['response'])[:300]}")
+            lines.append(f"Assistant: {_plain(turn['response'])[:answer_chars]}")
     return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
 
 
@@ -113,7 +135,7 @@ async def plan(question, history=()):
     tools = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS.values())
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT.format(tools=tools, max_calls=MAX_CALLS)},
-        {"role": "user", "content": f"{_conversation(history)}Question: {question}"},
+        {"role": "user", "content": f"{conversation(history)}Question: {question}"},
     ]
     raw = await llm.json_completion(messages, SCHEMA, name="plan")
     kind = raw.get("kind") if raw.get("kind") in ("data", "general", "greeting", "out_of_scope") else "general"

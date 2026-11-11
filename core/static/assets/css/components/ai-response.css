@@ -1,156 +1,517 @@
-.ai-msg-content .ai-table-wrap {
-  border: 0;
-  border-radius: 0;
-  margin: 12px 0;
-  overflow-x: auto;
-  background: transparent;
-  box-shadow: none;
-}
+/* Admas AI answers: the written answer in serif, then one panel per data result.
+   Each panel carries a dot in its source's colour (admas-ai-modern.css). */
 
-.ai-msg-content .ai-table {
-  width: 100%;
-  min-width: 680px;
-  border-collapse: separate;
-  border-spacing: 0;
-  margin: 0;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
+/* ---- Written answer ---- */
 
-.ai-msg-content .ai-table thead th {
-  background: linear-gradient(180deg, var(--dh-surface-soft) 0%, var(--dh-surface-muted) 100%) !important;
-  color: var(--dh-text) !important;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  border-bottom: 1px solid var(--dh-elevated-border) !important;
-}
-
-.ai-msg-content .ai-table th,
-.ai-msg-content .ai-table td {
-  padding: 11px 12px !important;
-  text-align: left;
-  vertical-align: middle;
-  border-right: 1px solid var(--dh-border) !important;
-  border-bottom: 1px solid var(--dh-border) !important;
-  white-space: nowrap;
-  color: var(--dh-text) !important;
-  background: transparent !important;
-}
-
-.ai-msg-content .ai-table th:last-child,
-.ai-msg-content .ai-table td:last-child {
-  border-right: 0 !important;
-}
-
-.ai-msg-content .ai-table tbody tr:last-child td {
-  border-bottom: 0 !important;
-}
-
-.ai-msg-content .ai-table tbody tr:nth-child(even) td {
-  background: var(--dh-surface-soft) !important;
-}
-
-.ai-msg-content .ai-table tbody tr:hover td {
-  background: rgba(var(--dh-accent-rgb), 0.08) !important;
-}
-
-.ai-msg-content .ai-table .ai-col-number,
-.ai-msg-content .ai-table .ai-cell-number {
-  width: 58px;
-  min-width: 58px;
-  max-width: 58px;
-  text-align: center;
-}
-
-.ai-msg-content .ai-table .ai-col-number {
-  color: var(--dh-text-muted) !important;
-}
-
-.ai-msg-content .ai-table .ai-cell-number {
-  color: var(--dh-text) !important;
-  font-weight: 700;
-}
-
-.ai-frequency-section {
-  margin: 16px 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.ai-frequency-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 0 0 6px;
-}
-
-.ai-frequency-section-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
+.ai-msg-content {
   color: var(--dh-text);
-  letter-spacing: 0.01em;
+  font-family: var(--ai-serif, Georgia, serif);
+  font-size: 16.5px;
+  line-height: 1.7;
 }
 
-.ai-frequency-section-table,
-.ai-frequency-section-chart {
-  margin-top: 8px;
+.ai-msg-content > p,
+.ai-msg-content > ul,
+.ai-msg-content > ol {
+  margin: 0 0 0.8em;
+}
+
+.ai-msg-content > ul,
+.ai-msg-content > ol {
+  padding-left: 1.15em;
+}
+
+.ai-msg-content li {
+  margin: 0.25em 0;
+}
+
+.ai-msg-content b,
+.ai-msg-content strong {
+  font-weight: 650;
+}
+
+/* The direct answer: the figure, its period, its source. */
+.ai-msg-content > p.ai-lead {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 0.7em;
+}
+
+/* ---- Data block ---- */
+
+.ai-data-card {
+  margin: 14px 0 4px;
+  padding: 0 14px;
+  border: 1px solid var(--dh-border);
+  border-radius: 14px;
+  background: var(--dh-surface-bg);
+  font-family: var(--ai-ui, system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ai-data-card + .ai-data-card {
+  margin-top: 10px;
+}
+
+/* One frequency of a series; the others wait behind their tab, keeping their width. */
+.ai-variant.is-off {
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.ai-freq-tabs {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.ai-freq-btn {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dh-text-muted);
+  font: 500 12.5px/1 inherit;
+}
+
+.ai-freq-btn:hover {
+  color: var(--dh-text);
+}
+
+.ai-freq-btn.is-active {
+  background: color-mix(in srgb, var(--dh-text) 8%, transparent);
+  color: var(--dh-text);
+  font-weight: 600;
+}
+
+.ai-freq-btn:focus-visible {
+  outline: 2px solid var(--ai-accent, var(--dh-text));
+  outline-offset: 1px;
+}
+
+.ai-chart-note {
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: var(--dh-text-muted);
+}
+
+.ai-data-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0 8px;
+}
+
+.ai-data-card-titles {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+/* SDG panels open with the goal's official icon (from sdg.mopd.gov.et). */
+.ai-sdg-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.has-sdg-icon > .ai-data-card-head {
+  align-items: center;
+}
+
+.has-sdg-icon > .ai-data-card-head > .ai-data-card-titles {
+  flex: 1 1 auto;
+}
+
+.ai-msg-content .ai-data-card-title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--dh-text);
+}
+
+.ai-data-card-meta {
+  font-size: 12px;
+  color: var(--dh-text-muted);
+}
+
+/* Chart / Table */
+.ai-view-toggle {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--dh-text) 6%, transparent);
+}
+
+.ai-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--dh-text-muted);
+  font: 600 12.5px/1 inherit;
+}
+
+
+.ai-view-btn:hover {
+  color: var(--dh-text);
+}
+
+.ai-view-btn.is-active {
+  background: var(--dh-surface-bg);
+  color: var(--dh-text);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.ai-view-btn:focus-visible,
+.ai-action-btn:focus-visible {
+  outline: 2px solid var(--ai-accent, var(--dh-text));
+  outline-offset: 2px;
+}
+
+/* Figures read off the series: latest, change, high, low, each with its period. */
+.ai-data-card-summary {
+  padding: 0 0 8px;
+}
+
+.ai-stats {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.ai-stat {
+  display: grid;
+  gap: 0;
+  padding: 2px 14px 2px 0;
+  margin-right: 14px;
+  border-right: 1px solid var(--dh-border);
+  min-width: 0;
+}
+
+.ai-stat:last-child {
+  border-right: 0;
+  margin-right: 0;
+}
+
+.ai-stat-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dh-text-muted);
+}
+
+.ai-stat-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--dh-text);
+  white-space: nowrap;
+}
+
+.ai-stat-value .ti {
+  font-size: 15px;
+  color: var(--dh-text-muted);
+  transform: translateY(1px);
+}
+
+.ai-stat-note {
+  font-size: 11px;
+  color: var(--dh-text-muted);
+  white-space: nowrap;
+}
+
+.ai-stats-unit {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dh-text-muted);
+}
+
+/* An overall score: the number, its DPMES band, and a 0–100 meter. */
+.ai-score {
+  display: grid;
+  gap: 5px;
+  max-width: 460px;
+}
+
+.ai-score-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+
+.ai-score-number {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--dh-text);
+}
+
+.ai-score-number small {
+  margin-left: 2px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--dh-text-muted);
+}
+
+.ai-score-band {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--dh-text);
+}
+
+.ai-score-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--score-color);
+}
+
+.ai-score-meter {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--dh-border);
+}
+
+.ai-score-meter span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--score-color);
+}
+
+.ai-score-caption {
+  font-size: 11px;
+  color: var(--dh-text-muted);
+}
+
+/* Body: the chart or the table */
+.ai-data-card-body {
+  border-top: 1px solid var(--dh-border);
+}
+
+.ai-view-pane[data-view="chart"] {
+  padding: 4px 0 0;
+}
+
+.ai-view-pane[data-view="table"] {
+  max-height: 280px;
+  overflow: auto;
+}
+
+/* The pane not shown keeps its width (charts need it) but takes no space. */
+.ai-view-pane.is-off {
+  height: 0;
+  max-height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 
 .ai-chart-payload {
   margin: 12px 0;
 }
 
-.ai-chart-card {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  padding: 4px 0 0;
+.ai-data-card .ai-chart-payload {
+  margin: 0;
 }
 
 .ai-chart-title {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 650;
   color: var(--dh-text);
   margin-bottom: 8px;
 }
 
 .ai-chart-loading,
 .ai-chart-error {
-  border: 0;
-  border-radius: 0;
-  padding: 10px 0;
+  padding: 14px 0;
   font-size: 13px;
   color: var(--dh-text-muted);
-  background: transparent !important;
+}
+
+/* ---- Tables ---- */
+
+.ai-msg-content .ai-table-wrap {
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.ai-data-card .ai-table-wrap {
+  margin: 0;
+  overflow: visible;
+}
+
+.ai-msg-content .ai-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  font-family: var(--ai-ui, system-ui, sans-serif);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-msg-content .ai-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px 12px 6px 0;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--dh-text-muted);
+  background: var(--dh-surface-bg);
+  border-bottom: 1px solid var(--dh-border);
+  white-space: nowrap;
+}
+
+.ai-msg-content .ai-table td {
+  padding: 6px 12px 6px 0;
+  text-align: left;
+  vertical-align: baseline;
+  color: var(--dh-text);
+  border-bottom: 1px solid var(--dh-border);
+  line-height: 1.4;
+  min-width: 120px;
+}
+
+.ai-msg-content .ai-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ai-msg-content .ai-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--dh-text) 4%, transparent);
+}
+
+.ai-msg-content .ai-table .ai-col-num,
+.ai-msg-content .ai-table .ai-cell-num {
+  text-align: right;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ai-msg-content .ai-table th:last-child,
+.ai-msg-content .ai-table td:last-child {
+  padding-right: 0;
+}
+
+.ai-msg-content .ai-table .ai-col-number,
+.ai-msg-content .ai-table .ai-cell-number {
+  width: 36px;
+  min-width: 36px;
+  color: var(--dh-text-muted);
+}
+
+.ai-score-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.ai-score-track {
+  position: relative;
+  width: 80px;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--dh-border);
+}
+
+.ai-score-fill {
+  display: block;
+  height: 100%;
+  background: var(--score-color, var(--dh-text));
+}
+
+.ai-score-value {
+  min-width: 46px;
+  font-weight: 650;
+  text-align: right;
+}
+
+/* ---- Foot: where the figures come from ---- */
+
+.ai-data-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 7px 0 8px;
+  border-top: 1px solid var(--dh-border);
+}
+
+/* One line; the full source shows on hover (title) and in the copied text. */
+.ai-msg-content .ai-source {
+  display: block;
+  flex: 1 1 260px;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dh-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-source-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 999px;
+  background: var(--band, var(--dh-text-muted));
+  vertical-align: 0.05em;
 }
 
 .ai-action-payload {
   margin: 10px 0;
 }
 
-.ai-action-btn {
-  border: 1px solid var(--dh-accent);
-  background: linear-gradient(135deg, var(--dh-accent), var(--dh-accent-strong));
-  color: #fff;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  box-shadow: 0 8px 18px rgba(var(--dh-accent-rgb), 0.22);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+.ai-data-card-foot .ai-action-payload {
+  margin: 0;
 }
 
-.ai-action-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.03);
-  box-shadow: 0 12px 22px rgba(var(--dh-accent-rgb), 0.24);
+.ai-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--dh-text);
+  font: 600 12.5px/1.4 inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
 }
+
+/* ---- Fallback bars when the chart library is missing ---- */
 
 .ai-bar-chart {
   display: grid;
@@ -159,7 +520,7 @@
   align-items: end;
   gap: 12px;
   min-height: 252px;
-  padding: 10px 4px 2px;
+  padding: 10px 0 2px;
   overflow-x: auto;
 }
 
@@ -183,28 +544,41 @@
 }
 
 .ai-bar-column-wrap {
-  position: relative;
   min-height: 160px;
-  border-radius: 16px 16px 12px 12px;
-  background: rgba(var(--dh-accent-rgb), 0.16);
-  overflow: hidden;
+  background: var(--dh-border);
   display: flex;
   align-items: end;
-  justify-content: center;
-  padding: 0 8px;
 }
 
 .ai-bar-column {
   width: 100%;
-  min-height: 8px;
-  border-radius: 14px 14px 8px 8px;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  min-height: 4px;
 }
 
 .ai-bar-value {
   font-size: 12px;
   font-weight: 700;
   color: var(--dh-text);
-  font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+/* ---- Small screens ---- */
+
+@media (max-width: 640px) {
+  .ai-data-card-head {
+    flex-wrap: wrap;
+  }
+
+  .ai-stat {
+    padding-right: 14px;
+    margin-right: 14px;
+  }
+
+  .ai-score-track {
+    width: 52px;
+  }
+
+  .ai-msg-content > p.ai-lead {
+    font-size: 17px;
+  }
 }

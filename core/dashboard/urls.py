@@ -3,7 +3,6 @@ from django.urls import path
 from dashboard.api.views import organization_overview
 
 from .views import (
-    about_dpmes_page,
     admas_ai_page,
     change_password_page,
     dashboard_login,
@@ -36,7 +35,6 @@ urlpatterns = [
     path("account/profile/", edit_profile_page, name="edit_profile"),
     path("account/password/", change_password_page, name="change_password"),
     path("", sample_dashboard, name="dashboard_home"),
-    path("about/", about_dpmes_page, name="dashboard_about"),
     path("sample/", sample_dashboard, name="dashboard_sample"),
     path("admas-ai/", admas_ai_page, name="dashboard_admas_ai"),
     path("data/", data_categories_page, name="data_categories"),

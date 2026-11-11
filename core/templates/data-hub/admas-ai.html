@@ -5,8 +5,8 @@
 {% block body_attrs %}class="admas-ai-body" data-pc-preset="preset-7" data-pc-sidebar-caption="true" data-pc-layout="vertical" data-pc-direction="ltr" data-pc-theme_contrast="true" data-pc-theme="light"{% endblock %}
 
 {% block style %}
-<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20260331a">
-<link rel="stylesheet" href="{% static 'assets/css/components/admas-ai-modern.css' %}?v=20260316u">
+<link rel="stylesheet" href="{% static 'assets/css/components/ai-response.css' %}?v=20261111c9">
+<link rel="stylesheet" href="{% static 'assets/css/components/admas-ai-modern.css' %}?v=20261111d5">
 {% endblock %}
 
 {% block content %}
@@ -14,144 +14,93 @@
   <input type="hidden" id="csrfTokenValue" value="{{ csrf_token }}">
 
   <div class="ai-chat-shell" id="aiChatShell">
-    <aside class="ai-sidebar" id="aiSidebar">
-      <div class="ai-panel-body">
-        <div class="ai-sidebar-static">
-          <div class="ai-sidebar-head">
-            <div class="ai-sidebar-title">
-              <h4>{{ page_title }}</h4>
-              <p>{{ subtitle }}</p>
-            </div>
-            <button id="sidebarCollapseBtn" class="ai-sidebar-toggle" type="button" aria-label="Collapse chat history">
-              <i class="ti ti-layout-sidebar-left-collapse"></i>
+    <aside class="ai-rail" id="aiSidebar" aria-label="Chats">
+      <div class="ai-rail-head">
+        <span class="ai-rail-name">
+          <img class="ai-rail-mark" src="{% static 'assets/images/token-branded_ais.png' %}" alt="">
+          Admas AI
+        </span>
+        <button id="sidebarCollapseBtn" class="ai-icon-btn" type="button" aria-label="Hide chats" title="Hide chats">
+          <i class="ti ti-layout-sidebar-left-collapse" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <button id="newInstanceBtn" class="ai-new-chat" type="button">
+        <span class="ai-new-chat-icon" aria-hidden="true"><i class="ti ti-plus"></i></span>
+        <span>New chat</span>
+      </button>
+
+      <label class="ai-search">
+        <i class="ti ti-search" aria-hidden="true"></i>
+        <input id="chatSearch" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off">
+      </label>
+
+      <p class="ai-rail-label">Recents</p>
+      <nav class="ai-instance-list" id="instanceList" aria-label="Your chats">
+        {% for instance in chat_instances %}
+        <button
+          type="button"
+          class="ai-instance{% if instance.id == active_instance.id %} active{% endif %}"
+          data-room="{{ instance.id }}"
+          data-title="{% if instance.title %}{{ instance.title }}{% else %}New Chat{% endif %}"
+          data-created="{{ instance.created_at|date:'c' }}"
+        ><span class="ai-instance-title">{% if instance.title %}{{ instance.title }}{% else %}New Chat{% endif %}</span></button>
+        {% endfor %}
+      </nav>
+      <p class="ai-search-empty" id="chatSearchEmpty" hidden>No chats match your search.</p>
+    </aside>
+    <div class="ai-rail-scrim" id="aiRailScrim" hidden></div>
+
+    <section class="ai-main" aria-label="Conversation">
+      <header class="ai-main-head">
+        <button id="sidebarExpandBtn" class="ai-icon-btn" type="button" aria-label="Show chats" title="Show chats">
+          <i class="ti ti-layout-sidebar-left-expand" aria-hidden="true"></i>
+        </button>
+        <div class="ai-chat-name">
+          <h1 id="chatTitle" class="ai-chat-title">{% if active_instance.title %}{{ active_instance.title }}{% else %}New Chat{% endif %}</h1>
+          <form id="chatTitleForm" class="ai-title-form" hidden>
+            <input id="chatTitleInput" class="ai-title-input" type="text" maxlength="100" aria-label="Chat name" autocomplete="off">
+            <button type="submit" class="ai-pill-btn is-primary">Save</button>
+            <button type="button" id="chatTitleCancel" class="ai-pill-btn">Cancel</button>
+          </form>
+          <div class="ai-main-actions">
+            <button id="renameInstanceBtn" class="ai-icon-btn" type="button" aria-label="Rename chat" title="Rename chat">
+              <i class="ti ti-pencil" aria-hidden="true"></i>
+            </button>
+            <button id="deleteInstanceBtn" class="ai-icon-btn is-danger" type="button" aria-label="Delete chat" title="Delete chat">
+              <i class="ti ti-trash" aria-hidden="true"></i>
             </button>
           </div>
-
-          <div class="ai-instance-tools">
-            <button id="newInstanceBtn" class="btn btn-outline-primary" type="button"><i class="ti ti-plus"></i><span>New</span></button>
-            <button id="renameInstanceBtn" class="btn btn-outline-secondary" type="button"><i class="ti ti-edit"></i><span>Rename</span></button>
-            <button id="deleteInstanceBtn" class="btn btn-outline-danger" type="button"><i class="ti ti-trash"></i><span>Delete</span></button>
-          </div>
-
-          <div class="ai-search-wrap">
-            <input id="chatSearch" class="form-control ai-search" type="text" placeholder="Search history...">
-          </div>
-
         </div>
+      </header>
 
-        <div class="ai-instance-list" id="instanceList">
-          {% for instance in chat_instances %}
-          <div
-            class="ai-instance {% if instance.id == active_instance.id %}active{% endif %}"
-            data-room="{{ instance.id }}"
-            data-title="{% if instance.title %}{{ instance.title }}{% else %}History {{ instance.id }}{% endif %}"
-            data-tags="policy ministry indicator"
-          >
-            <h6>{% if instance.title %}{{ instance.title }}{% else %}History {{ instance.id }}{% endif %}</h6>
-            <p>History #{{ instance.id }}</p>
+      <div class="ai-chat-output" id="chatOutput" data-room="{{ active_instance.id }}" data-user-name="{{ request.user.first_name|default:'' }}" aria-live="polite">
+        {% for item in history %}
+        <article class="entry">
+          <div class="msg user">
+            <div class="msg-bubble">{{ item.question }}</div>
           </div>
-          {% endfor %}
-        </div>
-      </div>
-    </aside>
-
-    <section class="ai-main">
-      <div class="ai-main-head">
-        <div class="ai-main-head-main">
-          <button id="sidebarExpandBtn" class="ai-main-expand" type="button" aria-label="Show chat history">
-            <i class="ti ti-layout-sidebar-left-expand"></i>
-            <span>History</span>
-          </button>
-          <div>
-            <h5 id="chatTitle">{% if active_instance.title %}{{ active_instance.title }}{% else %}History {{ active_instance.id }}{% endif %}</h5>
-            <p>Ask policy and indicator questions, then use translation and voice actions directly in each response.</p>
-          </div>
-        </div>
-        <div class="ai-main-head-actions">
-          <span class="badge text-bg-primary">AI</span>
-        </div>
-      </div>
-
-      <div class="ai-chat-output" id="chatOutput" data-room="{{ active_instance.id }}">
-        {% if history %}
-          {% for item in history %}
-            <div class="msg user">
-              <span class="msg-avatar" aria-hidden="true"><i class="ti ti-user-circle"></i></span>
-              <div class="msg-bubble">{{ item.question }}</div>
-            </div>
-            {% if item.response %}
-            <div class="msg ai">
-              <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
-              <div class="msg-bubble">
-                <div class="ai-msg-head">
-                  <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
-                  <div class="ai-msg-actions">
-                    <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
-                      <i class="ti ti-language-hiragana" aria-hidden="true"></i>
-                      <span>Amharic</span>
-                    </button>
-                    <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
-                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                      <span>Listen</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="ai-msg-content">{{ item.response|safe }}</div>
-                <div class="ai-msg-status" hidden></div>
-                <div class="ai-translation-panel" hidden>
-                  <div class="ai-translation-head">
-                    <div class="ai-translation-label">Amharic</div>
-                    <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
-                      <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                      <span>Speak</span>
-                    </button>
-                  </div>
-                  <div class="ai-translation-content"></div>
+          {% if item.response %}
+          <div class="msg ai">
+            <div class="msg-bubble">
+              <div class="ai-msg-content">{{ item.response|safe }}</div>
+              <div class="ai-msg-head">
+                <div class="ai-msg-actions">
+                  <button type="button" class="ai-copy-btn" title="Copy the written answer" aria-label="Copy the written answer">
+                    <i class="ti ti-copy" aria-hidden="true"></i><span>Copy</span>
+                  </button>
                 </div>
               </div>
             </div>
-            {% endif %}
-          {% endfor %}
-        {% else %}
-        <div class="msg ai">
-          <span class="msg-avatar" aria-hidden="true"><img class="msg-avatar-image" src="{% static 'assets/images/token-branded_ais.png' %}" alt=""></span>
-          <div class="msg-bubble">
-            <div class="ai-msg-head">
-              <span class="ai-msg-brand"><i class="ti ti-sparkles"></i><span>Admas AI</span></span>
-              <div class="ai-msg-actions">
-                <button type="button" class="ai-translate-btn" title="Show Amharic translation" aria-label="Show Amharic translation">
-                  <i class="ti ti-language-hiragana" aria-hidden="true"></i>
-                  <span>Amharic</span>
-                </button>
-                <button type="button" class="ai-tts-btn" title="Listen to this response" aria-label="Listen to this response">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                  <span>Listen</span>
-                </button>
-              </div>
-            </div>
-            <div class="ai-msg-content">
-              <p>Hello, I am Admas AI. Ask me about policy areas, ministries, or indicators.</p>
-            </div>
-            <div class="ai-msg-status" hidden></div>
-            <div class="ai-translation-panel" hidden>
-              <div class="ai-translation-head">
-                <div class="ai-translation-label">Amharic</div>
-                <button type="button" class="ai-translation-tts-btn" title="Listen to Amharic translation" aria-label="Listen to Amharic translation">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                  <span>Speak</span>
-                </button>
-              </div>
-              <div class="ai-translation-content"></div>
-            </div>
           </div>
-        </div>
-        {% endif %}
+          {% endif %}
+        </article>
+        {% endfor %}
       </div>
 
       <div class="ai-chat-stream-tools">
-        <button id="jumpToLatestBtn" class="ai-jump-latest" type="button" hidden>
-          <i class="ti ti-arrow-down"></i>
-          <span>Jump to latest</span>
+        <button id="jumpToLatestBtn" class="ai-jump-latest" type="button" hidden aria-label="Jump to the latest answer">
+          <i class="ti ti-arrow-down" aria-hidden="true"></i>
         </button>
       </div>
 
@@ -162,25 +111,24 @@
               <span class="ai-live-transcript-dot" aria-hidden="true"></span>
               <div class="ai-live-transcript-body">
                 <span id="liveTranscriptLabel" class="ai-live-transcript-label">Recording in English</span>
-                <span id="liveTranscriptText" class="ai-live-transcript-text">Recording... press stop to transcribe.</span>
+                <span id="liveTranscriptText" class="ai-live-transcript-text">Recording… press stop to transcribe.</span>
               </div>
             </div>
-            <input id="chatInput" type="text" class="form-control ai-input" placeholder="Type your question...">
+            <textarea id="chatInput" class="ai-input" rows="1" placeholder="Ask about Ethiopia's numbers…" aria-label="Your question"></textarea>
           </div>
-          <div class="ai-input-actions">
-            <div class="ai-speech-toggle" role="group" aria-label="Speech recognition language">
-              <button id="speechLangEn" class="ai-speech-lang is-active" type="button" data-lang="en-US" title="English speech recognition">EN</button>
-              <button id="speechLangAm" class="ai-speech-lang" type="button" data-lang="am-ET" title="Amharic speech recognition">አማ</button>
-            </div>
-            <button id="micBtn" class="btn ai-icon-btn ai-record-btn" type="button" title="Voice input">
-              <i class="ti ti-microphone"></i>
-              <span class="ai-record-label">Record</span>
+          <div class="ai-input-bar">
+            <button id="micBtn" class="ai-icon-btn ai-record-btn" type="button" title="Voice input (English)" aria-label="Voice input">
+              <i class="ti ti-microphone" aria-hidden="true"></i>
+              <span class="ai-record-label visually-hidden">Record</span>
             </button>
-            <button id="sendBtn" class="btn btn-primary ai-send-btn" type="button">
-              <i class="ti ti-arrow-up"></i>
+            <span class="ai-input-note">English or Amharic</span>
+            <button id="sendBtn" class="ai-send-btn" type="button" aria-label="Send question" title="Send" disabled>
+              <i class="ti ti-arrow-up" aria-hidden="true"></i>
             </button>
           </div>
         </div>
+        <div class="ai-starters" id="aiStarters" hidden></div>
+        <p class="ai-composer-hint">Admas AI answers from national data sources and names each one. Check important figures.</p>
       </div>
     </section>
   </div>
@@ -189,5 +137,5 @@
 
 {% block script %}
 <script src="{% static 'assets/js/plugins/apexcharts.min.js' %}"></script>
-<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20260331a"></script>
+<script src="{% static 'assets/js/pages/admas-ai.js' %}?v=20261111d1"></script>
 {% endblock %}

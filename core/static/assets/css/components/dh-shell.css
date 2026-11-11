@@ -1,0 +1,544 @@
+/* The dashboard frame on every page is one bar docked at the bottom of the
+   screen: the logo, the sections, and the account menu. There is no top bar
+   and no side menu, so pages get the whole window. Quiet and flat, like the
+   Admas AI chat, with one colour per section. Colours come from the hub theme
+   (--dh-*, set in base.html), so the theme picker still drives them. */
+
+:root {
+  --shell-hover: color-mix(in srgb, var(--dh-text) 6%, transparent);
+  --shell-active: color-mix(in srgb, var(--dh-accent) 13%, var(--dh-surface-bg));
+  --shell-icon: color-mix(in srgb, var(--dh-text) 55%, transparent);
+  --shell-ui: var(--dh-font-body);
+
+  /* The bottom bar: a floating dock on wide screens, a full-width bar on
+     phones. --dock-space is what pages keep clear at the bottom. */
+  --dock-h: 62px;
+  --dock-gap: 14px;
+  --dock-space: calc(var(--dock-h) + var(--dock-gap) * 2);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --dock-h: 60px;
+    --dock-gap: 0px;
+    --dock-space: calc(var(--dock-h) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* No top bar and no side menu: the page and footer take the whole window. */
+.dh-dock ~ .pc-container {
+  top: 0;
+  margin-left: 0;
+}
+
+.dh-dock ~ .pc-footer {
+  margin-top: 0;
+  margin-left: 0;
+}
+
+body {
+  padding-bottom: var(--dock-space);
+}
+
+/* ---- Bottom navigation --------------------------------------------------- */
+
+/* Each section has its own colour. Where the Admas AI chat already colours a
+   source, the section uses the same one: Statistics shows DPMES scorecards
+   (amber), SDGs the national SDG platform (blue). Home follows the theme. */
+.dh-dock {
+  --tone-home: var(--dh-accent);
+  --tone-ai: #6a52d1;
+  --tone-data: #2f8a3f;
+  --tone-sdg: #2d6bb3;
+  --tone-stats: #b7791f;
+  --tone-project: #c4502f;
+}
+
+html[data-dashboard-theme="dark"] .dh-dock {
+  --tone-ai: #a897ff;
+  --tone-data: #6cc47a;
+  --tone-sdg: #6fa3e8;
+  --tone-stats: #e0a84a;
+  --tone-project: #f08a6c;
+}
+
+[data-tone="home"] { --tone: var(--tone-home); }
+[data-tone="ai"] { --tone: var(--tone-ai); }
+[data-tone="data"] { --tone: var(--tone-data); }
+[data-tone="sdg"] { --tone: var(--tone-sdg); }
+[data-tone="stats"] { --tone: var(--tone-stats); }
+[data-tone="project"] { --tone: var(--tone-project); }
+[data-tone="account"] { --tone: var(--dh-text); }
+
+.dh-dock {
+  position: fixed;
+  left: 50%;
+  bottom: var(--dock-gap);
+  z-index: 1030;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  height: var(--dock-h);
+  padding: 5px;
+  transform: translateX(-50%);
+  border: 1px solid var(--dh-border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--dh-surface-bg) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 12px 32px -12px color-mix(in srgb, var(--dh-text) 28%, transparent),
+    0 2px 6px color-mix(in srgb, var(--dh-text) 6%, transparent);
+  font-family: var(--shell-ui);
+}
+
+.dh-dock-group {
+  position: relative;
+  display: flex;
+}
+
+/* The logo opens Home; thin rules set it and the account apart. */
+.dh-dock-brand {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  border-radius: 14px;
+}
+
+.dh-dock-brand img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dh-dock-brand:hover img {
+  transform: rotate(-6deg) scale(1.06);
+}
+
+.dh-dock-brand:focus-visible {
+  outline: 2px solid var(--dh-accent);
+  outline-offset: -2px;
+}
+
+.dh-dock-sep {
+  align-self: center;
+  width: 1px;
+  height: 28px;
+  margin: 0 4px;
+  background: var(--dh-border);
+}
+
+.dh-dock-item > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dh-dock-item .dh-avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+  transition: box-shadow 0.14s ease;
+}
+
+.dh-dock-item:hover .dh-avatar,
+.dh-dock-item[aria-expanded="true"] .dh-avatar,
+.dh-dock-item.is-active .dh-avatar {
+  box-shadow: 0 0 0 2px var(--dh-surface-bg), 0 0 0 4px color-mix(in srgb, var(--dh-accent) 45%, transparent);
+}
+
+.dh-dock-account .dh-dock-item {
+  min-width: 70px;
+  max-width: 110px;
+}
+
+/* The lamp: a pill lit in the section's colour, with a short bright line on
+   top. It rests on the section you are in and glides to what you point at. */
+.dh-dock-lamp {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 0;
+  width: var(--lamp-w, 0px);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--lamp-tone, var(--dh-accent)) 15%, var(--dh-surface-bg));
+  transform: translateX(var(--lamp-x, 0px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dh-dock-lamp::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 18px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--lamp-tone, var(--dh-accent));
+  transform: translateX(-50%);
+}
+
+.dh-dock-lamp.is-on {
+  opacity: 1;
+}
+
+.dh-dock.lamp-ready .dh-dock-lamp {
+  transition:
+    transform 0.34s cubic-bezier(0.2, 0.85, 0.25, 1),
+    width 0.34s cubic-bezier(0.2, 0.85, 0.25, 1),
+    background-color 0.24s ease,
+    opacity 0.2s ease;
+}
+
+.dh-dock.lamp-ready .dh-dock-lamp::before {
+  transition: background-color 0.24s ease;
+}
+
+.dh-dock-item {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 78px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 15px;
+  background: transparent;
+  color: var(--dh-text-muted);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.dh-dock-item i {
+  font-size: 21px;
+  line-height: 1;
+  color: var(--shell-icon);
+  transition: color 0.14s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Pointing at a section previews its colour; the lamp follows. */
+.dh-dock-item:hover,
+.dh-dock-item:focus-visible,
+.dh-dock-item[aria-expanded="true"] {
+  color: var(--dh-text);
+}
+
+.dh-dock-item:hover i,
+.dh-dock-item:focus-visible i,
+.dh-dock-item[aria-expanded="true"] i {
+  color: var(--tone);
+  transform: translateY(-1px);
+}
+
+.dh-dock-item:active i {
+  transform: scale(0.9);
+}
+
+/* The section you are in. */
+.dh-dock-item.is-active {
+  color: var(--dh-text);
+  font-weight: 650;
+}
+
+.dh-dock-item.is-active i {
+  color: var(--tone);
+}
+
+/* Without the script, plain fills stand in for the lamp. */
+.dh-dock:not(.has-lamp) .dh-dock-item:hover {
+  background: var(--shell-hover);
+}
+
+.dh-dock:not(.has-lamp) .dh-dock-item.is-active {
+  background: color-mix(in srgb, var(--tone) 15%, var(--dh-surface-bg));
+}
+
+.dh-dock-item:focus-visible,
+.dh-dock-menu a:focus-visible,
+.dh-dock-menu button:focus-visible {
+  outline: 2px solid var(--dh-accent);
+  outline-offset: -2px;
+}
+
+/* Statistics and Project open their pages in a small menu above the bar. */
+.dh-dock-menu {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  min-width: 220px;
+  padding: 6px;
+  transform: translateX(-50%);
+  border: 1px solid var(--dh-border);
+  border-radius: 14px;
+  background: var(--dh-surface-bg);
+  box-shadow: 0 16px 36px -12px color-mix(in srgb, var(--dh-text) 30%, transparent);
+  transform-origin: bottom center;
+  animation: dh-dock-menu-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dh-dock-menu[hidden] {
+  display: none;
+}
+
+.dh-dock-menu a,
+.dh-dock-menu button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dh-dock-menu a,
+.dh-dock-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--dh-text);
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dh-dock-menu a i,
+.dh-dock-menu button i {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tone) 12%, var(--dh-surface-bg));
+  font-size: 17px;
+  color: var(--tone);
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.dh-dock-menu a:hover,
+.dh-dock-menu button:hover {
+  background: color-mix(in srgb, var(--tone) 8%, var(--dh-surface-bg));
+}
+
+.dh-dock-menu a:hover i,
+.dh-dock-menu button:hover i {
+  background: var(--tone);
+  color: var(--dh-surface-bg);
+}
+
+.dh-dock-menu a.is-active {
+  background: color-mix(in srgb, var(--tone) 14%, var(--dh-surface-bg));
+  font-weight: 600;
+}
+
+@keyframes dh-dock-menu-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes dh-dock-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The account menu opens from the right end of the bar. */
+.dh-dock-account .dh-dock-menu {
+  left: auto;
+  right: -6px;
+  min-width: 270px;
+  transform: none;
+  transform-origin: bottom right;
+  animation-name: dh-dock-sheet-in;
+}
+
+/* Phones: a full-width bar flush with the bottom edge. */
+@media (max-width: 640px) {
+  .dh-dock {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    gap: 0;
+    padding: 5px 4px calc(5px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Share the width by name length, so "Statistics" is not cut short. */
+  .dh-dock > .dh-dock-item,
+  .dh-dock-group {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .dh-dock-item {
+    min-width: 0;
+    height: 50px;
+    padding: 0 4px;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+
+  .dh-dock-group {
+    position: static;
+  }
+
+  .dh-dock-group > .dh-dock-item {
+    flex: 1 1 auto;
+  }
+
+  .dh-dock-menu,
+  .dh-dock-account .dh-dock-menu {
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% + 8px);
+    min-width: 0;
+    transform: none;
+    animation-name: dh-dock-sheet-in;
+  }
+
+  .dh-dock-brand,
+  .dh-dock-sep {
+    display: none;
+  }
+
+  /* On phones the account is just the avatar, so the sections keep room
+     for their names. */
+  .dh-dock-account {
+    flex: 0 0 46px;
+  }
+
+  .dh-dock-account .dh-dock-item {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .dh-dock-account .dh-dock-label {
+    display: none;
+  }
+
+  .dh-dock-account .dh-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 400px) {
+  .dh-dock-item {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ---- Account ------------------------------------------------------------ */
+
+.dh-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--dh-accent);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  flex: none;
+}
+
+.dh-avatar.is-lg {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+}
+
+.dh-account-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--dh-border);
+  min-width: 0;
+}
+
+.dh-account-who div {
+  display: grid;
+  min-width: 0;
+}
+
+.dh-account-who strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dh-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-account-who div span {
+  font-size: 12.5px;
+  color: var(--dh-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dh-dock-menu-rule {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--dh-border);
+}
+
+.dh-menu-state {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--dh-text-muted);
+}
+
+[aria-pressed="true"] > .dh-menu-state {
+  color: var(--dh-accent);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh-dock-item,
+  .dh-dock-brand img,
+  .dh-dock-item i,
+  .dh-dock.lamp-ready .dh-dock-lamp,
+  .dh-dock-menu a i {
+    transition: none;
+  }
+
+  .dh-dock-item:hover i,
+  .dh-dock-item:active i {
+    transform: none;
+  }
+
+  .dh-dock-menu {
+    animation: none;
+  }
+}

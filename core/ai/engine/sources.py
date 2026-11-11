@@ -3,6 +3,7 @@
 import re
 
 from integrations.dpmes import client as dpmes_client
+from integrations.sdg import client as sdg_client
 
 # Long technical descriptions drown out the indicator name in the embedding,
 # so the catalog keeps only their opening.
@@ -32,3 +33,8 @@ def fetch_dpmes(period):
         for area in policy_areas
     }
     return organizations, org_scorecards, policy_areas, area_scorecards
+
+
+def fetch_sdg():
+    """Every SDG goal with its targets and indicators, from the national SDG platform."""
+    return [sdg_client.goal(goal_id) for goal_id in sdg_client.GOAL_IDS]
