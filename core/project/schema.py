@@ -4,6 +4,7 @@ def mobile_only_schema_endpoints(endpoints, **kwargs):
         "/api/user/auth/password-login/",
         "/api/user/reset-password/",
         "/api/auth/token/refresh/",
+        "/api/preferences/",
         "/api/schema/",
         "/api/docs/swagger/",
         "/api/docs/redoc/",

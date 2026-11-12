@@ -8,7 +8,7 @@ extend-exclude = ["core/static", "core/staticfiles", "core/media", "**/migration
 select = ["F", "E9", "I"]
 
 [lint.isort]
-known-first-party = ["ai", "chat", "dashboard", "integrations", "mobile", "notifications", "project", "users"]
+known-first-party = ["ai", "chat", "dashboard", "integrations", "mobile", "notifications", "preferences", "project", "users"]
 
 [lint.per-file-ignores]
 # Django loads these for their side effects / re-exports.

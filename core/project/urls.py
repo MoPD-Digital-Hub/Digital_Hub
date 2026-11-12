@@ -23,5 +23,6 @@ urlpatterns = [
     path('api/ai-chat/', include('ai.urls')),
     path('api/notification/', include('notifications.urls')),
     path('api/chat/', include('chat.urls')),
+    path('api/preferences/', include('preferences.urls')),
     path('dashboard/', include('dashboard.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
