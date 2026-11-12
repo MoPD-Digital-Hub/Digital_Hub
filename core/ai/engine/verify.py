@@ -51,6 +51,11 @@ def unsupported_numbers(answer_html, results, question=""):
 FOREIGN_SCRIPT = re.compile(r"[^\u0000-\u024F\u1200-\u139F\u2D80-\u2DDF\uAB00-\uAB2F\u2000-\u206F\u20A0-\u20CF\u2100-\u214F\u2190-\u21FF\u2600-\u27BF\uFE00-\uFE0F]")
 
 
+def scrub_foreign(answer_html):
+    """The answer without characters from unexpected scripts: a last resort, so none reach the user."""
+    return re.sub(r"[ \t]{2,}", " ", FOREIGN_SCRIPT.sub("", answer_html or ""))
+
+
 def foreign_script(answer_html):
     """Characters outside the scripts an answer should use, if any."""
     text = unescape(re.sub(r"<[^>]+>", " ", answer_html or ""))

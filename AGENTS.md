@@ -57,7 +57,7 @@
 - `core/ai/consumers.py`: chat WebSocket consumers. `core/ai/api/views.py`: REST endpoints.
 - Chat persistence uses `ChatInstance` and `QuestionHistory`; every answer also writes an `AnswerTrace`.
 - The catalog (`CatalogEntity`) is built by `manage.py sync_ai_catalog` (run in the web container); there is no vector database.
-- Language follows the question's script: Amharic script gets an Amharic answer, otherwise English.
+- Language follows the question's script: Amharic script gets an Amharic answer, otherwise English. An explicit request ("in Amharic", "በእንግሊዝኛ") wins and stays for the chat. Amharic answers are restricted to Ethiopic/Latin characters at generation and use the glossary in `core/ai/engine/amharic.py` (a draft awaiting the Ministry's review).
 
 ## Auth And User Flow
 - Sign-in is email + password: `POST /api/user/auth/password-login/` returns the user and JWT refresh/access tokens. There is no sign-in OTP.

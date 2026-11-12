@@ -357,6 +357,8 @@ LOGGING = {
 
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
+# Amharic answers may only use Ethiopic, Latin and punctuation (ai/engine/amharic.py).
+AI_AMHARIC_CONSTRAINED = config("AI_AMHARIC_CONSTRAINED", default=True, cast=bool)
 
 # Admas AI's web search for general questions, through the self-hosted SearXNG
 # (core/integrations/websearch). Off when SEARXNG_URL is empty.

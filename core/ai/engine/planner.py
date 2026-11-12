@@ -140,6 +140,19 @@ def detect_request_language(text):
     return requested_language(text) or ("Amharic" if AMHARIC_SCRIPT.search(str(text or "")) else "English")
 
 
+def without_language_request(question):
+    """The question to plan: "What is GDP growth? answer in Amharic" -> "What is GDP growth?".
+
+    A question that is only a language request ("make the response in Amharic")
+    is kept as it is: it asks for the previous answer again.
+    """
+    text = str(question or "")
+    for pattern in LANGUAGE_REQUESTS.values():
+        text = pattern.sub(" ", text)
+    text = re.sub(r"\s+", " ", text).strip(" ,;:-")
+    return text if len(re.sub(r"\W", "", text)) >= 3 else str(question or "")
+
+
 def reply_language(question, history=()):
     """The answer's language, keeping a language the user asked for earlier in the chat.
 
@@ -200,7 +213,7 @@ async def plan(question, history=()):
                                   web_examples=WEB_EXAMPLES.replace("{{", "{").replace("}}", "}") if web else "")
     messages = [
         {"role": "system", "content": prompt},
-        {"role": "user", "content": f"{conversation(history)}Question: {question}"},
+        {"role": "user", "content": f"{conversation(history)}Question: {without_language_request(question)}"},
     ]
     raw = await llm.json_completion(messages, SCHEMA, name="plan")
     kind = raw.get("kind") if raw.get("kind") in ("data", "web", "general", "greeting", "out_of_scope") else "general"

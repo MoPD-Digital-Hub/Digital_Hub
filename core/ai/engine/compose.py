@@ -3,7 +3,9 @@
 import json
 from datetime import date
 
-from ai.engine import llm
+from django.conf import settings
+
+from ai.engine import amharic, llm
 
 DATA_PROMPT = """You are Admas AI, an analyst for Ethiopia's Ministry of National Strategy (MoNS, formerly the Ministry of Planning and Development).
 Write the explanation of an answer. Tables and charts with the full figures are added automatically after your text.
@@ -82,6 +84,13 @@ def web_pages(pages):
 
 
 def messages_for(kind, question, language, results=(), problems=(), conversation=""):
+    messages = _messages_for(kind, question, language, results, problems, conversation)
+    if language == "Amharic":
+        messages[0]["content"] += amharic.rules()
+    return messages
+
+
+def _messages_for(kind, question, language, results=(), problems=(), conversation=""):
     """The writer's messages; `conversation` is planner.conversation() text (may be empty).
 
     For kind "web", `results` are the fetched pages (pipeline._web_research).
@@ -116,5 +125,6 @@ async def stream(kind, question, language, results=(), problems=(), temperature=
         # This model drifts into other scripts mid-word when sampling Amharic.
         temperature = 0 if language == "Amharic" else 0.2
     messages = messages_for(kind, question, language, results, problems, conversation)
-    async for piece in llm.stream_completion(messages, temperature=temperature):
+    allowed = amharic.ALLOWED_PATTERN if language == "Amharic" and settings.AI_AMHARIC_CONSTRAINED else None
+    async for piece in llm.stream_completion(messages, temperature=temperature, allowed_pattern=allowed):
         yield piece

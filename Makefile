@@ -75,7 +75,7 @@ superuser: ## Create an admin user
 	$(MANAGE) createsuperuser
 
 test: ## Run the tests (app=ai to run one app)
-	$(MANAGE) test $(app)
+	$(MANAGE) test --noinput $(app)
 
 check: ## Django checks plus a check for missing migrations
 	$(MANAGE) check

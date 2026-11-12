@@ -6,6 +6,7 @@ response_format=json_schema, so planning uses structured output.
 
 import asyncio
 import json
+import logging
 import os
 import weakref
 from urllib.parse import urlparse
@@ -14,6 +15,8 @@ import numpy as np
 from openai import AsyncOpenAI, OpenAI
 
 DEFAULT_GATEWAY = "https://llm.mopd.gov.et/v1"
+
+LOGGER = logging.getLogger(__name__)
 
 
 class LLMError(Exception):
@@ -97,9 +100,17 @@ async def json_completion(messages, schema, *, name="output", max_tokens=600, te
         raise LLMError(f"The LLM gateway failed: {exc}") from exc
 
 
-async def stream_completion(messages, *, max_tokens=1200, temperature=0.2):
-    """Yield text pieces of a streamed completion."""
+async def stream_completion(messages, *, max_tokens=1200, temperature=0.2, allowed_pattern=None):
+    """Yield text pieces of a streamed completion.
+
+    `allowed_pattern` (a regular expression) restricts what the model may
+    generate, through vLLM's structured outputs (amharic.ALLOWED_PATTERN keeps
+    Amharic answers to Ethiopic, Latin and punctuation). If the gateway rejects
+    it before writing anything, the answer is written without it.
+    """
     config = chat_config()
+    extra = {"structured_outputs": {"regex": allowed_pattern}} if allowed_pattern else None
+    started = False
     try:
         stream = await _client().chat.completions.create(
             model=config["model"],
@@ -107,12 +118,19 @@ async def stream_completion(messages, *, max_tokens=1200, temperature=0.2):
             max_tokens=max_tokens,
             temperature=temperature,
             stream=True,
+            extra_body=extra,
         )
         async for event in stream:
             delta = event.choices[0].delta.content if event.choices else None
             if delta:
+                started = True
                 yield delta
     except Exception as exc:
+        if allowed_pattern and not started:
+            LOGGER.warning("The gateway rejected the character restriction; writing without it: %s", exc)
+            async for piece in stream_completion(messages, max_tokens=max_tokens, temperature=temperature):
+                yield piece
+            return
         raise LLMError(f"The LLM gateway failed while writing the answer: {exc}") from exc
 
 

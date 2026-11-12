@@ -398,6 +398,82 @@ class AmharicAnswerTests(TestCase):
         self.assertEqual(temperatures, [0, 0.4])
         self.assertTrue(events[-1]["verified"])
 
+    @patch("ai.engine.pipeline.planner.plan")
+    def test_stray_characters_never_reach_the_user(self, mock_plan):
+        from ai.engine.pipeline import answer_stream
+
+        mock_plan.return_value = planner.Plan("general", "Amharic", [])
+
+        async def fake_compose(*args, **kwargs):
+            yield "<p>በፋይናንስ ያልمركزነት በгосударство ሚኒስትርነት</p>"
+
+        with patch("ai.engine.pipeline.compose.stream", fake_compose):
+            async def collect():
+                return [e async for e in answer_stream("ሰላም")]
+            events = async_to_sync(collect)()
+
+        sent = "".join(e["text"] for e in events if e["type"] == "delta")
+        self.assertEqual(sent, "<p>በፋይናንስ ያልነት በ ሚኒስትርነት</p>")
+        self.assertEqual(verify.foreign_script(sent), [])
+        self.assertTrue(AnswerTrace.objects.get().error.startswith("foreign script removed"))
+
+    def test_amharic_prompts_carry_the_glossary_and_english_ones_do_not(self):
+        from ai.engine import compose
+
+        for kind, results in (("data", [SERIES]), ("general", []), ("web", [])):
+            amharic_prompt = compose.messages_for(kind, "q", "Amharic", results)[0]["content"]
+            self.assertIn("state minister = ሚኒስትር ዴኤታ", amharic_prompt)
+            self.assertIn("Never write a word in any other script", amharic_prompt)
+            self.assertNotIn("ሚኒስትር ዴኤታ", compose.messages_for(kind, "q", "English", results)[0]["content"])
+
+    def test_only_amharic_answers_are_restricted_to_safe_characters(self):
+        from ai.engine import amharic, compose
+
+        for language, expected in (("Amharic", amharic.ALLOWED_PATTERN), ("English", None)):
+            calls = []
+
+            async def fake_stream(messages, **kwargs):
+                calls.append(kwargs)
+                yield "x"
+
+            with patch("ai.engine.compose.llm.stream_completion", fake_stream):
+                async def collect():
+                    return [p async for p in compose.stream("general", "q", language)]
+                async_to_sync(collect)()
+            self.assertEqual(calls[0]["allowed_pattern"], expected)
+
+    def test_the_restriction_is_sent_to_the_gateway_and_dropped_if_rejected(self):
+        from ai.engine import llm
+
+        class Delta:
+            def __init__(self, text):
+                self.choices = [type("C", (), {"delta": type("D", (), {"content": text})()})()]
+
+        async def events(*texts):
+            for text in texts:
+                yield Delta(text)
+
+        create = AsyncMock(side_effect=[RuntimeError("unknown field structured_outputs"), events("ሰላም")])
+        client = MagicMock()
+        client.chat.completions.create = create
+        with patch.object(llm, "_client", return_value=client), \
+                patch.object(llm, "chat_config", return_value={"model": "m"}):
+            async def collect():
+                return [p async for p in llm.stream_completion([], allowed_pattern="[a]*")]
+            self.assertEqual(async_to_sync(collect)(), ["ሰላም"])
+        self.assertEqual(create.call_args_list[0].kwargs["extra_body"], {"structured_outputs": {"regex": "[a]*"}})
+        self.assertIsNone(create.call_args_list[1].kwargs["extra_body"])
+
+    def test_the_allowed_characters_cover_amharic_and_exclude_other_scripts(self):
+        import re
+
+        from ai.engine import amharic
+
+        pattern = re.compile(amharic.ALLOWED_PATTERN)
+        self.assertTrue(pattern.fullmatch("<p>ክቡር አቶ በረከት (fiscal decentralization) 2.74%፣ “ዕድገት” — 2018 ዓ.ም።</p>\n"))
+        for stray in ("مركز", "государство", "政府", "நி"):
+            self.assertIsNone(pattern.fullmatch(stray), stray)
+
 
 def fake_pipeline(*events):
     async def stream(question, instance=None):
@@ -675,6 +751,12 @@ class LanguageTests(SimpleTestCase):
         for question, language in cases.items():
             with self.subTest(question):
                 self.assertEqual(planner.detect_request_language(question), language)
+
+    def test_the_language_request_is_left_out_of_planning(self):
+        self.assertEqual(planner.without_language_request("What is GDP growth? answer in Amharic"), "What is GDP growth?")
+        self.assertEqual(planner.without_language_request("የዋጋ ግሽበት በአማርኛ"), "የዋጋ ግሽበት")
+        self.assertEqual(planner.without_language_request("make the response in Amharic"), "make the response in Amharic")
+        self.assertEqual(planner.without_language_request("GDP growth?"), "GDP growth?")
 
     def test_a_requested_language_stays_for_the_chat(self):
         asked = [{"question": "GDP?"}, {"question": "answer in Amharic"}]

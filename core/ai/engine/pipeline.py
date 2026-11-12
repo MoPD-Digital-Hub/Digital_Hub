@@ -175,6 +175,12 @@ async def answer_stream(question, *, instance=None):
                     conversation=context)])
                 if not verify.foreign_script(narrative):
                     break
+            else:
+                # Every attempt slipped (the gateway's character restriction should
+                # prevent this): drop the stray characters rather than send them.
+                trace["error"] = f"foreign script removed: {''.join(verify.foreign_script(narrative))}"[:500]
+                LOGGER.warning("Amharic answer still had other scripts after retries; %s", trace["error"])
+                narrative = verify.scrub_foreign(narrative)
             pieces.append(narrative)
             yield {"type": "delta", "text": narrative}
         else:

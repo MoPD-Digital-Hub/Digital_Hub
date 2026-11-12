@@ -6,16 +6,18 @@ from pathlib import Path
 from asgiref.sync import async_to_sync
 from django.core.management.base import BaseCommand
 
-from ai.engine import planner
+from ai.engine import planner, verify
 from ai.engine.pipeline import _resolve_call, answer
+from ai.models import AnswerTrace
 
 QUESTIONS = Path(__file__).resolve().parents[2] / "engine" / "eval_questions.json"
 
 
 class Command(BaseCommand):
     help = (
-        "Score the assistant on AI/engine/eval_questions.json: question kind, tool choice and entity "
-        "resolution. With --full, also generate each answer and check its numbers against the data."
+        "Score the assistant on AI/engine/eval_questions.json: question kind, tool choice, entity "
+        "resolution and answer language. With --full, also generate each answer and check its numbers "
+        "against the data, and (Amharic) that no other script reached the answer or had to be removed."
     )
 
     def add_arguments(self, parser):
@@ -26,7 +28,8 @@ class Command(BaseCommand):
         cases = json.loads(QUESTIONS.read_text(encoding="utf-8"))
         if only:
             cases = [c for c in cases if only.lower() in c["q"].lower()]
-        totals = {"kind": 0, "tools": 0, "entities": 0, "entity_cases": 0, "verified": 0, "errors": 0}
+        totals = {"kind": 0, "tools": 0, "entities": 0, "entity_cases": 0, "verified": 0, "errors": 0,
+                  "language": 0, "language_cases": 0, "amharic_answers": 0, "script_repairs": 0, "script_leaks": 0}
         latencies = []
 
         for case in cases:
@@ -45,14 +48,22 @@ class Command(BaseCommand):
             expected = case.get("entities") or {}
             entities_ok = all(name in resolved_names.get(arg, []) for arg, name in expected.items())
 
+            language_ok = plan.language == case.get("language", plan.language)
+            if case.get("language"):
+                totals["language_cases"] += 1
+                totals["language"] += language_ok
+
             totals["kind"] += kind_ok
             totals["tools"] += tools_ok
             if expected:
                 totals["entity_cases"] += 1
                 totals["entities"] += entities_ok
 
-            line = f"{'OK ' if kind_ok and tools_ok and entities_ok else 'BAD'} plan {plan_ms:>5}ms  {case['q'][:52]:52}"
+            good = kind_ok and tools_ok and entities_ok and language_ok
+            line = f"{'OK ' if good else 'BAD'} plan {plan_ms:>5}ms  {case['q'][:52]:52}"
             line += f"  kind={plan.kind}{'' if kind_ok else '(want ' + case['kind'] + ')'} tools={tools}"
+            if not language_ok:
+                line += f" language={plan.language} (want {case['language']})"
             if expected:
                 line += f" entities={resolved_names}" + ("" if entities_ok else f" (want {expected})")
 
@@ -66,12 +77,24 @@ class Command(BaseCommand):
                 else:
                     totals["verified"] += bool(result.get("verified"))
                     line += f"  answer {latencies[-1]:.1f}s verified={result.get('verified')}"
+                    if plan.language == "Amharic":
+                        totals["amharic_answers"] += 1
+                        trace = AnswerTrace.objects.order_by("-id").first()
+                        if trace and trace.error.startswith("foreign script removed"):
+                            totals["script_repairs"] += 1
+                            line += "  SCRIPT-REPAIRED"
+                        if verify.foreign_script(result.get("answer") or ""):
+                            totals["script_leaks"] += 1
+                            line += "  SCRIPT-LEAK"
             self.stdout.write(line)
 
         n = len(cases)
         summary = (f"\nkind {totals['kind']}/{n}   tools {totals['tools']}/{n}   "
-                   f"entities {totals['entities']}/{totals['entity_cases']}")
+                   f"entities {totals['entities']}/{totals['entity_cases']}   "
+                   f"language {totals['language']}/{totals['language_cases']}")
         if full and latencies:
             summary += (f"   verified {totals['verified']}/{n - totals['errors']}   errors {totals['errors']}"
-                        f"   answer latency median {statistics.median(latencies):.1f}s max {max(latencies):.1f}s")
+                        f"   answer latency median {statistics.median(latencies):.1f}s max {max(latencies):.1f}s"
+                        f"   amharic: {totals['amharic_answers']} answers, {totals['script_repairs']} repaired, "
+                        f"{totals['script_leaks']} with other scripts")
         self.stdout.write(self.style.SUCCESS(summary))

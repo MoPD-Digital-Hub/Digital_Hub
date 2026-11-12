@@ -119,5 +119,16 @@ The gateway is the only AI provider.
   and its results say so (`"calendar": "Gregorian"`), so the answer does not write them as EC. A year later than the current Ethiopian year
   is read as Gregorian and converted (Y − 8), and the answer says so. DPMES questions without a year use the
   last completed year, like the dashboard.
-- Amharic questions are planned and answered by the gateway model directly. It occasionally drifts into other
-  scripts mid-word; answers are written with temperature 0 and checked for foreign script.
+- Amharic questions are planned and answered by the gateway model directly. Unconstrained, it writes words it
+  does not know in other scripts ("ያልمركزነት", "በгосударство"). Defences (`core/ai/engine/amharic.py`):
+  1. The writer may only generate Ethiopic, Latin, digits, punctuation and HTML: `amharic.ALLOWED_PATTERN`
+     is sent as vLLM structured outputs (`extra_body={"structured_outputs": {"regex": …}}`). The gateway honours
+     it (tested 2026-11-12; the older `guided_regex` is ignored). If the gateway rejects it, the answer is
+     written without it. `AI_AMHARIC_CONSTRAINED=False` turns it off.
+  2. Amharic prompts include a glossary of standard government and economic terms (`amharic.GLOSSARY`) and
+     say to put an unknown term in English in parentheses. The glossary is a draft until reviewed by someone
+     who writes the Ministry's official Amharic.
+  3. The answer is checked for other scripts and rewritten once; if both attempts fail, the stray characters
+     are removed before sending and the trace's `error` records it ("foreign script removed").
+  4. `eval_questions.json` has Amharic questions; `manage.py eval_ai --full` reports how many Amharic answers
+     needed repair or still contain other scripts.
