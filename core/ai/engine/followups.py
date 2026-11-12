@@ -53,8 +53,8 @@ def clean(raw, question):
     return kept[:MAX_SUGGESTIONS]
 
 
-async def suggest(question, answer_html):
-    language = detect_request_language(question)
+async def suggest(question, answer_html, language=None):
+    language = language or detect_request_language(question)
     messages = [
         {"role": "system", "content": PROMPT.format(count=MAX_SUGGESTIONS, language=language)},
         {"role": "user", "content": f"Question: {str(question or '')[:500]}\n\n"

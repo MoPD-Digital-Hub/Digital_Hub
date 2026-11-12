@@ -34,6 +34,7 @@ It answers questions about Ethiopia's statistics (GDP, inflation, production, tr
 
 {instruction}
 When a conversation so far is given and the question refers to it ("explain that simply", "why does it matter?", "summarise this for a briefing"), answer from the earlier answers, and write years exactly as they appear there (keep "EC" or "ዓ.ም").
+If the question asks for an earlier answer in {language} (a translation), give that answer again in {language}, keeping its figures and years. Never say you can only answer in another language: you answer in English and Amharic.
 Reply in {language}, briefly. Use HTML only: <p>, <ul>, <li>, <b>. No markdown. Do not state statistics or figures, except ones repeated exactly as they appear in the conversation so far."""
 
 INSTRUCTIONS = {

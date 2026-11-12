@@ -55,7 +55,8 @@ Return JSON with:
 Rules for calls:
 - Name entities in English, as specifically as the question allows ("GDP growth", "year-on-year general inflation", "Ministry of Health"). Translate Amharic names into English.
 - Use the conversation to resolve follow-ups like "what about 2016?" or "and the weak ones?".
-- A follow-up that only asks to explain, simplify, summarise or interpret an earlier answer ("explain that simply", "summarise this for a briefing", "what does that mean?") needs no new figures: kind "general", calls [].
+- A follow-up that only asks to explain, simplify, summarise, interpret or translate an earlier answer ("explain that simply", "summarise this for a briefing", "what does that mean?", "answer that in Amharic") needs no new figures: kind "general", calls [].
+- A request for the answer's language ("in Amharic", "in English") is not a topic: plan the rest of the question as usual.
 - Set year only when the question gives one, and quarter (1-4) only when it names a quarter.
 - Scores, ratings, rankings and KPIs of ministries or agencies come from DPMES tools; quantities, rates and trends of the economy or society come from indicator_series.
 - Use the SDG tools when the question mentions the SDGs, a goal or indicator number (SDG 4, 3.1.1), or asks about an SDG topic the time-series database does not cover well: poverty headcount, stunting and malnutrition, school completion and learning, access to water and sanitation, gender equality, or a breakdown by region or sex. For a topic both cover (GDP, inflation, maternal mortality, electricity access) use indicator_series unless the SDGs are mentioned. sdg_goal is for overall progress on a goal; sdg_indicator for one indicator. Name SDG indicators by what they measure, or by number when given.
@@ -91,9 +92,51 @@ class Plan:
 AMHARIC_SCRIPT = re.compile(r"[\u1200-\u137F]")
 
 
+# An explicit request for a language wins over the question's script:
+# "answer in Amharic", "translate it to Amharic", "Amharic please", "በአማርኛ".
+REPLY_WORDS = r"(?:answer|reply|respond|response|write|explain|say|tell|give|show|translate|make|put)"
+LANGUAGE_REQUESTS = {
+    "Amharic": re.compile(
+        r"\b(?:in|into|to|using|use)\s+amharic\b|\bamharic\s+(?:please|version|translation|language)\b"
+        rf"|\b{REPLY_WORDS}\b[^.?!]*\bamharic\b|^\W*amharic\W*$|በአማርኛ",
+        re.IGNORECASE),
+    "English": re.compile(
+        r"\b(?:in|into|to|using|use)\s+english\b|\benglish\s+(?:please|version|translation|language)\b"
+        rf"|\b{REPLY_WORDS}\b[^.?!]*\benglish\b|^\W*english\W*$|በእንግሊዝኛ",
+        re.IGNORECASE),
+}
+
+
+def requested_language(text):
+    """The language the text explicitly asks the answer to be in, or None."""
+    text = str(text or "")
+    for language, pattern in LANGUAGE_REQUESTS.items():
+        if pattern.search(text):
+            return language
+    return None
+
+
 def detect_request_language(text):
-    """Amharic script gets an Amharic answer; anything else, English."""
-    return "Amharic" if AMHARIC_SCRIPT.search(str(text or "")) else "English"
+    """An explicit request ("in Amharic") first; then Amharic script gets Amharic, anything else English."""
+    return requested_language(text) or ("Amharic" if AMHARIC_SCRIPT.search(str(text or "")) else "English")
+
+
+def reply_language(question, history=()):
+    """The answer's language, keeping a language the user asked for earlier in the chat.
+
+    "Answer in Amharic" once, and the chat's later English-script questions get
+    Amharic answers too, until the user asks for English.
+    """
+    asked = requested_language(question)
+    if asked:
+        return asked
+    if AMHARIC_SCRIPT.search(str(question or "")):
+        return "Amharic"
+    for turn in reversed(list(history)):
+        asked = requested_language(turn.get("question"))
+        if asked:
+            return asked
+    return "English"
 
 
 def _plain(html):
@@ -131,7 +174,7 @@ def _clean_calls(raw_calls):
 
 
 async def plan(question, history=()):
-    language = detect_request_language(question)
+    language = reply_language(question, history)
     tools = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS.values())
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT.format(tools=tools, max_calls=MAX_CALLS)},

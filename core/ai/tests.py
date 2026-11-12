@@ -658,6 +658,39 @@ class ConversationTests(TestCase):
         self.assertTrue(events[-1]["verified"])
 
 
+class LanguageTests(SimpleTestCase):
+    def test_an_explicit_request_wins_over_the_script(self):
+        cases = {
+            "make the response in Amharic": "Amharic",
+            "What is GDP growth? answer in Amharic": "Amharic",
+            "translate that to amharic": "Amharic",
+            "Amharic please": "Amharic",
+            "amharic": "Amharic",
+            "What is the Amharic speaking population?": "English",
+            "GDP growth?": "English",
+            "የኢትዮጵያ ጥቅል ምርት ዕድገት": "Amharic",
+            "ጥቅል ምርት ዕድገት በእንግሊዝኛ": "English",
+            "in english please": "English",
+        }
+        for question, language in cases.items():
+            with self.subTest(question):
+                self.assertEqual(planner.detect_request_language(question), language)
+
+    def test_a_requested_language_stays_for_the_chat(self):
+        asked = [{"question": "GDP?"}, {"question": "answer in Amharic"}]
+        self.assertEqual(planner.reply_language("and inflation?", asked), "Amharic")
+        self.assertEqual(planner.reply_language("and inflation?", asked + [{"question": "now in English"}]), "English")
+        self.assertEqual(planner.reply_language("and inflation?", [{"question": "ሰላም"}]), "English")
+        self.assertEqual(planner.reply_language("ዋጋ ግሽበት?", [{"question": "in English please"}]), "Amharic")
+
+    def test_the_writer_is_told_it_can_answer_in_either_language(self):
+        from ai.engine import compose
+
+        system = compose.messages_for("general", "answer that in Amharic", "Amharic")[0]["content"]
+        self.assertIn("give that answer again in Amharic", system)
+        self.assertIn("Never say you can only answer in another language", system)
+
+
 class FollowUpTests(TestCase):
     def test_suggestions_are_cleaned(self):
         from ai.engine import followups

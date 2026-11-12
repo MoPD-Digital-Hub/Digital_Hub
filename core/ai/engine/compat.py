@@ -52,7 +52,7 @@ async def stream_answer(question, *, instance, send, is_native_client, preview):
     {"event": "followups", "chat_instance_id", "history_id", "questions"}.
     The app is not sent them.
     """
-    so_far, streamed, buffer_only, answered, history_id = [], False, False, False, None
+    so_far, streamed, buffer_only, answered, history_id, language = [], False, False, False, None, None
     async for event in answer_stream(question, instance=instance):
         kind = event["type"]
         if kind == "status":
@@ -66,6 +66,7 @@ async def stream_answer(question, *, instance, send, is_native_client, preview):
         elif kind == "done":
             answered = True
             history_id = event.get("history_id")
+            language = event.get("language")
             if not streamed or not is_native_client:
                 await send(_final("".join(so_far), route_for(event.get("tools"))))
         elif kind == "error":
@@ -84,7 +85,7 @@ async def stream_answer(question, *, instance, send, is_native_client, preview):
     if is_native_client:
         return
     try:
-        questions = await followups.suggest(question, "".join(so_far))
+        questions = await followups.suggest(question, "".join(so_far), language=language)
     except Exception:  # suggestions are a nicety too
         LOGGER.exception("Follow-up suggestions failed for chat %s", instance.id)
         return

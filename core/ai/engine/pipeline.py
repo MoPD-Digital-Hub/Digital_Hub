@@ -151,6 +151,7 @@ async def answer_stream(question, *, instance=None):
             "sources": sorted({r["source"] for r in results if r.get("source")}),
             "tools": [call["tool"] for call in plan.calls],
             "verified": not trace["unsupported_numbers"] and not foreign,
+            "language": plan.language,
         }
     except LLMError as exc:
         LOGGER.warning("AI answer failed: %s", exc)
