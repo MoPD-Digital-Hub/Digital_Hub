@@ -355,6 +355,9 @@ LOGGING = {
     },
 }
 
+# Ends leftover database sessions before the test database is dropped (project/test_runner.py).
+TEST_RUNNER = "project.test_runner.Runner"
+
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
 # Amharic answers may only use Ethiopic, Latin and punctuation (ai/engine/amharic.py).
