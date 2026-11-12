@@ -27,6 +27,12 @@ Failure:
   `method_not_allowed`, `not_found`, `throttled`. Refresh the access token on `token_not_valid`; when the
   refresh itself is rejected (401, `token_not_valid`), sign in again.
 
+## Admas AI documents
+
+`GET /api/ai-chat/documents/<uuid>/?t=<token>` downloads a PowerPoint, Word or PDF file the assistant made (the
+link is in the answer, inside `<p class="ai-document" data-format="pptx|docx|pdf">`). It returns the file, not
+JSON: 404 for an unknown id or wrong token, 410 once the file has expired (after 7 days).
+
 ## Compatibility with the installed mobile app
 
 Responses are completed, never changed: fields the app already reads keep their exact names and values, and

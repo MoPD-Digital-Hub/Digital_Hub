@@ -26,6 +26,8 @@ x-app: &app
     CELERY_RESULT_BACKEND: redis://redis:6379/1
     # Admas AI's web search for general questions (core/integrations/websearch).
     SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
+    # Absolute links (AI documents) for the mobile app.
+    SITE_URL: ${SITE_URL:-http://localhost:8000}
   volumes:
     - ./core:/app/core
     # Key files (Firebase), git-ignored; see docs/deploy.md.

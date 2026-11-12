@@ -16,7 +16,8 @@ ENTITY_ARGS = ("indicator", "organization", "policy_area", "goal", "sdg_indicato
 SCHEMA = {
     "type": "object",
     "properties": {
-        "kind": {"type": "string", "enum": ["data", "web", "general", "greeting", "out_of_scope"]},
+        "kind": {"type": "string", "enum": ["data", "document", "web", "general", "greeting", "out_of_scope"]},
+        "document_format": {"type": "string", "enum": ["pptx", "docx", "pdf"]},
         "search_query": {"type": "string"},
         "calls": {
             "type": "array",
@@ -52,7 +53,8 @@ Tools:
 
 Return JSON with:
 {kinds}
-- calls: the lookups for a "data" question, otherwise []. One call per thing asked about, at most {max_calls}.
+- calls: the lookups for a "data" question or a "document", otherwise []. One call per thing asked about, at most {max_calls}.
+- A request to create a file is kind "document", with document_format "pptx" for a presentation, PowerPoint, slides or deck, "docx" for a Word document, report or brief, "pdf" for a PDF. Plan its calls as for a "data" question about the same subject; ask for a breakdown or ranking when it would make a useful chart.
 
 Rules for calls:
 - Name entities in English, as specifically as the question allows ("GDP growth", "year-on-year general inflation", "Ministry of Health"). Translate Amharic names into English.
@@ -75,23 +77,34 @@ Q: How is Ethiopia progressing on SDG 4?
 {{"kind": "data", "calls": [{{"tool": "sdg_goal", "sdg_goal": "SDG 4"}}]}}
 Q: What is the poverty rate by region?
 {{"kind": "data", "calls": [{{"tool": "sdg_indicator", "sdg_indicator": "poverty headcount index", "breakdown": "region"}}]}}
+Q: What is the status of the goal on expanding access to electricity?
+{{"kind": "data", "calls": [{{"tool": "goal_detail", "goal": "expanding access to electricity"}}]}}
 Q: Which ministries performed worst?
 {{"kind": "data", "calls": [{{"tool": "rank_organizations", "order": "bottom"}}]}}
 Q: What does inflation mean?
-{{"kind": "general", "calls": []}}{web_examples}"""
+{{"kind": "general", "calls": []}}
+Q: Make a professional PowerPoint on GDP growth
+{{"kind": "document", "document_format": "pptx", "calls": [{{"tool": "indicator_series", "indicator": "GDP growth"}}]}}
+Q: Prepare a PDF report on how the ministries performed in 2017
+{{"kind": "document", "document_format": "pdf", "calls": [{{"tool": "rank_organizations", "order": "top", "year": 2017}}, {{"tool": "rank_organizations", "order": "bottom", "year": 2017}}]}}{web_examples}"""
 
 KINDS = """- kind: "data" if answering needs figures from the tools; "general" for a conceptual question that needs no figures (e.g. what an indicator means); "greeting" for greetings or thanks; "out_of_scope" for anything unrelated to Ethiopia's statistics, planning or government performance."""
 
 # With web search on, general questions that need current or outside facts are searched.
 WEB_KINDS = """- kind: "data" if answering needs figures from the tools; "web" for a general question that needs current or specific facts the tools do not hold: news and recent events, international organisations, agreements and programmes, other countries, laws, institutions and people in public roles; "general" for a conceptual question you can answer without looking anything up (e.g. what an indicator means); "greeting" for greetings or thanks; "out_of_scope" for requests an analyst assistant should not answer (personal matters, anything harmful, writing code, jokes or stories).
 - Never use "web" for Ethiopia's official statistics, the performance of its ministries, policy areas or goals, or its SDG indicators: those are "data".
-- search_query: for "web", a short English web search query (3 to 10 words) for what the question needs, with "Ethiopia" when it is about Ethiopia; otherwise "". Translate Amharic into English."""
+- A question that needs both Ethiopia's figures and facts the tools do not hold (other countries, regional or world figures, international context), such as a comparison of Ethiopia with Brazil or with the African average, is kind "data" (or "document"): plan the calls for Ethiopia from the tools AND set search_query for the rest only, e.g. "Brazil coffee export value". Ethiopia's own figures always come from the tools, never the web.
+- search_query: for "web", a short English web search query (3 to 10 words) for what the question needs, with "Ethiopia" when it is about Ethiopia; for "data" or "document", only the part the tools do not cover (the other countries, the world or regional figure, the general topic); otherwise "". Translate Amharic into English."""
 
 WEB_EXAMPLES = """
 Q: What is the IMF Extended Credit Facility for Ethiopia?
 {{"kind": "web", "search_query": "IMF Extended Credit Facility Ethiopia", "calls": []}}
 Q: What did the latest African Union summit decide?
-{{"kind": "web", "search_query": "African Union summit latest decisions", "calls": []}}"""
+{{"kind": "web", "search_query": "African Union summit latest decisions", "calls": []}}
+Q: Compare coffee exports of Brazil and Ethiopia
+{{"kind": "data", "search_query": "Brazil coffee export value", "calls": [{{"tool": "indicator_series", "indicator": "coffee exports"}}]}}
+Q: How does Ethiopia's inflation compare with Kenya's?
+{{"kind": "data", "search_query": "Kenya inflation rate latest", "calls": [{{"tool": "indicator_series", "indicator": "year-on-year general inflation"}}]}}"""
 
 
 @dataclass
@@ -100,11 +113,14 @@ class Plan:
     language: str
     calls: list = field(default_factory=list)
     search_query: str = ""
+    document_format: str = ""
 
     def as_dict(self):
         plan = {"kind": self.kind, "language": self.language, "calls": self.calls}
         if self.search_query:
             plan["search_query"] = self.search_query
+        if self.document_format:
+            plan["document_format"] = self.document_format
         return plan
 
 
@@ -192,6 +208,26 @@ def conversation(history, answer_chars=300):
     return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
 
 
+YEAR = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)")
+
+
+def _keep_year(calls, question):
+    """When the question names exactly one year, every lookup that takes a year gets it.
+
+    The model sometimes drops it ("ministries in 2017" planned without a year),
+    and the tools then answer for the default period instead.
+    """
+    years = set(YEAR.findall(str(question or "")))
+    if len(years) != 1:
+        return calls
+    year = int(years.pop())
+    for call in calls:
+        tool = TOOLS.get(call.get("tool"))
+        if tool and "year" not in call and "year" in tool.description:
+            call["year"] = year
+    return calls
+
+
 def _clean_calls(raw_calls):
     calls = []
     for call in raw_calls or []:
@@ -216,14 +252,23 @@ async def plan(question, history=()):
         {"role": "user", "content": f"{conversation(history)}Question: {without_language_request(question)}"},
     ]
     raw = await llm.json_completion(messages, SCHEMA, name="plan")
-    kind = raw.get("kind") if raw.get("kind") in ("data", "web", "general", "greeting", "out_of_scope") else "general"
-    calls = _clean_calls(raw.get("calls")) if kind == "data" else []
+    kinds = ("data", "document", "web", "general", "greeting", "out_of_scope")
+    kind = raw.get("kind") if raw.get("kind") in kinds else "general"
+    calls = _keep_year(_clean_calls(raw.get("calls")), question) if kind in ("data", "document") else []
+    search_query = re.sub(r"\s+", " ", str(raw.get("search_query") or "")).strip()[:200] if web else ""
     if kind == "data" and not calls:
-        kind = "general"
-    search_query = ""
-    if kind == "web":
+        # Nothing for the national sources to answer: the web, if the planner gave a query.
+        kind = "web" if search_query else "general"
+    document_format = ""
+    if kind == "document":
+        document_format = raw.get("document_format") if raw.get("document_format") in ("pptx", "docx", "pdf") else "pptx"
+    elif kind == "web":
         if web:
-            search_query = re.sub(r"\s+", " ", str(raw.get("search_query") or "")).strip()[:200] or question[:200]
+            search_query = search_query or question[:200]
         else:
             kind = "general"
-    return Plan(kind=kind, language=language, calls=calls, search_query=search_query)
+    elif kind != "data":
+        search_query = ""
+    # A "data" or "document" plan keeps its query alongside the calls: the part of a
+    # mixed question (another country, a world figure) the national sources do not cover.
+    return Plan(kind=kind, language=language, calls=calls, search_query=search_query, document_format=document_format)

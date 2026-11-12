@@ -16,7 +16,7 @@
 
 ## Layout
 - `core/project/`: Django project config, ASGI/WSGI, Celery, middleware.
-- `core/ai/` (app label `AI`): Admas AI: the answer pipeline (`engine/`), chat WebSockets, REST endpoints.
+- `core/ai/` (app label `AI`): Admas AI: the answer pipeline (`engine/`), chat WebSockets, REST endpoints, and the PowerPoint/Word/PDF documents it makes on request (`documents/`; files in `GeneratedDocument`, downloaded through a signed link).
 - `core/users/` (app label `userManagement`): custom user model, email + password sign-in, password reset, JWT refresh.
 - `core/dashboard/`: server-rendered dashboard pages and account pages.
 - `core/mobile/`: mobile app content (apps, settings, FAQ, contact) and app version checks.
@@ -95,6 +95,7 @@
 - `TIME_SERIES_API_BASE`
 - `SDG_PLATFORM_BASE` (optional; default `https://sdg.mopd.gov.et`)
 - `SEARXNG_URL` (set by both compose files; empty turns web search off), `WEB_SEARCH_ENABLED`, `WEB_SEARCH_DAILY_LIMIT`
+- `SITE_URL` (absolute links for the mobile app; set by both compose files), `AI_DOCUMENT_DAYS`, `AI_DOCUMENTS_DAILY_LIMIT`
 
 ## Safe Working Conventions
 - Start by checking `git status --short` because this repo often has ongoing local edits.

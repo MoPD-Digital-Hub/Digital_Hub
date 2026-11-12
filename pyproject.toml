@@ -33,6 +33,11 @@ dependencies = [
     "redis (>=7.1.0,<8.0.0)",
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "whitenoise (>=6.8.2,<7.0.0)",
+    # Admas AI documents (core/ai/documents): PowerPoint, Word, PDF and their charts.
+    "python-pptx (>=1.0.2,<2.0.0)",
+    "python-docx (>=1.1.2,<2.0.0)",
+    "reportlab (>=4.2.5,<5.0.0)",
+    "matplotlib (>=3.9.2,<4.0.0)",
 ]
 
 

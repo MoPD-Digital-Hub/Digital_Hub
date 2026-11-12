@@ -11,6 +11,7 @@ from ai.api.views import (
     task_status,
     update_chat_instance,
 )
+from ai.documents.views import download_document
 
 urlpatterns = [
     path("health/", health, name="ai-health"),
@@ -22,4 +23,5 @@ urlpatterns = [
     path("history/<int:chat_instance_id>/", get_chat_list, name="ai-history"),
     path("instance/<int:chat_instance_id>/", update_chat_instance, name="ai-instance-update"),
     path("delete/<int:chat_instance_id>/", delete_chat_instance, name="ai-delete"),
+    path("documents/<uuid:document_id>/", download_document, name="ai-document"),
 ]

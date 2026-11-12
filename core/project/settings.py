@@ -366,6 +366,13 @@ SEARXNG_URL = config("SEARXNG_URL", default="")
 WEB_SEARCH_ENABLED = config("WEB_SEARCH_ENABLED", default=True, cast=bool)
 # Web-searched answers per user per day; 0 means no limit.
 WEB_SEARCH_DAILY_LIMIT = config("WEB_SEARCH_DAILY_LIMIT", default=50, cast=int)
+
+# Documents Admas AI makes on request (core/ai/documents): kept this many days,
+# at most this many per user per day (0 = no limit).
+AI_DOCUMENT_DAYS = config("AI_DOCUMENT_DAYS", default=7, cast=int)
+AI_DOCUMENTS_DAILY_LIMIT = config("AI_DOCUMENTS_DAILY_LIMIT", default=10, cast=int)
+# The site's public address, for links sent to the mobile app (empty: links are relative).
+SITE_URL = config("SITE_URL", default="").rstrip("/")
 AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
 AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
 
@@ -403,6 +410,10 @@ CELERY_BEAT_SCHEDULE = {
     "send-due-notifications": {
         "task": "notifications.tasks.send_due_notifications",
         "schedule": 60.0,
+    },
+    "delete-expired-ai-documents": {
+        "task": "ai.tasks.delete_expired_documents",
+        "schedule": 3600.0,
     },
 }
 

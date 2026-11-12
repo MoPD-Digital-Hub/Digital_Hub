@@ -23,6 +23,34 @@ from ai.engine.tools import TOOLS, ToolError
 from ai.models import AnswerTrace, CatalogEntity, QuestionHistory
 from integrations.websearch import client as websearch
 
+# Imported late by _document: the document builders pull in matplotlib and the Office libraries.
+DOCUMENT_UNITS = {
+    "English": {"pptx": ("slide", "slides"), "docx": ("section", "sections"), "pdf": ("page", "pages")},
+    "Amharic": {"pptx": ("ስላይድ", "ስላይዶች"), "docx": ("ክፍል", "ክፍሎች"), "pdf": ("ገጽ", "ገጾች")},
+}
+DOCUMENT_MESSAGES = {
+    "English": {
+        "ready": "Your {kind} <b>{title}</b> is ready: {count} {unit}, built from {sources}.",
+        "official": "official data",
+        "web": "web sources",
+        "download": "Download {filename}",
+        "limit": "You have reached today's limit for documents. Please try again tomorrow.",
+        "no_data": "I could not find the data for this document ({problems}). Try naming the indicator, "
+                   "ministry or SDG you want it to cover.",
+        "missing": "Some of the data could not be found: {problems}.",
+    },
+    "Amharic": {
+        "ready": "{kind}ዎ <b>{title}</b> ዝግጁ ነው፦ {count} {unit}፣ ከ{sources} የተዘጋጀ።",
+        "official": "ይፋዊ መረጃዎች",
+        "web": "የድር ምንጮች",
+        "download": "{filename} ያውርዱ",
+        "limit": "የዛሬውን የሰነድ ገደብ ጨርሰዋል። እባክዎ ነገ እንደገና ይሞክሩ።",
+        "no_data": "ለዚህ ሰነድ የሚያስፈልገውን መረጃ ማግኘት አልቻልኩም ({problems})። መሸፈን የሚፈልጉትን አመልካች፣ ሚኒስቴር ወይም "
+                   "የዘላቂ ልማት ግብ በስም ይጥቀሱ።",
+        "missing": "አንዳንድ መረጃዎች አልተገኙም፦ {problems}።",
+    },
+}
+
 LOGGER = logging.getLogger(__name__)
 # Below this blended similarity a match is more likely wrong than right.
 MIN_MATCH_SCORE = 0.45
@@ -99,8 +127,9 @@ def _web_quota_left(instance):
     limit = settings.WEB_SEARCH_DAILY_LIMIT
     if not limit or instance is None or not instance.user_id:
         return True
+    # Every answer that searched counts: "web" questions and mixed ones (their plan has a search_query).
     used = AnswerTrace.objects.filter(instance__user_id=instance.user_id, created_at__date=timezone.localdate(),
-                                      plan__kind="web").count()
+                                      plan__has_key="search_query").count()
     return used < limit
 
 
@@ -132,6 +161,66 @@ async def _web_research(plan, instance):
     return pages, entry, ""
 
 
+async def _document(plan, question, instance, results, pages, problems, context, trace):
+    """Make the requested document; the chat message announcing it, with its download link."""
+    from html import escape
+
+    from ai.documents import datasets as document_datasets
+    from ai.documents import design as document_design
+    from ai.documents import outline as document_outline
+    from ai.documents import service as document_service
+
+    text = DOCUMENT_MESSAGES.get(plan.language, DOCUMENT_MESSAGES["English"])
+    entry = {"tool": "document", "format": plan.document_format, "error": ""}
+    trace["tool_calls"].append(entry)
+    if not await document_service.quota_left(instance):
+        entry["error"] = "daily limit"
+        return f"<p>{text['limit']}</p>"
+    data = document_datasets.build(results)
+    if plan.calls and not data and not pages:
+        entry["error"] = "no data"
+        return f"<p>{escape(text['no_data'].format(problems='; '.join(problems) or '-'))}</p>"
+
+    def unsupported(draft):
+        return verify.unsupported_numbers(" ".join(document_outline.texts(draft)), list(results) + list(pages),
+                                          f"{question}\n{context}")
+
+    outline = await document_outline.write(question, plan.document_format, plan.language, data, results, pages,
+                                           context)
+    flagged = unsupported(outline)
+    if flagged:
+        # Documents are shared beyond the chat: rewrite once without the figures the data does not support.
+        entry["rewritten_for"] = flagged
+        retry = await document_outline.write(question, plan.document_format, plan.language, data, results, pages,
+                                             context, avoid=flagged)
+        if len(unsupported(retry)) < len(flagged):
+            outline, flagged = retry, unsupported(retry)
+    trace["unsupported_numbers"] = flagged
+    sources = document_datasets.sources(data, pages)
+    content, count = await asyncio.to_thread(document_service.build, plan.document_format, outline, data, sources,
+                                             plan.language)
+    if len(content) > document_service.MAX_BYTES:
+        entry["error"] = f"too large ({len(content)} bytes)"
+        raise LLMError("The document came out too large to send.")
+    document = await document_service.save(instance, plan.document_format, outline["title"], content)
+    entry.update(id=str(document.id), count=count, size=len(content))
+
+    units = DOCUMENT_UNITS.get(plan.language, DOCUMENT_UNITS["English"])[plan.document_format]
+    kind = document_design.FORMAT_NAMES.get(plan.language, document_design.FORMAT_NAMES["English"])[plan.document_format]
+    where = " + ".join(filter(None, [text["official"] if data else "", text["web"] if pages else ""])) or text["official"]
+    ready = text["ready"].format(kind=escape(kind), title=escape(outline["title"]), count=count,
+                                 unit=units[0] if count == 1 else units[1], sources=where)
+    message = f"<p>{ready}</p>"
+    if problems:
+        message += f"<p>{escape(text['missing'].format(problems='; '.join(problems)))}</p>"
+    message += (f'<p class="ai-document" data-format="{plan.document_format}">'
+                f'<a href="{escape(document_service.download_url(document), quote=True)}" '
+                f'download="{escape(document.filename, quote=True)}">'
+                f'{escape(text["download"].format(filename=document.filename))}</a> '
+                f'<span>{max(1, round(len(content) / 1024))} KB</span></p>')
+    return message
+
+
 async def answer_stream(question, *, instance=None):
     question = str(question or "").strip()
     started = time.monotonic()
@@ -146,13 +235,13 @@ async def answer_stream(question, *, instance=None):
         context = planner.conversation(history, answer_chars=WRITER_ANSWER_CHARS)
         trace["language"], trace["plan"] = plan.language, plan.as_dict()
 
-        results, problems = [], []
-        if plan.kind == "web":
+        results, problems, pages = [], [], []
+        # The web search (a "web" question, or the outside part of a mixed one) runs
+        # alongside the national-data lookups.
+        research = None
+        if plan.search_query and plan.kind in ("web", "data", "document"):
             yield {"type": "status", "stage": "searching"}
-            results, entry, problem = await _web_research(plan, instance)
-            trace["tool_calls"].append(entry)
-            if problem:
-                problems.append(problem)
+            research = asyncio.create_task(_web_research(plan, instance))
         if plan.calls:
             yield {"type": "status", "stage": "fetching"}
             for result, problem, resolved, entry in await asyncio.gather(*(_run_call(c) for c in plan.calls)):
@@ -162,9 +251,20 @@ async def answer_stream(question, *, instance=None):
                     results.append(result)
                 if problem:
                     problems.append(problem)
+        if research is not None:
+            pages, entry, problem = await research
+            trace["tool_calls"].append(entry)
+            if problem:
+                problems.append(problem)
+            if plan.kind == "web":
+                results, pages = pages, []
 
         yield {"type": "status", "stage": "writing", "language": plan.language}
-        if plan.language == "Amharic":
+        if plan.kind == "document":
+            narrative = await _document(plan, question, instance, results, pages, problems, context, trace)
+            pieces.append(narrative)
+            yield {"type": "delta", "text": narrative}
+        elif plan.language == "Amharic":
             # Written in full and checked before sending: the model sometimes
             # corrupts Amharic words with other scripts, and a streamed word
             # cannot be taken back. Greedy decoding would repeat the same
@@ -172,7 +272,7 @@ async def answer_stream(question, *, instance=None):
             for temperature in AMHARIC_ATTEMPT_TEMPERATURES:
                 narrative = "".join([p async for p in compose.stream(
                     plan.kind, question, plan.language, results, problems, temperature=temperature,
-                    conversation=context)])
+                    conversation=context, pages=pages)])
                 if not verify.foreign_script(narrative):
                     break
             else:
@@ -185,17 +285,22 @@ async def answer_stream(question, *, instance=None):
             yield {"type": "delta", "text": narrative}
         else:
             async for piece in compose.stream(plan.kind, question, plan.language, results, problems,
-                                              conversation=context):
+                                              conversation=context, pages=pages):
                 pieces.append(piece)
                 yield {"type": "delta", "text": piece}
 
         narrative = "".join(pieces)
-        trace["unsupported_numbers"] = verify.unsupported_numbers(narrative, results, f"{question}\n{context}")
+        if plan.kind != "document":  # a document's own text is checked in _document
+            trace["unsupported_numbers"] = verify.unsupported_numbers(
+                narrative, list(results) + list(pages), f"{question}\n{context}")
         foreign = verify.foreign_script(narrative)
         if foreign:
             LOGGER.warning("AI answer contains unexpected script characters: %s", "".join(foreign))
             trace["error"] = f"foreign script: {''.join(foreign)}"[:500]
-        sections = render.web_sources(results) if plan.kind == "web" else render.sections(results)
+        if plan.kind == "web":
+            sections = render.web_sources(results)
+        else:
+            sections = render.sections(results) + render.web_sources(pages)
         if sections:
             pieces.append(sections)
             yield {"type": "delta", "text": sections}
@@ -207,7 +312,7 @@ async def answer_stream(question, *, instance=None):
             "type": "done",
             "history_id": history_id,
             "sources": (["the web"] if plan.kind == "web" and results
-                        else sorted({r["source"] for r in results if r.get("source")})),
+                        else sorted({r["source"] for r in results if r.get("source")}) + (["the web"] if pages else [])),
             "tools": [call["tool"] for call in plan.calls],
             "verified": not trace["unsupported_numbers"] and not foreign,
             "language": plan.language,

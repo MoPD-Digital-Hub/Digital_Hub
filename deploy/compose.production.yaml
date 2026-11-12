@@ -17,6 +17,8 @@ x-app: &app
     WEB_PORT: ${WEB_PORT:-8000}
     # Admas AI's web search (the searxng service below).
     SEARXNG_URL: http://127.0.0.1:${SEARXNG_PORT:-8888}
+    # Absolute links (AI documents) for the mobile app.
+    SITE_URL: ${SITE_URL:-https://data-hub.mopd.gov.et}
   volumes:
     # Django reads the server's .env itself (python-dotenv), exactly as it did
     # before Docker. Passing it through Compose's env_file would re-parse it

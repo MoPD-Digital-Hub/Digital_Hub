@@ -44,7 +44,7 @@ def clean(raw, question):
     seen = {_key(question)}
     kept = []
     for item in raw or []:
-        text = re.sub(r"^\s*(?:\d+[.)]|[-*•])\s*", "", _plain(item)).strip().strip("\"'“”‘’")
+        text = re.sub(r"^\s*(?:\d+[.)]\s+|[-*•]\s*)", "", _plain(item)).strip().strip("\"'“”‘’")
         key = _key(text)
         if not text or len(text) > MAX_CHARS or key in seen or verify.foreign_script(text):
             continue

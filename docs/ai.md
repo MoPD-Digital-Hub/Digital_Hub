@@ -84,6 +84,28 @@ Configuration (in `.env`): `VLLM_API_BASE`, `VLLM_MODEL`, `VLLM_API_KEY`, `EMBED
 `SEARXNG_URL`, `WEB_SEARCH_ENABLED` and `WEB_SEARCH_DAILY_LIMIT` for web search.
 The gateway is the only AI provider.
 
+## Documents (PowerPoint, Word, PDF)
+
+- "Make a PowerPoint on GDP growth", "Prepare a PDF report on the ministries in 2017", «በዋጋ ግሽበት ላይ የWord ሪፖርት
+  አዘጋጅልኝ»: the planner marks these kind `document` with `document_format` `pptx`, `docx` or `pdf` (PowerPoint if
+  unsaid) and plans the same lookups as a data question (or a web search for a general topic). A year named in
+  the request is put on every lookup that takes one.
+- `core/ai/documents/`: `datasets.py` reads the fetched results back from their chat rendering into charts and
+  tables (so documents show exactly the chat's figures); `outline.py` has the model fill a structured outline
+  (title, key messages, 3–6 sections with points, a chosen chart or table and speaker notes, conclusion);
+  `slides.py`, `word.py` and `pdf.py` lay it out in the hub's design. PowerPoint charts are native and editable;
+  Word and PDF use chart images (`charts.py`). PDFs embed Noto Sans and Noto Sans Ethiopic (`fonts/`, SIL OFL);
+  Office files use Ebrima for Amharic and Calibri for English.
+- The outline's numbers are checked like a chat answer's; if any are not in the data, the outline is rewritten
+  once, told which numbers to drop. Amharic outlines get the glossary and the script check.
+- Files are kept in the database (`GeneratedDocument`), not under `/media/` (which nginx serves publicly), so the
+  web and worker containers share them. The answer links to `/api/ai-chat/documents/<id>/?t=<signed token>`: the
+  token alone downloads (the mobile app opens the link in the browser); the signed-in owner needs none. Links
+  are absolute when `SITE_URL` is set (both compose files set it). Files expire after `AI_DOCUMENT_DAYS` (7);
+  beat runs `ai.tasks.delete_expired_documents` hourly. `AI_DOCUMENTS_DAILY_LIMIT` (10) caps files per user per
+  day.
+- A document takes 15–40 seconds (two model calls when the outline is rewritten).
+
 ## Web search (general questions)
 
 - The planner marks a general question that needs current or outside facts (news, international organisations
@@ -97,8 +119,16 @@ The gateway is the only AI provider.
 - The writer answers from those pages only, cites them as [1], [2], treats page text as information and never
   as instructions, and the number check accepts only figures the pages contain. The answer ends with
   `<p class="ai-source" data-source="web">Source: the web: <a href="…">[1] imf.org</a> …</p>`.
+- Mixed questions ("compare coffee exports of Brazil and Ethiopia", "Ethiopia's inflation vs Kenya's", "our GDP
+  growth vs the Sub-Saharan average") are kind `data` (or `document`) with both calls and a `search_query`: the
+  calls fetch Ethiopia's figures from the national sources, the search covers only the rest. Both run at once.
+  The writer gets the facts and the pages with `compose.MIXED_RULES`: Ethiopia's figures only from the national
+  data, the others cited [n], each figure's source named, no differences or ratios across sources, and a plain
+  note when figures are not comparable (calendar, year, unit, value vs volume). The answer shows the official
+  data panels and the web source line; the number check covers both. A `data` plan with no usable calls but a
+  query is answered as `web`.
 - The search query, the pages used or the error are kept in `AnswerTrace.tool_calls` (`"tool": "web_search"`).
-  `WEB_SEARCH_DAILY_LIMIT` (default 50) caps web-searched answers per user per day. If the search is off,
+  `WEB_SEARCH_DAILY_LIMIT` (default 50) caps answers that searched (web and mixed) per user per day. If the search is off,
   over the limit or finds nothing usable, the question is answered briefly from general knowledge, saying that
   current information could not be checked.
 

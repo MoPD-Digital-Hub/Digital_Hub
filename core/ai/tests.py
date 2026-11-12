@@ -853,7 +853,7 @@ class WebSearchAnswerTests(TestCase):
     def test_the_daily_limit_stops_searching(self):
         user = get_user_model().objects.create_user(username="u", email="u@x.test", password="p")
         chat = ChatInstance.objects.create(title="t", user=user)
-        AnswerTrace.objects.create(instance=chat, question="earlier", plan={"kind": "web"})
+        AnswerTrace.objects.create(instance=chat, question="earlier", plan={"kind": "data", "search_query": "x"})
         search = MagicMock(return_value=WEB_RESULTS)
         _, seen = self.run_web(instance=chat, search=search)
         search.assert_not_called()
@@ -879,6 +879,79 @@ class WebSearchAnswerTests(TestCase):
         self.assertIn('title="&lt;b&gt;T&lt;/b&gt;"', html)
         self.assertNotIn("javascript", html)
         self.assertEqual(render.web_sources([{"url": "ftp://x"}]), "")
+
+
+@override_settings(SEARXNG_URL="http://searxng:8080", WEB_SEARCH_ENABLED=True, WEB_SEARCH_DAILY_LIMIT=50)
+class MixedSourceTests(TestCase):
+    """Ethiopia from the national data, the rest of a comparison from the web."""
+
+    def plan(self, raw, question="Compare coffee exports of Brazil and Ethiopia"):
+        with patch("ai.engine.planner.llm.json_completion", AsyncMock(return_value=raw)) as model:
+            return async_to_sync(planner.plan)(question), model
+
+    def test_a_comparison_keeps_its_lookups_and_its_search(self):
+        plan, model = self.plan({"kind": "data", "search_query": "Brazil coffee export value",
+                                 "calls": [{"tool": "indicator_series", "indicator": "coffee exports"}]})
+        self.assertEqual((plan.kind, plan.search_query), ("data", "Brazil coffee export value"))
+        self.assertEqual(plan.calls, [{"tool": "indicator_series", "indicator": "coffee exports"}])
+        self.assertIn("Ethiopia's own figures always come from the tools", model.call_args.args[0][0]["content"])
+
+    def test_a_data_question_with_nothing_to_look_up_goes_to_the_web(self):
+        plan, _ = self.plan({"kind": "data", "search_query": "Brazil coffee export value", "calls": []})
+        self.assertEqual((plan.kind, plan.search_query), ("web", "Brazil coffee export value"))
+
+    @override_settings(SEARXNG_URL="")
+    def test_without_web_search_only_the_national_data_is_used(self):
+        plan, _ = self.plan({"kind": "data", "search_query": "Brazil coffee export value",
+                             "calls": [{"tool": "indicator_series", "indicator": "coffee exports"}]})
+        self.assertEqual((plan.kind, plan.search_query), ("data", ""))
+
+    def test_the_writer_gets_both_with_the_mixed_rules(self):
+        from ai.engine import compose
+
+        pages = [dict(WEB_RESULTS[0], text="Brazil exported US$ 15.6 billion.")]
+        system, user = compose.messages_for("data", "Compare", "English", [SERIES], pages=pages)
+        self.assertIn("Ethiopia's figures come only from the facts", system["content"])
+        self.assertIn("not directly comparable", system["content"])
+        self.assertIn("Facts (JSON)", user["content"])
+        self.assertIn('"n":1,"title":"IMF completes fifth review"', user["content"])
+        # National data found nothing: the pages alone, with the web rules.
+        system, user = compose.messages_for("data", "Compare", "English", [], pages=pages)
+        self.assertIn("Cite the pages you use", system["content"])
+
+    @patch("ai.engine.pipeline.catalog.resolve", return_value=[GDP])
+    def test_the_answer_has_the_official_panel_and_the_web_sources(self, _resolve):
+        from ai.engine.pipeline import answer_stream
+        from ai.engine.tools import TOOLS, Tool
+
+        seen = {}
+
+        async def fake_compose(kind, question, language, results=(), problems=(), **kwargs):
+            seen.update(kind=kind, results=list(results), pages=list(kwargs.get("pages") or []))
+            yield "<p>Ethiopia: 7.7% (MoPD). Brazil: Board completes review [1].</p>"
+
+        plan = planner.Plan("data", "English", [{"tool": "indicator_series", "indicator": "GDP growth"}],
+                            search_query="Brazil GDP growth")
+        fake_tool = Tool("indicator_series", "", lambda **_: SERIES, {"indicator": CatalogEntity.INDICATOR})
+        with patch.dict(TOOLS, {"indicator_series": fake_tool}), \
+                patch("ai.engine.pipeline.planner.plan", AsyncMock(return_value=plan)), \
+                patch("ai.engine.pipeline.compose.stream", fake_compose), \
+                patch("ai.engine.pipeline.websearch.search", MagicMock(return_value=WEB_RESULTS)), \
+                patch("ai.engine.pipeline.websearch.read_page", return_value=""):
+            async def collect():
+                return [e async for e in answer_stream("Compare GDP growth of Ethiopia and Brazil")]
+            events = async_to_sync(collect)()
+
+        self.assertEqual(seen["kind"], "data")
+        self.assertEqual([r["tool"] for r in seen["results"]], ["indicator_series"])
+        self.assertEqual([p["site"] for p in seen["pages"]], ["imf.org", "wikipedia.org"])
+        answer = "".join(e["text"] for e in events if e["type"] == "delta")
+        self.assertIn("<h4>GDP Growth: annual</h4>", answer)
+        self.assertIn('<p class="ai-source" data-source="time_series">', answer)
+        self.assertIn('<p class="ai-source" data-source="web">', answer)
+        self.assertEqual(events[-1]["sources"], ["MoPD", "the web"])
+        self.assertTrue(events[-1]["verified"])
+        self.assertEqual([c["tool"] for c in AnswerTrace.objects.get().tool_calls], ["indicator_series", "web_search"])
 
 
 class FollowUpTests(TestCase):

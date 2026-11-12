@@ -29,7 +29,7 @@ class Command(BaseCommand):
         if only:
             cases = [c for c in cases if only.lower() in c["q"].lower()]
         totals = {"kind": 0, "tools": 0, "entities": 0, "entity_cases": 0, "verified": 0, "errors": 0,
-                  "language": 0, "language_cases": 0, "amharic_answers": 0, "script_repairs": 0, "script_leaks": 0}
+                  "language": 0, "language_cases": 0, "search": 0, "search_cases": 0, "amharic_answers": 0, "script_repairs": 0, "script_leaks": 0}
         latencies = []
 
         for case in cases:
@@ -49,6 +49,11 @@ class Command(BaseCommand):
             entities_ok = all(name in resolved_names.get(arg, []) for arg, name in expected.items())
 
             language_ok = plan.language == case.get("language", plan.language)
+            # "search": whether the plan should also search the web (mixed questions) or not.
+            search_ok = "search" not in case or bool(plan.search_query) == case["search"]
+            if "search" in case:
+                totals["search_cases"] += 1
+                totals["search"] += search_ok
             if case.get("language"):
                 totals["language_cases"] += 1
                 totals["language"] += language_ok
@@ -59,11 +64,13 @@ class Command(BaseCommand):
                 totals["entity_cases"] += 1
                 totals["entities"] += entities_ok
 
-            good = kind_ok and tools_ok and entities_ok and language_ok
+            good = kind_ok and tools_ok and entities_ok and language_ok and search_ok
             line = f"{'OK ' if good else 'BAD'} plan {plan_ms:>5}ms  {case['q'][:52]:52}"
             line += f"  kind={plan.kind}{'' if kind_ok else '(want ' + case['kind'] + ')'} tools={tools}"
             if not language_ok:
                 line += f" language={plan.language} (want {case['language']})"
+            if plan.search_query or not search_ok:
+                line += f" search={plan.search_query!r}" + ("" if search_ok else f" (want search={case['search']})")
             if expected:
                 line += f" entities={resolved_names}" + ("" if entities_ok else f" (want {expected})")
 
@@ -91,7 +98,8 @@ class Command(BaseCommand):
         n = len(cases)
         summary = (f"\nkind {totals['kind']}/{n}   tools {totals['tools']}/{n}   "
                    f"entities {totals['entities']}/{totals['entity_cases']}   "
-                   f"language {totals['language']}/{totals['language_cases']}")
+                   f"language {totals['language']}/{totals['language_cases']}   "
+                   f"search {totals['search']}/{totals['search_cases']}")
         if full and latencies:
             summary += (f"   verified {totals['verified']}/{n - totals['errors']}   errors {totals['errors']}"
                         f"   answer latency median {statistics.median(latencies):.1f}s max {max(latencies):.1f}s"

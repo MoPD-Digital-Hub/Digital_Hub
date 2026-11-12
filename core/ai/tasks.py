@@ -32,3 +32,12 @@ def generate_answer_task(self, chat_instance_id, question, request_id=None):
 def generate_chat_title(chat_instance_id, question):
     """Title a chat after its first REST answer (see ai.engine.titles)."""
     return async_to_sync(titles.ensure_title)(chat_instance_id, question)
+
+
+@shared_task(ignore_result=True)
+def delete_expired_documents():
+    """Delete AI documents older than AI_DOCUMENT_DAYS (run hourly by beat)."""
+    from ai.documents import service
+
+    return service.delete_expired()
+

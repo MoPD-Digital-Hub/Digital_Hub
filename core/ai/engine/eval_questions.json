@@ -7,7 +7,8 @@
   ],
   "entities": {
    "indicator": "GDP Growth"
-  }
+  },
+  "search": false
  },
  {
   "q": "What was GDP growth in 2017?",
@@ -57,7 +58,8 @@
   ],
   "entities": {
    "indicator": "Coffee"
-  }
+  },
+  "search": false
  },
  {
   "q": "What is the maternal mortality ratio?",
@@ -151,7 +153,8 @@
   "kind": "data",
   "tools": [
    "rank_organizations"
-  ]
+  ],
+  "search": false
  },
  {
   "q": "What is the score of the healthcare policy area?",
@@ -339,6 +342,53 @@
   "entities": {
    "indicator": "GDP Growth"
   },
+  "language": "Amharic"
+ },
+ {
+  "q": "Compare coffee exports of Brazil and Ethiopia",
+  "kind": "data",
+  "tools": [
+   "indicator_series"
+  ],
+  "entities": {
+   "indicator": "Coffee"
+  },
+  "search": true
+ },
+ {
+  "q": "How does Ethiopia's inflation compare with Kenya's?",
+  "kind": "data",
+  "tools": [
+   "indicator_series"
+  ],
+  "search": true
+ },
+ {
+  "q": "How does Ethiopia's GDP growth compare with the Sub-Saharan Africa average?",
+  "kind": "data",
+  "tools": [
+   "indicator_series"
+  ],
+  "entities": {
+   "indicator": "GDP Growth"
+  },
+  "search": true
+ },
+ {
+  "q": "Make a PowerPoint comparing Ethiopia's and Kenya's inflation",
+  "kind": "document",
+  "tools": [
+   "indicator_series"
+  ],
+  "search": true
+ },
+ {
+  "q": "የኢትዮጵያን እና የኬንያን የዋጋ ግሽበት አወዳድር",
+  "kind": "data",
+  "tools": [
+   "indicator_series"
+  ],
+  "search": true,
   "language": "Amharic"
  }
 ]

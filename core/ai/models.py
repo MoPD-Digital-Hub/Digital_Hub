@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 from users.models import CustomUser as User
@@ -94,3 +96,32 @@ class AnswerTrace(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class GeneratedDocument(models.Model):
+    """A PowerPoint, Word or PDF file Admas AI made on request (ai/documents).
+
+    Kept in the database, not under MEDIA_ROOT: nginx serves /media/ publicly,
+    and the web and worker containers share the database but not a disk.
+    Downloads need the owner's session or the signed link in the answer, and
+    files are deleted after AI_DOCUMENT_DAYS (ai.tasks.delete_expired_documents).
+    """
+
+    FORMATS = (("pptx", "PowerPoint"), ("docx", "Word"), ("pdf", "PDF"))
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    instance = models.ForeignKey(ChatInstance, null=True, blank=True, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    title = models.CharField(max_length=200)
+    format = models.CharField(max_length=10, choices=FORMATS)
+    filename = models.CharField(max_length=200)
+    content = models.BinaryField()
+    size = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.filename
