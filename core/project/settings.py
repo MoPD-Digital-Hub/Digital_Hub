@@ -357,6 +357,13 @@ LOGGING = {
 
 AI_USE_ASYNC_QUEUE = config("AI_USE_ASYNC_QUEUE", default=False, cast=bool)
 AI_WS_MAX_CONCURRENCY = config("AI_WS_MAX_CONCURRENCY", default=20, cast=int)
+
+# Admas AI's web search for general questions, through the self-hosted SearXNG
+# (core/integrations/websearch). Off when SEARXNG_URL is empty.
+SEARXNG_URL = config("SEARXNG_URL", default="")
+WEB_SEARCH_ENABLED = config("WEB_SEARCH_ENABLED", default=True, cast=bool)
+# Web-searched answers per user per day; 0 means no limit.
+WEB_SEARCH_DAILY_LIMIT = config("WEB_SEARCH_DAILY_LIMIT", default=50, cast=int)
 AI_TTS_CACHE_TIMEOUT = config("AI_TTS_CACHE_TIMEOUT", default=3600, cast=int)
 AI_TRANSLATION_CACHE_TIMEOUT = config("AI_TRANSLATION_CACHE_TIMEOUT", default=3600, cast=int)
 

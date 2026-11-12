@@ -8,6 +8,11 @@ One image (`Dockerfile`) runs all three processes:
 | `worker` | Celery, queues `celery` and `ai_queue` | Emails, push notifications, queued AI answers |
 | `beat` | Celery beat | Starts the periodic tasks; today: sending scheduled notifications, every minute. Exactly one may run. |
 
+Next to them runs `searxng` (the `searxng/searxng` image, pinned; settings in `deploy/searxng/settings.yml`): a
+private web search the AI uses for general questions. Only the app talks to it: inside Docker locally, on
+`127.0.0.1:8888` (`SEARXNG_PORT`) on the server. It needs outbound internet; if it is down, the AI answers
+general questions without the web.
+
 Configuration is environment variables only: `.env` in the repository root, documented in `.env.example`.
 The image contains no secrets or uploaded media.
 
@@ -18,7 +23,7 @@ cp .env.example .env          # set DEBUG=True and fill in the keys you have
 docker compose up --build     # http://localhost:8000
 ```
 
-`compose.yaml` runs PostgreSQL, Redis, web, worker and beat. `./core` is mounted, so code edits reload without a
+`compose.yaml` runs PostgreSQL, Redis, web, worker, beat and searxng. `./core` is mounted, so code edits reload without a
 rebuild. The `Makefile` wraps the usual commands (`make` lists them: `make up`, `make test`, `make logs`,
 `make sync-catalog`, …); underneath they are:
 
@@ -38,7 +43,7 @@ containers, using the host network, so `DATABASE_HOST=127.0.0.1` and `REDIS_HOST
 
 | File | Purpose |
 |---|---|
-| `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`), `worker` and `beat`, restart automatically |
+| `deploy/compose.production.yaml` | `web` (Daphne on `127.0.0.1:8000`), `worker`, `beat` and `searxng` (`127.0.0.1:8888`), restart automatically |
 | `deploy/deploy.sh` | Pull, build, migrate, restart, wait for health, keep the last 5 images |
 | `deploy/switch-to-docker.sh` | The one-time move of an existing systemd server to Docker (below) |
 | `deploy/nginx/data-hub.conf` | nginx site: TLS, `/media/` from disk, everything else to `127.0.0.1:8000` |

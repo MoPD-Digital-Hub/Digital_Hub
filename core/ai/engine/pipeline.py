@@ -14,11 +14,14 @@ import logging
 import time
 
 from asgiref.sync import sync_to_async
+from django.conf import settings
+from django.utils import timezone
 
 from ai.engine import catalog, compose, planner, render, verify
 from ai.engine.llm import LLMError
 from ai.engine.tools import TOOLS, ToolError
 from ai.models import AnswerTrace, CatalogEntity, QuestionHistory
+from integrations.websearch import client as websearch
 
 LOGGER = logging.getLogger(__name__)
 # Below this blended similarity a match is more likely wrong than right.
@@ -27,6 +30,10 @@ OPTIONAL_ENTITY_KINDS = {"organization": CatalogEntity.ORGANIZATION}
 AMHARIC_ATTEMPT_TEMPERATURES = (0, 0.4)
 # How much of each earlier answer the writer sees (the planner sees 300 characters).
 WRITER_ANSWER_CHARS = 700
+# Web answers: results considered, pages read in full, and text kept per page.
+WEB_RESULTS = 6
+WEB_PAGES_READ = 3
+WEB_PAGE_CHARS = 3500
 
 
 async def _resolve_call(call):
@@ -86,6 +93,45 @@ def _save(instance, question, answer, trace):
     return history.id
 
 
+@sync_to_async
+def _web_quota_left(instance):
+    """False when the chat's owner has used today's web searches (WEB_SEARCH_DAILY_LIMIT)."""
+    limit = settings.WEB_SEARCH_DAILY_LIMIT
+    if not limit or instance is None or not instance.user_id:
+        return True
+    used = AnswerTrace.objects.filter(instance__user_id=instance.user_id, created_at__date=timezone.localdate(),
+                                      plan__kind="web").count()
+    return used < limit
+
+
+async def _web_research(plan, instance):
+    """Search the web for a "web" question and read the best pages.
+
+    Returns (pages, trace entry, problem). Each page: {"title", "url", "site",
+    "published", "snippet", "text"}; the first WEB_PAGES_READ are read in full,
+    the rest keep their search snippet.
+    """
+    entry = {"tool": "web_search", "query": plan.search_query, "urls": [], "error": ""}
+    if not await _web_quota_left(instance):
+        entry["error"] = "daily limit"
+        return [], entry, "today's web search limit has been reached"
+    try:
+        found = await asyncio.to_thread(websearch.search, plan.search_query, WEB_RESULTS)
+    except websearch.WebSearchError as exc:
+        LOGGER.warning("Web search failed: %s", exc)
+        entry["error"] = str(exc)[:300]
+        return [], entry, "web search is unavailable right now"
+    texts = await asyncio.gather(*(asyncio.to_thread(websearch.read_page, r["url"], WEB_PAGE_CHARS)
+                                   for r in found[:WEB_PAGES_READ]))
+    pages = [dict(result, text=(texts[i] if i < len(texts) else "") or result["snippet"])
+             for i, result in enumerate(found)]
+    pages = [page for page in pages if page["text"]]
+    entry["urls"] = [page["url"] for page in pages]
+    if not pages:
+        return [], entry, f'the web search for "{plan.search_query}" found nothing usable'
+    return pages, entry, ""
+
+
 async def answer_stream(question, *, instance=None):
     question = str(question or "").strip()
     started = time.monotonic()
@@ -101,6 +147,12 @@ async def answer_stream(question, *, instance=None):
         trace["language"], trace["plan"] = plan.language, plan.as_dict()
 
         results, problems = [], []
+        if plan.kind == "web":
+            yield {"type": "status", "stage": "searching"}
+            results, entry, problem = await _web_research(plan, instance)
+            trace["tool_calls"].append(entry)
+            if problem:
+                problems.append(problem)
         if plan.calls:
             yield {"type": "status", "stage": "fetching"}
             for result, problem, resolved, entry in await asyncio.gather(*(_run_call(c) for c in plan.calls)):
@@ -137,7 +189,7 @@ async def answer_stream(question, *, instance=None):
         if foreign:
             LOGGER.warning("AI answer contains unexpected script characters: %s", "".join(foreign))
             trace["error"] = f"foreign script: {''.join(foreign)}"[:500]
-        sections = render.sections(results)
+        sections = render.web_sources(results) if plan.kind == "web" else render.sections(results)
         if sections:
             pieces.append(sections)
             yield {"type": "delta", "text": sections}
@@ -148,7 +200,8 @@ async def answer_stream(question, *, instance=None):
         yield {
             "type": "done",
             "history_id": history_id,
-            "sources": sorted({r["source"] for r in results if r.get("source")}),
+            "sources": (["the web"] if plan.kind == "web" and results
+                        else sorted({r["source"] for r in results if r.get("source")})),
             "tools": [call["tool"] for call in plan.calls],
             "verified": not trace["unsupported_numbers"] and not foreign,
             "language": plan.language,

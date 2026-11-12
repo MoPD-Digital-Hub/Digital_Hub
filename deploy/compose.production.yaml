@@ -15,6 +15,8 @@ x-app: &app
   environment:
     DEBUG: "False"
     WEB_PORT: ${WEB_PORT:-8000}
+    # Admas AI's web search (the searxng service below).
+    SEARXNG_URL: http://127.0.0.1:${SEARXNG_PORT:-8888}
   volumes:
     # Django reads the server's .env itself (python-dotenv), exactly as it did
     # before Docker. Passing it through Compose's env_file would re-parse it
@@ -56,3 +58,22 @@ services:
     command: celery --app project beat --loglevel info --schedule /tmp/celerybeat-schedule
     healthcheck:
       disable: true
+
+  # Private web search for Admas AI's general questions. Bound to 127.0.0.1:
+  # only the app on this machine uses it; nginx does not expose it.
+  searxng:
+    image: searxng/searxng:2026.10.27-b5ed73fcb
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      GRANIAN_HOST: 127.0.0.1
+      SEARXNG_PORT: ${SEARXNG_PORT:-8888}
+    # A fresh secret key on every start: nothing it signs needs to outlive the container.
+    entrypoint: ["/bin/sh", "-c", "SEARXNG_SECRET=$$(head -c 32 /dev/urandom | base64) exec /usr/local/searxng/entrypoint.sh"]
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

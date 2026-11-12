@@ -26,6 +26,7 @@
 - `core/integrations/`: one package per external service, each with `client.py` (the calls), `views.py` + `urls.py` (the `/api/mobile/` endpoints that serve its data).
 - `core/integrations/dpmes/`: DPMES client, response mapping (`compat.py`), and the scorecard endpoints the website uses.
 - `core/integrations/time_series/`: time-series service client (address from `TIME_SERIES_API_BASE`), the pass-through endpoints for the app and website, and their OpenAPI docs.
+- `core/integrations/websearch/`: web search through the self-hosted SearXNG (`searxng` service; settings in `deploy/searxng/settings.yml`) and safe page reading (public addresses only). Used by the AI for general questions only, never for official figures.
 - `core/integrations/sdg/`: national SDG platform client (sdg.mopd.gov.et; reads the data each goal page embeds) and `series.py` (picks national totals or one breakdown). Used by the dashboard's SDG pages and the AI.
 - Every app: REST views in `api/views.py`, serializers in `api/serializers.py`, Celery tasks in `tasks.py`, routes in `urls.py`.
 - API responses: build them with `project.responses.success()` / `failure()` (docs/api.md). Every `/api/` JSON response is completed to the standard shape by middleware; it must stay backward compatible with the installed mobile app (add fields, never rename, retype or remove).
@@ -51,7 +52,7 @@
 
 ## AI Architecture
 - Full description: `docs/ai.md`.
-- `core/ai/engine/pipeline.py`: plan (one model call, JSON schema) → resolve names against the entity catalog → fetch with typed tools (time-series and DPMES APIs, national SDG platform) → compose (streamed) → render tables/charts in code → check numbers.
+- `core/ai/engine/pipeline.py`: plan (one model call, JSON schema) → resolve names against the entity catalog → fetch with typed tools (time-series and DPMES APIs, national SDG platform) → compose (streamed) → render tables/charts in code → check numbers. General questions that need outside facts are planned as `web`: SearXNG search, read the top pages, answer with [n] citations and a linked source line.
 - `core/ai/engine/compat.py`: the message format the mobile app and web chat expect on `/ws/chat/` and `/api/ai-chat/answer/`.
 - `core/ai/consumers.py`: chat WebSocket consumers. `core/ai/api/views.py`: REST endpoints.
 - Chat persistence uses `ChatInstance` and `QuestionHistory`; every answer also writes an `AnswerTrace`.
@@ -93,6 +94,7 @@
 - `DPMES2_API_BASE`, `DPMES2_API_KEY`
 - `TIME_SERIES_API_BASE`
 - `SDG_PLATFORM_BASE` (optional; default `https://sdg.mopd.gov.et`)
+- `SEARXNG_URL` (set by both compose files; empty turns web search off), `WEB_SEARCH_ENABLED`, `WEB_SEARCH_DAILY_LIMIT`
 
 ## Safe Working Conventions
 - Start by checking `git status --short` because this repo often has ongoing local edits.
@@ -103,7 +105,7 @@
 - For dashboard UI changes, inspect `core/dashboard/views.py` plus templates/static assets.
 
 ## Tests
-- Every package has a `tests.py`: `ai`, `users`, `chat`, `notifications`, `mobile`, `dashboard`, `project` (API response shape), `integrations/dpmes`, `integrations/time_series`, `integrations/sdg`.
+- Every package has a `tests.py`: `ai`, `users`, `chat`, `notifications`, `mobile`, `dashboard`, `project` (API response shape), `integrations/dpmes`, `integrations/time_series`, `integrations/sdg`, `integrations/websearch`.
 - Tests never call the real services: patch the LLM gateway, DPMES, time-series and Firebase. Saving a `Notification` queues a push to every device, so tests that create one must patch `notifications.models.send_to_all` (see `notifications/tests.py`).
 - Before finishing a change: `make ci` (lint + Django checks + missing-migration check + tests). GitHub runs the same on every push (`.github/workflows/ci.yml`), and a push to `production` deploys only if it passes.
 - Lint rules are in `ruff.toml`; `make lint fix=1` applies the safe fixes.

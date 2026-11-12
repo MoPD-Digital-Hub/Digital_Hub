@@ -24,6 +24,8 @@ x-app: &app
     USE_REDIS_CHANNELS: "True"
     CELERY_BROKER_URL: redis://redis:6379/0
     CELERY_RESULT_BACKEND: redis://redis:6379/1
+    # Admas AI's web search for general questions (core/integrations/websearch).
+    SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
   volumes:
     - ./core:/app/core
     # Key files (Firebase), git-ignored; see docs/deploy.md.
@@ -56,6 +58,14 @@ services:
     command: celery --app project beat --loglevel info --schedule /tmp/celerybeat-schedule
     healthcheck:
       disable: true
+
+  # Private web search for Admas AI's general questions; only the app uses it.
+  searxng:
+    image: searxng/searxng:2026.10.27-b5ed73fcb
+    # A fresh secret key on every start: nothing it signs needs to outlive the container.
+    entrypoint: ["/bin/sh", "-c", "SEARXNG_SECRET=$$(head -c 32 /dev/urandom | base64) exec /usr/local/searxng/entrypoint.sh"]
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
 
   db:
     image: postgres:16-alpine

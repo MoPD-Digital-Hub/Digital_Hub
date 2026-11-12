@@ -6,6 +6,7 @@ from html import unescape
 
 from ai.engine import llm
 from ai.engine.tools import TOOLS
+from integrations.websearch import client as websearch
 
 MAX_CALLS = 4
 HISTORY_TURNS = 5
@@ -15,7 +16,8 @@ ENTITY_ARGS = ("indicator", "organization", "policy_area", "goal", "sdg_indicato
 SCHEMA = {
     "type": "object",
     "properties": {
-        "kind": {"type": "string", "enum": ["data", "general", "greeting", "out_of_scope"]},
+        "kind": {"type": "string", "enum": ["data", "web", "general", "greeting", "out_of_scope"]},
+        "search_query": {"type": "string"},
         "calls": {
             "type": "array",
             "maxItems": MAX_CALLS,
@@ -49,7 +51,7 @@ Tools:
 {tools}
 
 Return JSON with:
-- kind: "data" if answering needs figures from the tools; "general" for a conceptual question that needs no figures (e.g. what an indicator means); "greeting" for greetings or thanks; "out_of_scope" for anything unrelated to Ethiopia's statistics, planning or government performance.
+{kinds}
 - calls: the lookups for a "data" question, otherwise []. One call per thing asked about, at most {max_calls}.
 
 Rules for calls:
@@ -76,7 +78,20 @@ Q: What is the poverty rate by region?
 Q: Which ministries performed worst?
 {{"kind": "data", "calls": [{{"tool": "rank_organizations", "order": "bottom"}}]}}
 Q: What does inflation mean?
-{{"kind": "general", "calls": []}}"""
+{{"kind": "general", "calls": []}}{web_examples}"""
+
+KINDS = """- kind: "data" if answering needs figures from the tools; "general" for a conceptual question that needs no figures (e.g. what an indicator means); "greeting" for greetings or thanks; "out_of_scope" for anything unrelated to Ethiopia's statistics, planning or government performance."""
+
+# With web search on, general questions that need current or outside facts are searched.
+WEB_KINDS = """- kind: "data" if answering needs figures from the tools; "web" for a general question that needs current or specific facts the tools do not hold: news and recent events, international organisations, agreements and programmes, other countries, laws, institutions and people in public roles; "general" for a conceptual question you can answer without looking anything up (e.g. what an indicator means); "greeting" for greetings or thanks; "out_of_scope" for requests an analyst assistant should not answer (personal matters, anything harmful, writing code, jokes or stories).
+- Never use "web" for Ethiopia's official statistics, the performance of its ministries, policy areas or goals, or its SDG indicators: those are "data".
+- search_query: for "web", a short English web search query (3 to 10 words) for what the question needs, with "Ethiopia" when it is about Ethiopia; otherwise "". Translate Amharic into English."""
+
+WEB_EXAMPLES = """
+Q: What is the IMF Extended Credit Facility for Ethiopia?
+{{"kind": "web", "search_query": "IMF Extended Credit Facility Ethiopia", "calls": []}}
+Q: What did the latest African Union summit decide?
+{{"kind": "web", "search_query": "African Union summit latest decisions", "calls": []}}"""
 
 
 @dataclass
@@ -84,9 +99,13 @@ class Plan:
     kind: str
     language: str
     calls: list = field(default_factory=list)
+    search_query: str = ""
 
     def as_dict(self):
-        return {"kind": self.kind, "language": self.language, "calls": self.calls}
+        plan = {"kind": self.kind, "language": self.language, "calls": self.calls}
+        if self.search_query:
+            plan["search_query"] = self.search_query
+        return plan
 
 
 AMHARIC_SCRIPT = re.compile(r"[\u1200-\u137F]")
@@ -176,13 +195,22 @@ def _clean_calls(raw_calls):
 async def plan(question, history=()):
     language = reply_language(question, history)
     tools = "\n".join(f"- {tool.name}: {tool.description}" for tool in TOOLS.values())
+    web = websearch.enabled()
+    prompt = SYSTEM_PROMPT.format(tools=tools, max_calls=MAX_CALLS, kinds=WEB_KINDS if web else KINDS,
+                                  web_examples=WEB_EXAMPLES.replace("{{", "{").replace("}}", "}") if web else "")
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT.format(tools=tools, max_calls=MAX_CALLS)},
+        {"role": "system", "content": prompt},
         {"role": "user", "content": f"{conversation(history)}Question: {question}"},
     ]
     raw = await llm.json_completion(messages, SCHEMA, name="plan")
-    kind = raw.get("kind") if raw.get("kind") in ("data", "general", "greeting", "out_of_scope") else "general"
+    kind = raw.get("kind") if raw.get("kind") in ("data", "web", "general", "greeting", "out_of_scope") else "general"
     calls = _clean_calls(raw.get("calls")) if kind == "data" else []
     if kind == "data" and not calls:
         kind = "general"
-    return Plan(kind=kind, language=language, calls=calls)
+    search_query = ""
+    if kind == "web":
+        if web:
+            search_query = re.sub(r"\s+", " ", str(raw.get("search_query") or "")).strip()[:200] or question[:200]
+        else:
+            kind = "general"
+    return Plan(kind=kind, language=language, calls=calls, search_query=search_query)

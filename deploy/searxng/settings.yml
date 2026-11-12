@@ -1,0 +1,33 @@
+# SearXNG for Admas AI's web search (core/integrations/websearch).
+# One private instance per environment: only the Digital Hub app talks to it
+# (inside Docker locally, on 127.0.0.1 on the server), never the public.
+# The secret key is generated when the container starts (see the compose files).
+use_default_settings:
+  engines:
+    # Tor-only engines: they cannot load without a Tor proxy.
+    remove:
+      - ahmia
+      - torch
+
+general:
+  instance_name: "Digital Hub search"
+  enable_metrics: false
+
+search:
+  safe_search: 1
+  autocomplete: ""
+  default_lang: "en"
+  # The app reads results as JSON.
+  formats:
+    - html
+    - json
+
+server:
+  limiter: false
+  public_instance: false
+  image_proxy: false
+  method: "GET"
+
+outgoing:
+  request_timeout: 5.0
+  max_request_timeout: 10.0

@@ -230,6 +230,23 @@ def _source(result):
             + (f" ({escape(detail)})" if detail else "") + "</p>")
 
 
+def web_sources(pages):
+    """The source line of a web-searched answer: the pages, numbered as the text cites them.
+
+    <p class="ai-source" data-source="web">Source: the web: <a href="…">[1] imf.org</a> <a …>[2] …</a></p>
+    """
+    links = []
+    for i, page in enumerate(pages):
+        url = str(page.get("url") or "")
+        if not url.startswith(("https://", "http://")):
+            continue
+        links.append(f'<a href="{escape(url, quote=True)}" target="_blank" rel="noopener noreferrer" '
+                     f'title="{escape(str(page.get("title") or url), quote=True)}">[{i + 1}] {escape(str(page.get("site") or url))}</a>')
+    if not links:
+        return ""
+    return f'<p class="ai-source" data-source="web">Source: the web: {" ".join(links)}</p>'
+
+
 RENDERERS = {
     "indicator_series": _indicator_series,
     "organization_score": _organization_score,

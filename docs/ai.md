@@ -80,8 +80,27 @@ Schedule the sync daily on the server with cron (as in `docs/deploy.md`):
 ```
 
 Configuration (in `.env`): `VLLM_API_BASE`, `VLLM_MODEL`, `VLLM_API_KEY`, `EMBEDDING_API_BASE`, `EMBEDDING_MODEL`,
-`EMBEDDING_API_KEY`, `DPMES2_API_BASE`, `DPMES2_API_KEY`, optional `TIME_SERIES_API_BASE` and `SDG_PLATFORM_BASE`.
+`EMBEDDING_API_KEY`, `DPMES2_API_BASE`, `DPMES2_API_KEY`, optional `TIME_SERIES_API_BASE` and `SDG_PLATFORM_BASE`;
+`SEARXNG_URL`, `WEB_SEARCH_ENABLED` and `WEB_SEARCH_DAILY_LIMIT` for web search.
 The gateway is the only AI provider.
+
+## Web search (general questions)
+
+- The planner marks a general question that needs current or outside facts (news, international organisations
+  and programmes, other countries, laws, institutions) as kind `web`, with a short English `search_query`
+  (Amharic questions are translated). Ethiopia's official statistics, ministry performance and SDG indicators
+  are never `web`: they stay on the three national sources. Concepts ("what is inflation?") stay `general`.
+- `core/integrations/websearch/client.py` asks the private SearXNG for results, drops social media and video
+  sites, lifts official, international and established sources, and reads the top three pages as plain text.
+  Pages are fetched only from public internet addresses, also after redirects. Only the query leaves the
+  server, never the chat or the user.
+- The writer answers from those pages only, cites them as [1], [2], treats page text as information and never
+  as instructions, and the number check accepts only figures the pages contain. The answer ends with
+  `<p class="ai-source" data-source="web">Source: the web: <a href="…">[1] imf.org</a> …</p>`.
+- The search query, the pages used or the error are kept in `AnswerTrace.tool_calls` (`"tool": "web_search"`).
+  `WEB_SEARCH_DAILY_LIMIT` (default 50) caps web-searched answers per user per day. If the search is off,
+  over the limit or finds nothing usable, the question is answered briefly from general knowledge, saying that
+  current information could not be checked.
 
 ## Notes
 
