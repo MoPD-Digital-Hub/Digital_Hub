@@ -1147,10 +1147,11 @@ class LayoutTests(TestCase):
         table = "| Country | Export value | Period |\n| :--- | ---: | :--"
         self.assertEqual(markdown.plain(table), "Country · Export value · Period")
         self.assertEqual(markdown.plain(table + "- |\n| Ethiopia | **3.14** Billion USD | 2018 EC |\n| Ken"),
-                         "Country · Export value · Period Ethiopia · 3.14 Billion USD · 2018 EC Ken")
-        # Ordinary writing is untouched: a dash in a sentence, a list, a heading.
-        self.assertEqual(markdown.plain("### Trend\n\n- Exports rose - sharply\n- **3.14** Billion USD"),
-                         "Trend Exports rose - sharply 3.14 Billion USD")
+                         "Country · Export value · Period\nEthiopia · 3.14 Billion USD · 2018 EC\nKen")
+        # A list keeps one line per item; a dash inside a sentence and bold figures are left readable.
+        self.assertEqual(markdown.plain("### Trend\n\n- Exports rose - sharply\n* **3.14** Billion USD\n1. First"),
+                         "Trend\n• Exports rose - sharply\n• 3.14 Billion USD\n1. First")
+        self.assertEqual(markdown.plain("> **Key takeaway:** growth  slowed."), "Key takeaway: growth slowed.")
 
     def test_a_live_draft_hides_a_marker_that_is_still_being_written(self):
         from ai.engine import layout
@@ -1275,7 +1276,7 @@ class MarkdownTests(SimpleTestCase):
         html, pending = stream.feed("2%**.\n\nIt then")
         self.assertEqual((html, pending), ("<p>Growth was <strong>9.2%</strong>.</p>", "It then"))
         self.assertEqual(stream.flush(), "<p>It then</p>")
-        self.assertEqual(markdown.plain("### Key **figures**\n- one"), "Key figures one")
+        self.assertEqual(markdown.plain("### Key **figures**\n- one"), "Key figures\n• one")
 
     def test_drafts_go_to_browsers_only(self):
         from ai.engine import compat

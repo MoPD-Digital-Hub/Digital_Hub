@@ -133,6 +133,10 @@ The gateway is the only AI provider.
   The first words arrive as a draft before any block is finished, and the web chat shows them at once, so an answer
   is typed from its first word. A table being written reads as its cells ("Country · Value"), and a marker that is
   not finished yet ("[[chart:") is left out of the draft.
+- The web chat types the stream at an even pace (`admas-ai.js`, `playStream`): messages wait in a queue and are
+  shown at a steady rate, a little faster than the writer, spread over the pause between bursts when the network
+  delivers in bursts (a buffering proxy between the server and the gateway or the browser). The final message
+  waits until the last words are typed (about 0.2 s). A list being written keeps one line per item in the draft.
 - Visuals are optional and placed by the writer, drawn by code (`core/ai/engine/layout.py`). Each result in the
   facts has `"visual": N` and a `"best_view"`; the writer adds `[[chart:N]]`, `[[table:N]]`, `[[figure:N]]` (a
   compact card), `[[card:N]]` (the full panel) or `[[visual:N]]` on its own line only where a visual helps (a

@@ -1032,6 +1032,8 @@ body.admas-ai-body {
 /* The line being typed: the answer's own text style (.ai-msg-content in ai-response.css). */
 .ai-stream-typing {
   margin: 0;
+  /* A list or table being written keeps its lines (markdown.plain sends one per item). */
+  white-space: pre-line;
   color: var(--dh-text);
   font: 400 16.5px/1.7 var(--ai-serif, Georgia, serif);
 }

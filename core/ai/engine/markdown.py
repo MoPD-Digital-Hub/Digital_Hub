@@ -30,14 +30,18 @@ TABLE_RULE = re.compile(r"^[ \t]*\|?[ \t:|-]*-[ \t:|-]*$", re.MULTILINE)
 def plain(text):
     """Markdown as readable text, for the live preview of the block being written.
 
-    A table being written reads as its cells ("Country · Value · Period"), not as pipes and dashes.
+    One line per line of the block, so a list being written reads as a list
+    ("• first" / "• second") and a table as its rows ("Country · Value · Period"),
+    not as pipes, dashes and stars.
     """
     text = TABLE_RULE.sub("", str(text or ""))
     text = re.sub(r"^[ \t]*\|[ \t]*|[ \t]*\|[ \t]*$", "", text, flags=re.MULTILINE)
     text = re.sub(r"[ \t]*\|[ \t]*", " · ", text)
-    text = re.sub(r"^\s{0,3}(#{1,6}\s+|[-*+]\s+|\d+[.)]\s+|>\s?)", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^\s{0,3}(#{1,6}\s+|>\s?)", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*[-*+][ \t]+", "• ", text, flags=re.MULTILINE)
     text = re.sub(r"[*_`]+", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+    lines = (re.sub(r"[ \t]+", " ", line).strip() for line in text.splitlines())
+    return "\n".join(line for line in lines if line)
 
 
 class Stream:

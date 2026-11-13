@@ -32,8 +32,20 @@
   let socket = null;
   let streamMessageElement = null;
   let streamHtmlBuffer = "";
-  let pendingStreamRender = false;
-  let streamRenderTimer = null;
+  // Stream messages not shown yet. They are typed out at an even pace, so the text
+  // grows steadily even when the network delivers it in bursts (a buffering proxy).
+  let streamQueue = [];
+  let streamPlayerFrame = 0;
+  let streamPlayerTimer = 0;
+  let streamFinal = null; // {html}: the answer's final message, once it has arrived
+  let streamPlayedAt = 0;
+  let streamCredit = 0; // messages that may be shown now (fractions carry over)
+  let streamLastArrival = 0;
+  let streamBurstGap = 0; // the usual pause between bursts, when messages arrive in bursts
+  const STREAM_MIN_RATE = 1 / 25; // messages per millisecond: a little faster than the writer
+  const STREAM_HORIZON_MS = 250; // waiting messages are shown within about this long…
+  const STREAM_MAX_HORIZON_MS = 1200; // …or within the pause between bursts, if longer
+  const STREAM_FINISH_MS = 200; // once the whole answer is here
   let streamViewAnchored = false;
   let streamPreviewText = "";
   let streamDraftText = "";
@@ -426,7 +438,11 @@
       return;
     }
     // The server's HTML is safe to show: it escapes the model's own text (markdown.py).
-    live.innerHTML = streamHtmlBuffer;
+    // Finished blocks change only now and then; the line being typed changes every frame.
+    if (live.dataset.shown !== String(streamHtmlBuffer.length)) {
+      live.innerHTML = streamHtmlBuffer;
+      live.dataset.shown = String(streamHtmlBuffer.length);
+    }
     const draft = String(streamDraftText || "").trim();
     typing.textContent = draft || (streamHtmlBuffer.trim() ? "" : "Thinking…");
     typing.classList.toggle("is-thinking", !draft && !streamHtmlBuffer.trim());
@@ -440,33 +456,101 @@
     if (!awaitingAssistantResponse) {
       return;
     }
-    streamHtmlBuffer += chunkHtml || "";
     if (previewText !== undefined && previewText !== null) {
       streamPreviewText = String(previewText || "").trim();
     }
-    if (draftText !== undefined && draftText !== null) {
-      streamDraftText = String(draftText || "");
+    const now = performance.now();
+    if (streamLastArrival && now - streamLastArrival > 150) {
+      const gap = Math.min(now - streamLastArrival, STREAM_MAX_HORIZON_MS);
+      streamBurstGap = streamBurstGap ? (streamBurstGap + gap) / 2 : gap;
     }
-    if (pendingStreamRender || streamRenderTimer) {
+    streamLastArrival = now;
+    streamQueue.push({
+      html: chunkHtml || "",
+      draft: draftText === undefined || draftText === null ? null : String(draftText || "")
+    });
+    scheduleStreamPlayer();
+  }
+
+  function scheduleStreamPlayer() {
+    if (streamPlayerFrame || streamPlayerTimer) {
       return;
     }
+    if (!streamPlayedAt) {
+      // Starting from idle: the first waiting message is shown on the next frame.
+      streamPlayedAt = performance.now();
+      streamCredit = 1;
+    }
+    streamPlayerFrame = requestAnimationFrame(playStream);
+    // Frames stop in a background tab; the timer keeps the answer moving there.
+    streamPlayerTimer = window.setTimeout(playStream, 250);
+  }
 
-    streamRenderTimer = window.setTimeout(function () {
-      streamRenderTimer = null;
-      pendingStreamRender = true;
-      requestAnimationFrame(function () {
-        pendingStreamRender = false;
+  function stopStreamPlayer() {
+    if (streamPlayerFrame) {
+      cancelAnimationFrame(streamPlayerFrame);
+    }
+    if (streamPlayerTimer) {
+      window.clearTimeout(streamPlayerTimer);
+    }
+    streamPlayerFrame = 0;
+    streamPlayerTimer = 0;
+  }
+
+  function resetStreamPlayer() {
+    stopStreamPlayer();
+    streamQueue = [];
+    streamFinal = null;
+    streamPlayedAt = 0;
+    streamCredit = 0;
+    streamLastArrival = 0;
+    streamBurstGap = 0;
+  }
+
+  function takeFromStreamQueue(count) {
+    while (count > 0 && streamQueue.length) {
+      const item = streamQueue.shift();
+      streamHtmlBuffer += item.html;
+      if (item.draft !== null) {
+        streamDraftText = item.draft;
+      }
+      count -= 1;
+    }
+  }
+
+  // One step of typing. Waiting messages are shown at a steady rate: fast enough to be
+  // done within the horizon (the pause between bursts, when delivery is bursty), never
+  // slower than the writer. The rate follows time, not frames, so it holds where frames
+  // are slow or paused.
+  function playStream() {
+    stopStreamPlayer();
+    const now = performance.now();
+    if (streamQueue.length) {
+      const horizon = streamFinal
+        ? STREAM_FINISH_MS
+        : Math.max(STREAM_HORIZON_MS, Math.min(streamBurstGap, STREAM_MAX_HORIZON_MS));
+      const rate = Math.max(STREAM_MIN_RATE, streamQueue.length / horizon);
+      streamCredit += (now - streamPlayedAt) * rate;
+      const count = document.hidden ? streamQueue.length : Math.min(streamQueue.length, Math.floor(streamCredit));
+      if (count > 0) {
+        streamCredit -= count;
+        takeFromStreamQueue(count);
         renderStreamBuffer();
-      });
-    }, 48);
+      }
+    }
+    streamPlayedAt = now;
+    if (streamQueue.length) {
+      scheduleStreamPlayer();
+    } else {
+      streamPlayedAt = 0;
+      streamCredit = 0;
+      if (streamFinal) {
+        completeStream(streamFinal.html);
+      }
+    }
   }
 
   function flushStreamRender() {
-    if (streamRenderTimer) {
-      window.clearTimeout(streamRenderTimer);
-      streamRenderTimer = null;
-    }
-    pendingStreamRender = false;
     if (!streamMessageElement && !String(streamHtmlBuffer || "").trim()) {
       return;
     }
@@ -2035,7 +2119,20 @@
     });
   }
 
+  // The answer's final message has arrived (or the chat was left). Words still waiting
+  // are typed out first, at a quicker pace, so the end of an answer does not jump in.
   function finishStream(finalMessageHtml) {
+    if (finalMessageHtml !== undefined && streamQueue.length && !document.hidden) {
+      streamFinal = { html: finalMessageHtml };
+      scheduleStreamPlayer();
+      return;
+    }
+    completeStream(finalMessageHtml);
+  }
+
+  function completeStream(finalMessageHtml) {
+    takeFromStreamQueue(streamQueue.length);
+    resetStreamPlayer();
     awaitingAssistantResponse = false;
     const hasFinalHtml = Boolean(String(finalMessageHtml || "").trim());
     if (hasFinalHtml) {
@@ -2071,6 +2168,7 @@
     clearEmptyState();
     currentEntry = null;
     chatOutput.classList.remove("is-generating");
+    resetStreamPlayer();
     streamMessageElement = null;
     streamHtmlBuffer = "";
     streamViewAnchored = false;
@@ -2296,7 +2394,7 @@
         }
 
         if (payload.is_final) {
-          awaitingAssistantResponse = false;
+          // Sending stays off until the last words are typed (completeStream).
           finishStream(payload.message || "");
           return;
         }
@@ -2408,6 +2506,7 @@
     awaitingAssistantResponse = true;
     awaitingSince = Date.now();
     syncComposerInput();
+    resetStreamPlayer();
     streamMessageElement = null;
     streamHtmlBuffer = "";
     streamPreviewText = "";
@@ -2427,7 +2526,8 @@
 
   function syncComposerInput() {
     chatInput.style.height = "auto";
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + "px";
+    // An empty box is one line: measuring it can count a wrapped placeholder (narrow or hidden window).
+    chatInput.style.height = chatInput.value ? Math.min(chatInput.scrollHeight, 200) + "px" : "";
     sendBtn.disabled = !chatInput.value.trim() || isAnswering();
     syncComposerSpace();
   }
