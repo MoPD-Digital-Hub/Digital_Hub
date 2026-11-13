@@ -39,14 +39,20 @@ def _final(message, route):
 async def stream_answer(question, *, instance, send, is_native_client, preview):
     """Answer `question`, sending the chat socket's messages through `send`.
 
-    English streams as {"message", "preview", "is_stream": true}; Amharic and
-    errors arrive as one final message. After a stream, browsers get the full
+    English streams as {"message", "preview", "is_stream": true}: each message is a
+    finished block of the answer, as HTML (markdown.py). Browsers also get "draft",
+    the block still being written as plain text, including in messages with an
+    empty "message". Amharic and errors arrive as one final message. After a stream, browsers get the full
     answer again as the final message (the web chat finishes its render with
     it); the mobile app does not, or it shows the answer twice.
 
     After a chat's first answer the chat is given a title (titles.py). Browsers
     are told with {"event": "chat_title", "chat_instance_id", "title"}; the app
     is sent nothing new and reads the title from the chat list.
+
+    While the answer is prepared, browsers get {"event": "status", "stage":
+    "planning" | "searching" | "fetching" | "writing"} (writing also carries the
+    answer's "kind"), and the web chat names the step. The app is not sent them.
 
     Browsers then get suggested next questions (followups.py) as
     {"event": "followups", "chat_instance_id", "history_id", "questions"}.
@@ -58,11 +64,23 @@ async def stream_answer(question, *, instance, send, is_native_client, preview):
         if kind == "status":
             if event.get("stage") == "writing":
                 buffer_only = event.get("language") == "Amharic"
+            if not is_native_client:
+                # What the answer is waiting for, so the wait is not silent (the web chat names it).
+                await send({"event": "status", "stage": event.get("stage"),
+                            **({"kind": event["kind"]} if event.get("kind") else {})})
         elif kind == "delta":
             so_far.append(event["text"])
             if not buffer_only:
                 streamed = True
-                await send({"message": event["text"], "preview": preview("".join(so_far)), "is_stream": True})
+                message = {"message": event["text"], "preview": preview("".join(so_far)), "is_stream": True}
+                if not is_native_client:
+                    message["draft"] = event.get("draft", "")
+                await send(message)
+        elif kind == "draft":
+            # The block still being written, as plain text: browsers show it live after
+            # the finished, formatted blocks. The app is not sent it.
+            if not buffer_only and not is_native_client:
+                await send({"message": "", "is_stream": True, "draft": event["text"]})
         elif kind == "done":
             answered = True
             history_id = event.get("history_id")

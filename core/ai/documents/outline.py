@@ -53,6 +53,8 @@ Rules:
   "chart" or "table" with the number of the dataset that supports it (datasets are numbered from 0), or "none". Use each dataset at most once; prefer a chart for a time series and a table for scores or lists.
   notes: 2 or 3 sentences the presenter can say about the section.
 - conclusion: 2 or 3 points: what the figures mean for policy and what to watch next, without new numbers.
+- Never do arithmetic yourself. Where a fact has "stats", its change from the previous period, highest, lowest, average, totals and shares are already calculated: quote those for comparisons.
+- The datasets are Ethiopia's (the national sources hold only Ethiopia's data): a request that names no country is about Ethiopia. Never present them as another country's or the world's figures.
 - Years: data from the time-series database and DPMES is in the Ethiopian calendar ({calendar}); data marked "calendar": "Gregorian" (the SDG platform) and web pages use Gregorian years ({gregorian}).
 - Name the source of the figures in the subtitle or a point (for example "according to DPMES").
 - Plain text only: no HTML, no markdown, no numbering, no bullet characters.
@@ -135,7 +137,7 @@ def messages(question, document_format, language, datasets, results, pages, conv
         gregorian=compose.GREGORIAN_NOTES.get(language, compose.GREGORIAN_NOTES["English"]))
     if language == "Amharic":
         system += amharic.rules()
-    facts = compose.facts(results, []) if results else "[]"
+    facts = compose.facts(results, [], language) if results else "[]"
     user = (f"{conversation}Request: {question}\n\nDatasets for charts and tables (JSON):\n"
             f"{_summary_or_none(datasets)}\n\nFacts (JSON):\n{facts[:14000]}")
     if pages:

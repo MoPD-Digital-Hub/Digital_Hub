@@ -18,6 +18,9 @@ def _build_stream_preview(text):
         return ""
 
     cleaned = re.sub(r"<chart-data[\s\S]*?</chart-data>", " ", cleaned, flags=re.IGNORECASE)
+    # Visuals placed inside the answer (layout.py): the live preview shows only the writing.
+    cleaned = re.sub(r"<(table|h4)[\s\S]*?</\1>", " ", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'<p class="ai-source"[\s\S]*?</p>', " ", cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r"```[\s\S]*?```", " ", cleaned)
     cleaned = re.sub(r"<[^>]+>", " ", cleaned)
     cleaned = unescape(cleaned)

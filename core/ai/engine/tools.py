@@ -13,7 +13,7 @@ from typing import Callable
 import requests
 from django.core.cache import cache
 
-from ai.engine import periods
+from ai.engine import periods, stats
 from ai.models import CatalogEntity
 from integrations.dpmes import client as dpmes_client
 from integrations.dpmes import compat as dpmes_compat
@@ -73,7 +73,32 @@ def _kpi_counts(performance_analysis):
     return {band: values[0] for band, values in (performance_analysis or {}).items() if values}
 
 
+def _stats(**parts):
+    """A result's calculated figures (stats.py), without the parts that had too little data."""
+    found = {name: part for name, part in parts.items() if part}
+    return found or None
+
+
+def _previous_year(call, entity_id, period, current):
+    """The score one year before `period` and how it has moved since, if both are known."""
+    if current is None:
+        return None
+    earlier = {**period, "year": period["year"] - 1}
+    try:
+        before = ((_dpmes(call, entity_id, earlier) or {}).get("score") or {}).get("avg_score")
+    except ToolError:
+        return None
+    if before is None:
+        return None
+    return {"period": periods.period_label(earlier), "value": before,
+            "change": stats.change(float(before), float(current), unit="points")}
+
+
 # --- Time series -----------------------------------------------------------
+
+# The catalog's name for how often an indicator is reported -> the series it names.
+FREQUENCIES = {"annual": "annual", "year": "annual", "yearly": "annual", "quarter": "quarterly",
+               "quarterly": "quarterly", "month": "monthly", "monthly": "monthly"}
 
 
 def indicator_series(*, indicator, year=None, **_):
@@ -110,11 +135,19 @@ def indicator_series(*, indicator, year=None, **_):
         if value is None:
             notes.append(f"There is no annual value for {ethiopian} EC.")
 
+    # Only the frequency the indicator is reported at: its other series are often
+    # cumulative or on another scale, and a change calculated from them would mislead.
+    reported = FREQUENCIES.get(str(details.get("frequency") or "").lower())
+    reported = reported if reported in series else next(iter(series), None)
+    asked = str(requested["year"]) if requested else None
+    calculated = {reported: stats.series(series[reported], details.get("unit"), reported,
+                                         asked if reported == "annual" else None)} if reported else {}
     return {
         "tool": "indicator_series",
         "title": indicator.name,
         "source": details.get("source") or "MoNS time-series database",
         "notes": notes,
+        "stats": _stats(**calculated),
         "data": {
             "indicator": {"name": indicator.name, "code": code, "unit": details.get("unit"),
                           "frequency": details.get("frequency"), "description": details.get("description")},
@@ -131,21 +164,23 @@ def organization_score(*, organization, year=None, quarter=None, **_):
     period, notes = periods.dpmes_period(year, quarter)
     card = _dpmes(dpmes_client.organization_scorecard, organization.external_id, period) or {}
     score = _score(card.get("score"))
+    areas = [{"name": area.get("name"), **_score(area.get("score"))} for area in card.get("policy_areas") or []]
+    kpi_counts = _kpi_counts(card.get("performance_analysis"))
     return {
         "tool": "organization_score",
         "title": f"{organization.name}: performance score",
         "source": "DPMES",
         "notes": notes,
         "period": periods.period_label(period),
+        "stats": _stats(
+            previous_year=_previous_year(dpmes_client.organization_scorecard, organization.external_id, period, score["value"]),
+            policy_areas=stats.across(areas), kpis=stats.shares(kpi_counts)),
         "data": {
             "organization": {"id": organization.external_id, "name": organization.name, "code": organization.code},
             "period": period,
             "score": {**score, "band": _band_name(score["value"])},
-            "policy_areas": [
-                {"name": area.get("name"), **_score(area.get("score"))}
-                for area in card.get("policy_areas") or []
-            ],
-            "kpi_counts": _kpi_counts(card.get("performance_analysis")),
+            "policy_areas": areas,
+            "kpi_counts": kpi_counts,
         },
     }
 
@@ -172,6 +207,7 @@ def organization_kpis(*, organization, performance="all", year=None, quarter=Non
         "source": "DPMES",
         "notes": notes + ([f"Showing {MAX_KPIS} of {len(records)} KPIs."] if len(records) > MAX_KPIS else []),
         "period": periods.period_label(period),
+        "stats": _stats(kpis=stats.shares(counts)),
         "data": {
             "organization": {"id": organization.external_id, "name": organization.name, "code": organization.code},
             "period": period,
@@ -189,18 +225,23 @@ def policy_area_score(*, policy_area, year=None, quarter=None, **_):
     period, notes = periods.dpmes_period(year, quarter)
     card = _dpmes(dpmes_client.policy_area_scorecard, policy_area.external_id, period) or {}
     score = _score(card.get("score"))
+    goals = [{"name": g.get("name"), **_score(g.get("score"))} for g in card.get("goals") or []]
+    kpi_counts = _kpi_counts(card.get("performance_analysis"))
     return {
         "tool": "policy_area_score",
         "title": f"{policy_area.name}: performance score",
         "source": "DPMES",
         "notes": notes,
         "period": periods.period_label(period),
+        "stats": _stats(
+            previous_year=_previous_year(dpmes_client.policy_area_scorecard, policy_area.external_id, period, score["value"]),
+            goals=stats.across(goals), kpis=stats.shares(kpi_counts)),
         "data": {
             "policy_area": {"id": policy_area.external_id, "name": policy_area.name, "code": policy_area.code},
             "period": period,
             "score": {**score, "band": _band_name(score["value"])},
-            "goals": [{"name": g.get("name"), **_score(g.get("score"))} for g in card.get("goals") or []],
-            "kpi_counts": _kpi_counts(card.get("performance_analysis")),
+            "goals": goals,
+            "kpi_counts": kpi_counts,
         },
     }
 
@@ -212,22 +253,22 @@ def goal_detail(*, goal, organization=None, year=None, quarter=None, **_):
         notes.append("No organization was named, so the national view is used.")
     kras = (_dpmes(dpmes_client.goal_kras, goal.external_id, org_id, period) or {}).get("kras") or []
     goal_score = dpmes_compat.find_goal_score(_dpmes(dpmes_client.organization_scorecard, org_id, period), goal.external_id)
+    areas = [{"name": k.get("name"), **_score(k.get("score")), "kpis": len(k.get("kpis") or [])} for k in kras]
     return {
         "tool": "goal_detail",
         "title": f"{goal.name}",
         "source": "DPMES",
         "notes": notes,
         "period": periods.period_label(period),
+        "stats": _stats(key_result_areas=stats.across(areas),
+                        kpis_total=sum(area["kpis"] for area in areas) if len(areas) > 1 else None),
         "data": {
             "goal": {"id": goal.external_id, "name": goal.name, "code": goal.code,
                      "policy_area": (goal.details or {}).get("policy_area")},
             "organization": organization.name if organization else "National",
             "period": period,
             "score": {"value": (goal_score or {}).get("avg_score"), "color": (goal_score or {}).get("scorecard_color")},
-            "key_result_areas": [
-                {"name": k.get("name"), **_score(k.get("score")), "kpis": len(k.get("kpis") or [])}
-                for k in kras
-            ],
+            "key_result_areas": areas,
         },
     }
 
@@ -241,6 +282,8 @@ def _ranked(title, rows, order, period, notes):
     scored.sort(key=lambda r: r["value"], reverse=(order != "bottom"))
     return {
         "title": title, "source": "DPMES", "notes": notes, "period": periods.period_label(period),
+        # Across every scored body or area, not only the ones listed.
+        "stats": _stats(all_scored=stats.across(scored)),
         "data": {"period": period, "order": order, "total": len(scored), "items": scored[:MAX_RANKED]},
     }
 
@@ -324,6 +367,8 @@ def sdg_indicator(*, sdg_indicator, year=None, breakdown=None, **_):
         "calendar": "Gregorian",
         "notes": notes,
         "period": f"{years[0]}–{years[-1]}" if len(years) > 1 else str(years[0]),
+        "stats": stats.many_series(shown, shown[0]["unit"], int(year) if year else None,
+                                   breakdown=breakdown in sdg_series.BREAKDOWNS),
         "data": {
             "indicator": {
                 "code": item.get("id"), "name": item.get("description"), "type": item.get("type"),

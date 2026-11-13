@@ -30,10 +30,13 @@ unsupported numbers, latency. Use traces to see why an answer went wrong.
 app and the web chat were built against (`core/ai/engine/compat.py`):
 
 - Send `{"message": "your question"}` on the socket, or POST `{"question": "..."}`.
-- English: `{"message", "preview", "is_stream": true}` pieces. Browsers then get a final
+- English: `{"message", "preview", "is_stream": true}` pieces (browsers also get `draft`, see Answer layout). Browsers then get a final
   `{"message", "is_stream": false, "is_final": true, "route"}` with the full answer; the mobile app (no
   `Origin` header) does not, or it would show the answer twice.
 - Amharic and errors: one final message.
+- While an answer is prepared, browsers get `{"event": "status", "stage": "planning" | "searching" | "fetching" |
+  "writing"}` (writing also carries the answer's `kind`), and the web chat names the step ("Reading the national
+  data and searching the web…"). The mobile app is not sent them.
 - `route` names the kind of answer (`get_time_series_context`, `get_ministry_score_context`, …).
 - REST returns `data: {chat_instance_id, question, answer, route, token_usage}`; `token_usage` is always null.
 - With `AI_USE_ASYNC_QUEUE=True` (or `?mode=async`) the REST answer is queued on Celery and polled at
@@ -83,6 +86,65 @@ Configuration (in `.env`): `VLLM_API_BASE`, `VLLM_MODEL`, `VLLM_API_KEY`, `EMBED
 `EMBEDDING_API_KEY`, `DPMES2_API_BASE`, `DPMES2_API_KEY`, optional `TIME_SERIES_API_BASE` and `SDG_PLATFORM_BASE`;
 `SEARXNG_URL`, `WEB_SEARCH_ENABLED` and `WEB_SEARCH_DAILY_LIMIT` for web search.
 The gateway is the only AI provider.
+
+## Calculated figures
+
+- The writer never does arithmetic (the number check would reject it, and models get sums wrong). Code works the
+  figures out (`core/ai/engine/stats.py`) and each tool attaches them to its result as `"stats"`, which the writer
+  sees in the facts and may quote: "fell by 1.5 percentage points", "17.6 percent higher than 2017 EC".
+- A series (time-series indicator, SDG indicator): latest and previous value, the change between them, highest,
+  lowest, average, change since the first period, how long it has moved the same way, the comparison with 5 and 10
+  years earlier (the same month or quarter a year earlier for monthly and quarterly data), the average yearly
+  growth or decline of a quantity, and the same comparison for a year the question asked about. Years with no value are
+  listed (`years_without_data`), so ten values over twelve years are not called a ten-year average.
+- A rate (unit with %) changes in percentage points; a quantity also gets its percent change. Amounts carry no
+  sign, the direction is beside them (`{"direction": "down", "by": 1.5}`), so the sentence's number matches the fact.
+  Figures are rounded half up, never to more decimals than the data.
+- DPMES: a score comes with the previous year's score and the change in points (one more DPMES call, cached; left
+  out if it fails); scorecards get the strongest and weakest part; KPI counts get their total and each band's
+  share; rankings get the average, highest, lowest and gap across every scored body, not only the ten listed.
+- An SDG breakdown (regions, sex) is compared across its series at the latest year most of them report.
+- Guards: stats are calculated only for the frequency the indicator is reported at (its other series are often
+  cumulative), and not at all when consecutive values differ by more than 20 times (the source mixes units, e.g.
+  millions then billions); fewer than two values give none.
+- Documents use the same stats (`documents/outline.py`).
+
+## Answer layout
+
+- The national sources (time-series, DPMES, the SDG platform) hold only Ethiopia's data, so a question that names
+  no country is about Ethiopia ("What is the GDP growth?" means Ethiopia's), and every fact the writer sees carries
+  `"country": "Ethiopia"`. A question only about another country or the world never looks them up: it is a web
+  question (or out of scope when web search is off); a comparison uses them for Ethiopia's side only.
+- Time-series years are Ethiopian-calendar years stored bare ("2018"). The writer sees them marked in the answer's
+  language ("2018 EC", "Hidar 2018 EC", "2018 EC Q3"; "2018 ዓ.ም" in Amharic), so answers write them that way;
+  charts and tables keep the data as fetched. Month names are mapped to English whatever letters the API spells
+  them with (`periods.month_label`: ሕዳር, ህዳር and ኅዳር are all Hidar). Amharic answers get the months in
+  Amharic (`periods.AMHARIC_MONTHS`), so the model does not respell the English names in Ethiopic letters.
+- The writer writes Markdown (`compose.STYLE`): a style guide, not a template. It leads with the answer and
+  picks the form the content needs: a short paragraph for a simple question; `###` headings, lists, a small
+  Markdown table or a `>` takeaway for a broader one. English is sampled at temperature 0.5 for natural variety
+  (numbers are still checked); Amharic stays at 0 (the model drifts into other scripts when sampling it).
+- The server converts the Markdown to HTML (`core/ai/engine/markdown.py`, mistune with `escape=True`), so clients
+  still get HTML, and raw HTML in the model's text is escaped, never passed through: a web page the assistant read
+  cannot put markup or scripts into the chat. The writer's own tables get `class="ai-text-table"` and stay inline.
+- Streaming: `markdown.Stream` sends each finished block (paragraph, list, table) as HTML as soon as it ends;
+  browsers also get a `draft` field with the block still being written, as plain text, so the answer appears
+  formatted while it streams. The mobile app's messages are unchanged.
+  The first words arrive as a draft before any block is finished, and the web chat shows them at once, so an answer
+  is typed from its first word. A table being written reads as its cells ("Country · Value"), and a marker that is
+  not finished yet ("[[chart:") is left out of the draft.
+- Visuals are optional and placed by the writer, drawn by code (`core/ai/engine/layout.py`). Each result in the
+  facts has `"visual": N` and a `"best_view"`; the writer adds `[[chart:N]]`, `[[table:N]]`, `[[figure:N]]` (a
+  compact card), `[[card:N]]` (the full panel) or `[[visual:N]]` on its own line only where a visual helps (a
+  trend, a full list). The marker is replaced by that result's blocks (`<h4>`, `<table>`, `<chart-data>`, source
+  line, exactly as `render.py` makes them), with the view on the title: `<h4 data-view="...">`. A visual never
+  lands inside a paragraph.
+- Results the writer did not place follow the text with `<h4 data-placement="more">`; the web chat folds them
+  under "Show all data", so every figure stays one click away. The app ignores the attributes and sees the same
+  elements after the text, as before.
+- The web chat accepts one question at a time: Send is disabled while an answer is coming (up to 2 minutes),
+  so two answers never stream into each other.
+- The number check runs on the writer's own text (markers removed); the live preview leaves out the visuals.
 
 ## Documents (PowerPoint, Word, PDF)
 

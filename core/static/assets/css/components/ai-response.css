@@ -21,6 +21,15 @@
   padding-left: 1.15em;
 }
 
+/* The site's base stylesheet sets every <p> to 14px. An answer's paragraphs follow
+   the answer's own size instead, so they match its lists and the line being typed
+   while it streams (.ai-stream-typing), and nothing changes size when it finishes. */
+.ai-msg-content > p,
+.ai-msg-content > blockquote p,
+.ai-msg-content li > p {
+  font-size: inherit;
+}
+
 .ai-msg-content li {
   margin: 0.25em 0;
 }
@@ -477,6 +486,152 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Writer's headings inside an answer (layout.py lets it structure longer answers). */
+.ai-msg-content h3 {
+  margin: 22px 0 8px;
+  font-family: var(--dh-font-body, system-ui, sans-serif);
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+  color: var(--dh-text);
+}
+
+.ai-msg-content h3:first-child {
+  margin-top: 4px;
+}
+
+/* A chart or table placed in the text: a light figure, not a panel. */
+.ai-data-card.is-inline {
+  margin: 14px 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.ai-data-card.is-inline .ai-data-card-summary {
+  display: none;
+}
+
+.ai-data-card.is-inline .ai-data-card-head {
+  padding: 0 0 4px;
+}
+
+.ai-data-card.is-inline .ai-data-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dh-text-muted);
+}
+
+.ai-data-card.is-inline .ai-data-card-meta {
+  font-size: 11.5px;
+}
+
+.ai-data-card.is-inline .ai-data-card-foot {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+/* A small table the writer made in the text. */
+.ai-msg-content .ai-text-table-wrap {
+  margin: 12px 0 16px;
+  overflow-x: auto;
+}
+
+.ai-msg-content .ai-text-table {
+  width: auto;
+  min-width: 60%;
+  border-collapse: collapse;
+  font-family: var(--dh-font-body, system-ui, sans-serif);
+  font-size: 13.5px;
+}
+
+.ai-msg-content .ai-text-table th {
+  padding: 7px 14px 7px 0;
+  border-bottom: 1.5px solid var(--dh-text);
+  color: var(--dh-text);
+  font-weight: 650;
+  text-align: left;
+}
+
+.ai-msg-content .ai-text-table td {
+  padding: 7px 14px 7px 0;
+  border-bottom: 1px solid var(--dh-border);
+  color: var(--dh-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The key takeaway of an analysis. */
+.ai-msg-content blockquote {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--dh-accent) 22%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dh-accent) 7%, transparent);
+  color: var(--dh-text);
+  font-weight: 500;
+}
+
+.ai-msg-content blockquote p {
+  margin: 0;
+}
+
+/* A compact figure: the numbers lead, a short chart supports them. */
+.ai-data-card.is-figure {
+  max-width: 520px;
+}
+
+.ai-data-card.is-figure .ai-data-card-summary {
+  padding-bottom: 4px;
+}
+
+/* Data the writer did not place in the text, folded after the answer. */
+.ai-msg-content .ai-more-data {
+  margin: 14px 0 6px;
+  border-top: 1px solid var(--dh-border);
+  padding-top: 10px;
+}
+
+.ai-msg-content .ai-more-data > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--dh-border);
+  border-radius: 999px;
+  color: var(--dh-text-muted);
+  font-family: var(--dh-font-body, system-ui, sans-serif);
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ai-msg-content .ai-more-data > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ai-msg-content .ai-more-data > summary::before {
+  content: "▸";
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.ai-msg-content .ai-more-data[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.ai-msg-content .ai-more-data > summary:hover {
+  color: var(--dh-text);
+  border-color: color-mix(in srgb, var(--dh-accent) 40%, var(--dh-border));
+}
+
+.ai-msg-content .ai-more-data > summary:focus-visible {
+  outline: 2px solid var(--dh-accent);
+  outline-offset: 2px;
 }
 
 /* A document Admas AI made: a download card, coloured by its format. */

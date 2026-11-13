@@ -1,7 +1,7 @@
 """The one answer pipeline, shared by the WebSocket, REST and evaluation.
 
 Events (dicts), in order:
-    {"type": "status", "stage": "planning" | "fetching" | "writing"}   (writing also carries "language")
+    {"type": "status", "stage": "planning" | "searching" | "fetching" | "writing"}   (writing also carries "language" and "kind")
     {"type": "delta", "text": "..."}          zero or more; the answer is their concatenation
     {"type": "done", "history_id", "sources", "tools", "verified"}   or   {"type": "error", "message"}
 
@@ -17,7 +17,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
 
-from ai.engine import catalog, compose, planner, render, verify
+from ai.engine import catalog, compose, layout, markdown, planner, render, verify
 from ai.engine.llm import LLMError
 from ai.engine.tools import TOOLS, ToolError
 from ai.models import AnswerTrace, CatalogEntity, QuestionHistory
@@ -259,7 +259,11 @@ async def answer_stream(question, *, instance=None):
             if plan.kind == "web":
                 results, pages = pages, []
 
-        yield {"type": "status", "stage": "writing", "language": plan.language}
+        yield {"type": "status", "stage": "writing", "language": plan.language, "kind": plan.kind}
+        # The writer places each result where it fits ([[chart:0]] …); layout.py
+        # swaps the markers for the rendered blocks as the text streams.
+        placer = layout.Placer(results if plan.kind == "data" else [])
+        written = []  # the writer's own text, markers included, for the checks below
         if plan.kind == "document":
             narrative = await _document(plan, question, instance, results, pages, problems, context, trace)
             pieces.append(narrative)
@@ -281,15 +285,31 @@ async def answer_stream(question, *, instance=None):
                 trace["error"] = f"foreign script removed: {''.join(verify.foreign_script(narrative))}"[:500]
                 LOGGER.warning("Amharic answer still had other scripts after retries; %s", trace["error"])
                 narrative = verify.scrub_foreign(narrative)
-            pieces.append(narrative)
-            yield {"type": "delta", "text": narrative}
+            written.append(narrative)
+            placed = placer.place(markdown.to_html(narrative))
+            pieces.append(placed)
+            yield {"type": "delta", "text": placed}
         else:
+            # Markdown in, HTML out: each finished block is sent as soon as it is done;
+            # the block still being written goes to browsers as a plain-text draft.
+            blocks = markdown.Stream()
             async for piece in compose.stream(plan.kind, question, plan.language, results, problems,
                                               conversation=context, pages=pages):
-                pieces.append(piece)
-                yield {"type": "delta", "text": piece}
+                written.append(piece)
+                html, pending = blocks.feed(piece)
+                ready = placer.feed(html) if html else ""
+                draft = markdown.plain(layout.strip_markers(pending, partial=True))
+                if ready:
+                    pieces.append(ready)
+                    yield {"type": "delta", "text": ready, "draft": draft}
+                else:
+                    yield {"type": "draft", "text": draft}
+            tail = placer.feed(blocks.flush()) + placer.flush()
+            if tail:
+                pieces.append(tail)
+                yield {"type": "delta", "text": tail, "draft": ""}
 
-        narrative = "".join(pieces)
+        narrative = layout.strip_markers("".join(written)) if written else "".join(pieces)
         if plan.kind != "document":  # a document's own text is checked in _document
             trace["unsupported_numbers"] = verify.unsupported_numbers(
                 narrative, list(results) + list(pages), f"{question}\n{context}")
@@ -299,6 +319,9 @@ async def answer_stream(question, *, instance=None):
             trace["error"] = f"foreign script: {''.join(foreign)}"[:500]
         if plan.kind == "web":
             sections = render.web_sources(results)
+        elif plan.kind == "data":
+            # Results the writer did not place (all of them when it used no markers).
+            sections = placer.remaining() + render.web_sources(pages)
         else:
             sections = render.sections(results) + render.web_sources(pages)
         if sections:

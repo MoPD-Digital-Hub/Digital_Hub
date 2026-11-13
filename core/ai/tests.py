@@ -299,7 +299,7 @@ class PipelineTests(TestCase):
             return [event async for event in answer_stream(question, instance=instance)]
         return async_to_sync(collect)()
 
-    @patch("ai.engine.pipeline.compose.stream", fake_stream("<p>GDP grew ", "7.7% in 2018 EC.</p>"))
+    @patch("ai.engine.pipeline.compose.stream", fake_stream("GDP grew ", "7.7% in 2018 EC."))
     @patch("ai.engine.pipeline.catalog.resolve", return_value=[GDP])
     @patch("ai.engine.pipeline.planner.plan")
     def test_events_stream_then_done_without_repeating_the_answer(self, mock_plan, _resolve):
@@ -315,7 +315,9 @@ class PipelineTests(TestCase):
 
         self.assertEqual([e["type"] for e in events][:3], ["status", "status", "status"])
         deltas = "".join(e["text"] for e in events if e["type"] == "delta")
-        self.assertTrue(deltas.startswith("<p>GDP grew 7.7% in 2018 EC.</p><h4>GDP Growth: annual</h4>"))
+        # The writer's Markdown, as HTML; the data it did not place follows, marked for "Show all data".
+        self.assertTrue(deltas.startswith(
+            '<p>GDP grew 7.7% in 2018 EC.</p><h4 data-view="chart" data-placement="more">GDP Growth: annual</h4>'))
         done = events[-1]
         self.assertEqual(done["type"], "done")
         self.assertNotIn("message", done)
@@ -382,7 +384,7 @@ class AmharicAnswerTests(TestCase):
         from ai.engine.pipeline import answer_stream
 
         mock_plan.return_value = planner.Plan("general", "Amharic", [])
-        drafts = iter(["<p>የጤናစောင့်leት</p>", "<p>የጤና ሥርዓት</p>"])
+        drafts = iter(["የጤናစောင့်leት", "የጤና ሥርዓት"])
         temperatures = []
 
         async def fake_compose(*args, temperature=None, **kwargs):
@@ -405,7 +407,7 @@ class AmharicAnswerTests(TestCase):
         mock_plan.return_value = planner.Plan("general", "Amharic", [])
 
         async def fake_compose(*args, **kwargs):
-            yield "<p>በፋይናንስ ያልمركزነት በгосударство ሚኒስትርነት</p>"
+            yield "በፋይናንስ ያልمركزነት በгосударство ሚኒስትርነት"
 
         with patch("ai.engine.pipeline.compose.stream", fake_compose):
             async def collect():
@@ -521,6 +523,25 @@ class CompatTests(SimpleTestCase):
         sent = self.run_compat(ENGLISH, native=False)
         self.assertEqual(sent[-1], {"message": "<p>GDP grew 7.7%.</p>", "is_stream": False, "is_final": True,
                                     "route": "get_time_series_context"})
+
+    def test_browser_is_told_each_step_and_the_app_is_not(self):
+        async def stream(question, *, instance=None):
+            yield {"type": "status", "stage": "planning"}
+            yield {"type": "status", "stage": "searching"}
+            yield {"type": "status", "stage": "writing", "language": "English", "kind": "data"}
+            yield {"type": "draft", "text": "GDP"}
+            yield {"type": "delta", "text": "<p>GDP grew 7.7%.</p>", "draft": ""}
+            yield {"type": "done", "tools": ["indicator_series"]}
+
+        browser = self.run_compat(stream, native=False)
+        self.assertEqual(browser[:4], [
+            {"event": "status", "stage": "planning"},
+            {"event": "status", "stage": "searching"},
+            {"event": "status", "stage": "writing", "kind": "data"},
+            # The first words, before any finished block: the web chat types them at once.
+            {"message": "", "is_stream": True, "draft": "GDP"}])
+        app = self.run_compat(stream, native=True)
+        self.assertEqual(app, [{"message": "<p>GDP grew 7.7%.</p>", "preview": "preview:21", "is_stream": True}])
 
     def test_amharic_arrives_as_one_final_message(self):
         sent = self.run_compat(AMHARIC, native=True)
@@ -928,7 +949,7 @@ class MixedSourceTests(TestCase):
 
         async def fake_compose(kind, question, language, results=(), problems=(), **kwargs):
             seen.update(kind=kind, results=list(results), pages=list(kwargs.get("pages") or []))
-            yield "<p>Ethiopia: 7.7% (MoPD). Brazil: Board completes review [1].</p>"
+            yield "Ethiopia: 7.7% (MoPD). Brazil: Board completes review [1]."
 
         plan = planner.Plan("data", "English", [{"tool": "indicator_series", "indicator": "GDP growth"}],
                             search_query="Brazil GDP growth")
@@ -946,12 +967,337 @@ class MixedSourceTests(TestCase):
         self.assertEqual([r["tool"] for r in seen["results"]], ["indicator_series"])
         self.assertEqual([p["site"] for p in seen["pages"]], ["imf.org", "wikipedia.org"])
         answer = "".join(e["text"] for e in events if e["type"] == "delta")
-        self.assertIn("<h4>GDP Growth: annual</h4>", answer)
+        self.assertIn('<h4 data-view="chart" data-placement="more">GDP Growth: annual</h4>', answer)
         self.assertIn('<p class="ai-source" data-source="time_series">', answer)
         self.assertIn('<p class="ai-source" data-source="web">', answer)
         self.assertEqual(events[-1]["sources"], ["MoPD", "the web"])
         self.assertTrue(events[-1]["verified"])
         self.assertEqual([c["tool"] for c in AnswerTrace.objects.get().tool_calls], ["indicator_series", "web_search"])
+
+
+RANKING = {"tool": "rank_organizations", "title": "Ministries", "period": "2017 EC", "source": "DPMES", "data": {
+    "items": [{"name": "Ministry of Revenue", "value": 98.35, "color": "green"}]}}
+
+
+class StatsTests(SimpleTestCase):
+    """Figures the writer may quote are calculated in code (ai/engine/stats.py)."""
+
+    def test_a_rate_changes_in_percentage_points(self):
+        from ai.engine import stats
+
+        points = [{"period": str(year), "value": value} for year, value in
+                  ((2008, 10.41), (2012, 6.3), (2013, 6.27), (2016, 7.2), (2017, 9.2), (2018, 7.7))]
+        found = stats.series(points, "%", "annual")
+        self.assertEqual(found["latest"], {"period": "2018", "value": 7.7})
+        self.assertEqual(found["change_from_previous"], {"direction": "down", "by": 1.5, "unit": "percentage points"})
+        self.assertEqual(found["highest"], {"period": "2008", "value": 10.41})
+        self.assertEqual(found["lowest"], {"period": "2013", "value": 6.27})
+        self.assertEqual(found["average"], 7.85)
+        self.assertEqual(found["periods"], 6)
+        self.assertEqual(found["years_without_data"], ["2009", "2010", "2011", "2014", "2015"])
+        self.assertEqual(found["change_since_first"]["by"], 2.71)
+        self.assertEqual(found["compared_with"], [
+            {"earlier": "5 years earlier", "period": "2013", "value": 6.27,
+             "change": {"direction": "up", "by": 1.43, "unit": "percentage points"}},
+            {"earlier": "10 years earlier", "period": "2008", "value": 10.41,
+             "change": {"direction": "down", "by": 2.71, "unit": "percentage points"}}])
+        # A percent of a percent would mislead, and so would a growth rate of a rate.
+        self.assertNotIn("percent", found["change_from_previous"])
+        self.assertNotIn("average_yearly_growth_percent", found)
+
+    def test_a_quantity_also_gets_its_percent_change_and_yearly_growth(self):
+        from ai.engine import stats
+
+        points = [{"period": "2016", "value": 1.0}, {"period": "2017", "value": 2.0}, {"period": "2018", "value": 4.0}]
+        found = stats.series(points, "Billion USD", "annual")
+        self.assertEqual(found["change_from_previous"], {"direction": "up", "by": 2, "percent": 100})
+        self.assertEqual(found["moving_the_same_way_for"], {"direction": "up", "periods": 2})
+        self.assertEqual(found["average_yearly_growth_percent"], 100)
+        falling = stats.series([{"period": "2000", "value": 44.2}, {"period": "2016", "value": 23.5},
+                                {"period": "2020", "value": 19}], "Index", "annual")
+        # No signs: the text says "fell by 4.1% a year", and that number must match.
+        self.assertEqual(falling["average_yearly_decline_percent"], 4.1)
+        self.assertNotIn("average_yearly_growth_percent", falling)
+
+    def test_values_on_two_scales_give_no_stats(self):
+        from ai.engine import stats
+
+        # The source mixes billions and millions (coffee exports, quarterly): no change is calculated.
+        mixed = [{"period": "2018 Q3", "value": 1.93}, {"period": "2018 Q4", "value": 2.26}, {"period": "2019 Q1", "value": 880.1}]
+        self.assertIsNone(stats.series(mixed, "Billion USD", "quarterly"))
+
+    def test_months_compare_with_the_same_month_a_year_earlier(self):
+        from ai.engine import stats
+
+        points = [{"period": "Tikimt 2018", "value": 10.9}, {"period": "Hidar 2018", "value": 9.4},
+                  {"period": "Meskerem 2019", "value": 13.1}, {"period": "Tikimt 2019", "value": 14.6}]
+        found = stats.series(points, "%", "monthly")
+        self.assertEqual(found["compared_with"], [
+            {"earlier": "same month a year earlier", "period": "Tikimt 2018", "value": 10.9,
+             "change": {"direction": "up", "by": 3.7, "unit": "percentage points"}}])
+
+    def test_too_little_data_gives_no_stats(self):
+        from ai.engine import stats
+
+        self.assertIsNone(stats.series([{"period": "2018", "value": 7.7}], "%"))
+        self.assertIsNone(stats.series([{"period": "2017", "value": None}, {"period": "2018", "value": 7.7}], "%"))
+        self.assertIsNone(stats.across([{"name": "Health", "value": 66.65}]))
+        self.assertIsNone(stats.shares({"on_track": 0, "weak": 0}))
+
+    def test_rankings_and_kpi_counts(self):
+        from ai.engine import stats
+
+        found = stats.across([{"name": "Revenue", "value": 98.35}, {"name": "Health", "value": 66.65},
+                              {"name": "Irrigation", "value": 18.99}, {"name": "Unscored", "value": None}])
+        self.assertEqual(found, {"count": 3, "highest": {"name": "Revenue", "value": 98.35},
+                                 "lowest": {"name": "Irrigation", "value": 18.99}, "average": 61.33,
+                                 "gap_between_highest_and_lowest": 79.36})
+        self.assertEqual(stats.shares({"on_track": 52, "in_progress": 10, "weak": 42}),
+                         {"total": 104, "share_percent": {"on_track": 50, "in_progress": 9.6, "weak": 40.4}})
+
+    def test_a_breakdown_is_compared_across_its_series(self):
+        from ai.engine import stats
+
+        regions = [{"name": name, "points": [{"year": 2011, "value": old}, {"year": 2016, "value": new}]}
+                   for name, old, new in (("Total", 29.6, 23.5), ("Afar", 36.1, 23.6), ("Amhara", 30.5, 26.1),
+                                          ("Harari", 11.1, 7.1), ("Tigray", 31.8, 27.0))]
+        self.assertIsNone(stats.many_series(regions, "%"))  # not a breakdown: different measures are not compared
+        found = stats.many_series(regions, "%", breakdown=True)
+        # Five series: no stats for each, only the comparison at the latest year (the total is not a region).
+        self.assertEqual(found, {"across_series": {
+            "year": 2016, "count": 4, "highest": {"name": "Tigray", "value": 27},
+            "lowest": {"name": "Harari", "value": 7.1}, "average": 21,  # 20.95, rounded half up
+            "gap_between_highest_and_lowest": 19.9, "gap_unit": "percentage points"}})
+        national = stats.many_series(regions[:1], "%", requested=2016)
+        self.assertEqual(national["by_series"]["Total"]["change_from_previous"],
+                         {"direction": "down", "by": 6.1, "unit": "percentage points"})
+        self.assertEqual(national["by_series"]["Total"]["requested"]["previous"], {"period": "2011", "value": 29.6})
+
+    def test_the_sdg_tool_attaches_them(self):
+        from ai.engine import tools
+
+        match = Match(1, CatalogEntity.SDG_INDICATOR, "1.1.1P1", "1.1.1P1", "x", 1.0, "exact", {"goal": "1"})
+        with patch.object(tools.sdg_client, "goal", return_value=SDG_FEED):
+            result = tools.sdg_indicator(sdg_indicator=match)
+        national = result["stats"]["by_series"]["Total"]
+        self.assertEqual(national["change_from_previous"]["direction"], "down")
+        self.assertEqual(national["change_from_previous"]["by"], 6.1)
+
+
+class LayoutTests(TestCase):
+    """The writer places visuals with markers; code draws them (ai/engine/layout.py)."""
+
+    def test_markers_become_the_results_blocks_with_their_view(self):
+        from ai.engine import layout
+
+        placer = layout.Placer([SERIES, RANKING])
+        html = placer.place("<p>Growth slowed.</p>\n[[figure:0]]\n<p>Revenue led.</p>\n[[visual:1]]")
+        self.assertIn('<p>Growth slowed.</p>\n<h4 data-view="figure">GDP Growth: annual</h4>', html)
+        self.assertIn('<h4 data-view="table">Ministries, 2017 EC</h4>', html)
+        self.assertIn('<p class="ai-source" data-source="time_series">Source: MoPD</p>', html)
+        self.assertNotIn("[[", html)
+        self.assertEqual(placer.remaining(), "")
+
+    def test_a_marker_split_across_streamed_pieces_is_still_replaced(self):
+        from ai.engine import layout
+
+        placer = layout.Placer([SERIES])
+        sent = [placer.feed(piece) for piece in ("<p>Up.</p>[", "[cha", "rt:0", "]", "]<p>Next.</p>")]
+        sent.append(placer.flush())
+        html = "".join(sent)
+        self.assertEqual(sent[:4], ["<p>Up.</p>", "", "", ""])
+        self.assertIn('<h4 data-view="chart">GDP Growth: annual</h4>', html)
+        self.assertTrue(html.endswith("<p>Next.</p>"))
+
+    def test_unplaced_results_follow_marked_for_show_all_data(self):
+        from ai.engine import layout
+
+        placer = layout.Placer([SERIES, RANKING])
+        placer.place("<p>Growth slowed.</p>[[chart:0]]")
+        self.assertIn('<h4 data-view="table" data-placement="more">Ministries, 2017 EC</h4>', placer.remaining())
+        # No markers: every result after the text, as before, and nothing marked "more".
+        # No markers: the text alone, and every result folded under "Show all data".
+        unplaced = layout.Placer([SERIES, RANKING])
+        self.assertEqual(unplaced.place("<p>Growth slowed.</p>"), "<p>Growth slowed.</p>")
+        self.assertEqual(unplaced.remaining().count('data-placement="more"'), 2)
+
+    def test_visuals_never_land_inside_a_paragraph_and_bad_markers_are_dropped(self):
+        from ai.engine import layout
+
+        placer = layout.Placer([SERIES])
+        html = placer.place("<p>Growth slowed [[chart:0]] last year.</p>[[table:7]][[chart:0]]")
+        self.assertIn('<p>Growth slowed </p><h4 data-view="chart">', html)
+        self.assertIn('</p><p> last year.</p>', html)
+        self.assertEqual(html.count("<h4"), 1)
+        self.assertNotIn("[[", html)
+
+    def test_writer_tables_stay_in_the_text_and_cards_are_a_view(self):
+        from ai.engine import layout
+
+        placer = layout.Placer([SERIES])
+        sent = [placer.feed(p) for p in ("<p>Side by side:</p><tab", "le><tr><td>2018</td><td>7.7</td></tr></table>",
+                                          "[[card:0]]")]
+        html = "".join(sent) + placer.flush()
+        self.assertIn('<table class="ai-text-table"><tr><td>2018</td>', html)
+        self.assertIn('<h4 data-view="card">GDP Growth: annual</h4>', html)
+
+    def test_a_table_being_written_reads_as_its_cells(self):
+        from ai.engine import markdown
+
+        table = "| Country | Export value | Period |\n| :--- | ---: | :--"
+        self.assertEqual(markdown.plain(table), "Country · Export value · Period")
+        self.assertEqual(markdown.plain(table + "- |\n| Ethiopia | **3.14** Billion USD | 2018 EC |\n| Ken"),
+                         "Country · Export value · Period Ethiopia · 3.14 Billion USD · 2018 EC Ken")
+        # Ordinary writing is untouched: a dash in a sentence, a list, a heading.
+        self.assertEqual(markdown.plain("### Trend\n\n- Exports rose - sharply\n- **3.14** Billion USD"),
+                         "Trend Exports rose - sharply 3.14 Billion USD")
+
+    def test_a_live_draft_hides_a_marker_that_is_still_being_written(self):
+        from ai.engine import layout
+
+        self.assertEqual(layout.strip_markers("Growth slowed.\n\n[[chart:", partial=True), "Growth slowed.\n\n")
+        self.assertEqual(layout.strip_markers("Growth slowed. [[cha", partial=True), "Growth slowed. ")
+        self.assertEqual(layout.strip_markers("See [1] and [[chart:0]] here", partial=True), "See [1] and   here")
+        # A citation being typed is not a marker, and finished text is left alone.
+        self.assertEqual(layout.strip_markers("as reported [2", partial=True), "as reported [2")
+        self.assertEqual(layout.strip_markers("Growth [[chart:"), "Growth [[chart:")
+
+    def test_the_writer_sees_each_results_number_and_best_view(self):
+        from ai.engine import compose
+
+        facts = json.loads(compose.facts([SERIES, RANKING], []))
+        self.assertEqual([(f["visual"], f["best_view"]) for f in facts], [(0, "chart"), (1, "table")])
+        system = compose.messages_for("data", "q", "English", [SERIES])[0]["content"]
+        self.assertIn("[[chart:N]]", system)
+        self.assertIn("Visuals (optional)", system)
+        self.assertIn("Write Markdown only", system)
+        self.assertIn("[[card:N]]", system)
+
+    def test_the_writer_sees_ethiopian_years_marked_for_the_answer_language(self):
+        from ai.engine import compose
+
+        result = {"tool": "indicator_series", "title": "Inflation", "data": {
+            "requested": {"year": 2018, "value": 7.7},
+            "series": {"annual": [{"period": "2018", "value": 7.7}],
+                       "quarterly": [{"period": "2018 Q3", "value": 1.2}],
+                       "monthly": [{"period": "Hidar 2018", "value": 9.4}]}}}
+        english = json.loads(compose.facts([result], []))[0]["data"]
+        self.assertEqual([english["series"][f][0]["period"] for f in ("annual", "quarterly", "monthly")],
+                         ["2018 EC", "2018 EC Q3", "Hidar 2018 EC"])
+        self.assertEqual(english["requested"]["year"], "2018 EC")
+        amharic = json.loads(compose.facts([result], [], "Amharic"))[0]["data"]
+        self.assertEqual(amharic["series"]["annual"][0]["period"], "2018 ዓ.ም")
+        self.assertEqual(amharic["series"]["quarterly"][0]["period"], "2018 ዓ.ም 3ኛ ሩብ ዓመት")
+        self.assertEqual(amharic["series"]["monthly"][0]["period"], "ኅዳር 2018 ዓ.ም")
+        # Charts and tables keep the data as fetched.
+        self.assertEqual(result["data"]["series"]["annual"][0]["period"], "2018")
+
+    def test_month_names_match_whatever_letters_amharic_spells_them_with(self):
+        from ai.engine import periods
+
+        self.assertEqual([periods.month_label(m) for m in ("ሕዳር", "ህዳር", "ኅዳር", "ሃምሌ", "ታኅሣሥ", " ጥቅምት ")],
+                         ["Hidar", "Hidar", "Hidar", "Hamle", "Tahsas", "Tikimt"])
+        self.assertEqual(periods.month_label("13"), "13")
+
+    def test_calculated_figures_reach_the_writer_and_pass_the_number_check(self):
+        from ai.engine import compose, stats, verify
+
+        points = [{"period": "2016", "value": 6.1}, {"period": "2017", "value": 9.2}, {"period": "2018", "value": 7.7}]
+        result = {"tool": "indicator_series", "title": "GDP Growth", "source": "MoPD",
+                  "stats": {"annual": stats.series(points, "%", "annual", "2017")},
+                  "data": {"indicator": {"name": "GDP Growth", "unit": "%"}, "series": {"annual": points}}}
+        seen = json.loads(compose.facts([result], []))[0]["stats"]["annual"]
+        # Periods are marked like the series; the amounts are the calculated ones.
+        self.assertEqual(seen["latest"], {"period": "2018 EC", "value": 7.7})
+        self.assertEqual(seen["change_from_previous"], {"direction": "down", "by": 1.5, "unit": "percentage points"})
+        self.assertEqual(seen["requested"]["change_from_previous"]["by"], 3.1)
+        gaps = {**result, "stats": {"annual": stats.series([points[0], points[2]], "%", "annual")}}
+        self.assertEqual(json.loads(compose.facts([gaps], []))[0]["stats"]["annual"]["years_without_data"], ["2017 EC"])
+        self.assertEqual(result["stats"]["annual"]["latest"]["period"], "2018")
+        system = compose.messages_for("data", "q", "English", [result])[0]["content"]
+        self.assertIn("Never do arithmetic yourself", system)
+        # A sentence built on the calculated figures is supported; one with its own sum is not.
+        self.assertEqual(verify.unsupported_numbers("<p>Growth fell by 1.5 percentage points to 7.7% in 2018 EC.</p>", [result]), [])
+        self.assertEqual(verify.unsupported_numbers("<p>Growth fell by 2.4 points.</p>", [result]), [2.4])
+
+    def test_national_data_is_ethiopias_by_default(self):
+        from ai.documents import outline
+        from ai.engine import compose, planner
+
+        facts = json.loads(compose.facts([SERIES, RANKING], []))
+        self.assertEqual({f["country"] for f in facts}, {"Ethiopia"})
+        system = compose.messages_for("data", "What is the GDP growth?", "English", [SERIES])[0]["content"]
+        self.assertIn("A question that names no country is about Ethiopia", system)
+        self.assertIn("names no country is about Ethiopia", planner.SYSTEM_PROMPT)
+        # Another country alone is never looked up in the national (Ethiopian) sources.
+        self.assertIn("Kenya's inflation", planner.WEB_KINDS)
+        self.assertIn("Kenya's inflation", planner.KINDS)
+        self.assertIn("The datasets are Ethiopia's", outline.PROMPT)
+
+    @patch("ai.engine.pipeline.catalog.resolve", return_value=[GDP])
+    def test_the_pipeline_streams_the_placed_answer_and_checks_the_writers_text(self, _resolve):
+        from ai.engine.pipeline import answer_stream
+        from ai.engine.tools import TOOLS, Tool
+
+        plan = planner.Plan("data", "English", [{"tool": "indicator_series", "indicator": "GDP growth"}])
+        fake_tool = Tool("indicator_series", "", lambda **_: SERIES, {"indicator": CatalogEntity.INDICATOR})
+        with patch.dict(TOOLS, {"indicator_series": fake_tool}), \
+                patch("ai.engine.pipeline.planner.plan", AsyncMock(return_value=plan)), \
+                patch("ai.engine.pipeline.compose.stream", fake_stream("GDP grew **7.7%**.\n\n[[fig", "ure:0]]")):
+            async def collect():
+                return [e async for e in answer_stream("GDP growth in 2018?")]
+            events = async_to_sync(collect)()
+        answer = "".join(e["text"] for e in events if e["type"] == "delta")
+        self.assertTrue(answer.startswith('<p>GDP grew <strong>7.7%</strong>.</p><h4 data-view="figure">GDP Growth: annual</h4>'))
+        self.assertEqual(answer.count("<h4"), 1)
+        self.assertTrue(events[-1]["verified"])
+
+
+class MarkdownTests(SimpleTestCase):
+    """The writer writes Markdown; the server turns it into safe HTML (ai/engine/markdown.py)."""
+
+    def test_markdown_becomes_html_and_raw_html_is_escaped(self):
+        from ai.engine import markdown
+
+        html = markdown.to_html("Growth was **9.2%**.\n\n### Context\n\n- one\n\n| Year | Value |\n|---|---|\n| 2017 | 9.2 |"
+                                "\n\n<script>alert(1)</script>")
+        self.assertIn("<strong>9.2%</strong>", html)
+        self.assertIn("<h3>Context</h3>", html)
+        self.assertIn("<td>9.2</td>", html)
+        self.assertIn("&lt;script&gt;", html)
+        self.assertNotIn("<script>", html)
+
+    def test_finished_blocks_stream_as_html_and_the_rest_waits(self):
+        from ai.engine import markdown
+
+        stream = markdown.Stream()
+        self.assertEqual(stream.feed("Growth was **9."), ("", "Growth was **9."))
+        html, pending = stream.feed("2%**.\n\nIt then")
+        self.assertEqual((html, pending), ("<p>Growth was <strong>9.2%</strong>.</p>", "It then"))
+        self.assertEqual(stream.flush(), "<p>It then</p>")
+        self.assertEqual(markdown.plain("### Key **figures**\n- one"), "Key figures one")
+
+    def test_drafts_go_to_browsers_only(self):
+        from ai.engine import compat
+
+        stream = fake_pipeline(
+            {"type": "status", "stage": "writing", "language": "English"},
+            {"type": "draft", "text": "GDP grew"},
+            {"type": "delta", "text": "<p>GDP grew 7.7%.</p>", "draft": ""},
+            {"type": "done", "history_id": 1, "sources": [], "tools": [], "verified": True})
+        for native in (False, True):
+            sent = []
+
+            async def send(payload):
+                sent.append(payload)
+
+            with patch("ai.engine.compat.answer_stream", stream):
+                async_to_sync(compat.stream_answer)("q", instance=None, send=send, is_native_client=native,
+                                                   preview=lambda text: "")
+            drafts = [m for m in sent if "draft" in m]
+            self.assertEqual(bool(drafts), not native)
+            if native:
+                self.assertEqual(sent, [{"message": "<p>GDP grew 7.7%.</p>", "preview": "", "is_stream": True}])
 
 
 class FollowUpTests(TestCase):

@@ -1021,3 +1021,51 @@ body.admas-ai-body {
     max-width: 90%;
   }
 }
+
+
+/* ---- A streaming answer: finished blocks formatted, then the one being written ---- */
+
+.ai-stream-live chart-data {
+  display: none;
+}
+
+/* The line being typed: the answer's own text style (.ai-msg-content in ai-response.css). */
+.ai-stream-typing {
+  margin: 0;
+  color: var(--dh-text);
+  font: 400 16.5px/1.7 var(--ai-serif, Georgia, serif);
+}
+
+.ai-stream-typing:not(:empty)::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  border-radius: 2px;
+  background: var(--ai-accent);
+  animation: ai-caret 1s steps(2, start) infinite;
+}
+
+.ai-stream-typing.is-thinking {
+  color: var(--ai-muted);
+  font-family: var(--ai-ui);
+  font-size: 14px;
+}
+
+.ai-stream-typing.is-thinking::after {
+  display: none;
+}
+
+@keyframes ai-caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-stream-typing:not(:empty)::after {
+    animation: none;
+  }
+}

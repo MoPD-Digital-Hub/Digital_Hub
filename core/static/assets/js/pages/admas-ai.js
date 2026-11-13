@@ -36,7 +36,10 @@
   let streamRenderTimer = null;
   let streamViewAnchored = false;
   let streamPreviewText = "";
+  let streamDraftText = "";
   let awaitingAssistantResponse = false;
+  let awaitingSince = 0;
+  const ANSWER_TIMEOUT_MS = 120000;
   let loadingElement = null;
   let chartCounter = 0;
   const sidebarStorageKey = "admas-ai-sidebar-collapsed";
@@ -49,6 +52,16 @@
   let autoScrollPinned = true;
   let suppressNextScrollEventsUntil = 0;
   let lastTouchY = 0;
+
+  let loadingStages = {};
+  const LOADING_STEPS = {
+    planning: "Understanding your question…",
+    searching: "Searching the web…",
+    fetching: "Reading the national data…",
+    both: "Reading the national data and searching the web…",
+    writing: "Writing the answer…",
+    document: "Preparing your document…"
+  };
 
   function buildAIMessageMarkup(contentHtml) {
     return (
@@ -65,13 +78,13 @@
     );
   }
 
+  // While an answer streams: its finished blocks, formatted (the server sends each
+  // paragraph, list or table as HTML once it is done), then the block being written.
   function buildAIStreamingMessageMarkup() {
     return (
       '<div class="msg-bubble ai-stream-bubble">' +
-      '<div class="ai-stream-draft">' +
-      '<div class="ai-stream-draft-label">Writing the answer</div>' +
-      '<div class="ai-stream-draft-text"></div>' +
-      "</div>" +
+      '<div class="ai-msg-content ai-stream-live"></div>' +
+      '<p class="ai-stream-typing" aria-live="off"></p>' +
       "</div>"
     );
   }
@@ -324,9 +337,26 @@
     if (loadingElement) {
       return;
     }
+    loadingStages = {};
     loadingElement = appendAIMessageHtml(
-      '<div class="ai-loading" role="status"><img class="ai-loading-mark" src="' + aiAvatarSrc + '" alt=""><span>Finding the data…</span></div>'
+      '<div class="ai-loading" role="status"><img class="ai-loading-mark" src="' + aiAvatarSrc + '" alt=""><span>' + LOADING_STEPS.planning + '</span></div>'
     );
+  }
+
+  // The server names each step of an answer ({"event": "status"}), so the wait says what it is for.
+  // A question that needs both sources reads the national data and searches the web at the same time.
+  function showLoadingStep(stage, kind) {
+    const label = loadingElement && loadingElement.querySelector(".ai-loading span");
+    loadingStages[stage] = true;
+    let text = LOADING_STEPS[stage];
+    if (stage === "writing" && kind === "document") {
+      text = LOADING_STEPS.document;
+    } else if ((stage === "searching" || stage === "fetching") && loadingStages.searching && loadingStages.fetching) {
+      text = LOADING_STEPS.both;
+    }
+    if (label && text) {
+      label.textContent = text;
+    }
   }
 
   function hideLoading() {
@@ -384,31 +414,38 @@
   }
 
   function renderStreamBuffer() {
-    if (!streamMessageElement && !String(streamHtmlBuffer || "").trim()) {
+    // The first words arrive as a draft, before any finished block: show them at once,
+    // so the answer is typed from its first word.
+    if (!streamMessageElement && !String(streamHtmlBuffer || "").trim() && !String(streamDraftText || "").trim()) {
       return;
     }
     const box = ensureStreamMessage();
-    const content = box.querySelector(".ai-stream-draft-text");
-    if (!content) {
+    const live = box.querySelector(".ai-stream-live");
+    const typing = box.querySelector(".ai-stream-typing");
+    if (!live || !typing) {
       return;
     }
-    const derivedPreview = extractStreamingPreviewText(streamHtmlBuffer);
-    const livePreview = String(streamPreviewText || "").trim() || derivedPreview;
-    streamPreviewText = livePreview;
-    content.textContent = livePreview || "Thinking...";
+    // The server's HTML is safe to show: it escapes the model's own text (markdown.py).
+    live.innerHTML = streamHtmlBuffer;
+    const draft = String(streamDraftText || "").trim();
+    typing.textContent = draft || (streamHtmlBuffer.trim() ? "" : "Thinking…");
+    typing.classList.toggle("is-thinking", !draft && !streamHtmlBuffer.trim());
 
     if (autoScrollPinned) {
       scrollToBottom();
     }
   }
 
-  function appendStreamChunk(chunkHtml, previewText) {
+  function appendStreamChunk(chunkHtml, previewText, draftText) {
     if (!awaitingAssistantResponse) {
       return;
     }
     streamHtmlBuffer += chunkHtml || "";
     if (previewText !== undefined && previewText !== null) {
       streamPreviewText = String(previewText || "").trim();
+    }
+    if (draftText !== undefined && draftText !== null) {
+      streamDraftText = String(draftText || "");
     }
     if (pendingStreamRender || streamRenderTimer) {
       return;
@@ -810,10 +847,28 @@
       variant.appendChild(body);
     }
 
+    // The writer's choice of view (layout.py puts it on the block title), and whether
+    // the block is one it did not place in the text ("more": folded under "Show all data").
+    const preferred = group.heading ? group.heading.dataset.view || "" : "";
+    if (group.heading && group.heading.dataset.placement) {
+      card.dataset.placement = group.heading.dataset.placement;
+    }
+    if (preferred === "figure" && (scoreHero || stats)) {
+      card.classList.add("is-figure");
+    } else if (preferred === "chart" || preferred === "table") {
+      // Placed in the text as a figure: light, without the panel's summary row.
+      card.classList.add("is-inline");
+    }
+
     if (panes.chart && panes.table) {
       // A time series reads best as a chart; scores read best as the table, which carries its own bars.
       const firstType = charts[0].payload ? charts[0].payload.type : "";
-      const initial = firstType === "line" || firstType === "area" ? "chart" : "table";
+      let initial = firstType === "line" || firstType === "area" ? "chart" : "table";
+      if (preferred === "chart" || preferred === "table") {
+        initial = preferred;
+      } else if (preferred === "figure" && !scoreHero) {
+        initial = "chart";
+      }
       const toggle = document.createElement("div");
       toggle.className = "ai-view-toggle";
       toggle.setAttribute("role", "group");
@@ -981,6 +1036,31 @@
       content.replaceChild(card, placeholder);
     });
     mergeFrequencyCards(content);
+    foldExtraCards(content);
+  }
+
+  // Data the writer did not place in the text goes, collapsed, after the answer.
+  function foldExtraCards(content) {
+    const extra = Array.from(content.children).filter(function (child) {
+      return child.classList && child.classList.contains("ai-data-card") && child.dataset.placement === "more";
+    });
+    if (!extra.length) {
+      return;
+    }
+    const fold = document.createElement("details");
+    fold.className = "ai-more-data";
+    const summary = document.createElement("summary");
+    summary.textContent = "Show all data (" + extra.length + ")";
+    fold.appendChild(summary);
+    extra.forEach(function (card) { fold.appendChild(card); });
+    // The web source line, if any, stays last.
+    const webSources = content.querySelector(':scope > .ai-source[data-source="web"]');
+    content.insertBefore(fold, webSources || null);
+    fold.addEventListener("toggle", function () {
+      if (fold.open) {
+        renderCharts(fold);
+      }
+    });
   }
 
   function getReadableMessageText(node) {
@@ -1417,6 +1497,17 @@
     tables.forEach(function (table) {
       table.classList.add("ai-table");
       stripInlineTableStyles(table);
+      // A small table the writer made in the text (layout.py marks it): keep it there, as it is.
+      if (table.classList.contains("ai-text-table")) {
+        decorateTableCells(table);
+        if (!table.parentElement || !table.parentElement.classList.contains("ai-text-table-wrap")) {
+          const textWrap = document.createElement("div");
+          textWrap.className = "ai-text-table-wrap";
+          table.parentNode.insertBefore(textWrap, table);
+          textWrap.appendChild(table);
+        }
+        return;
+      }
       const firstHeader = table.querySelector("thead th");
       // A period column already orders the rows; a row number would only add noise.
       if (!firstHeader || firstHeader.textContent.trim().toLowerCase() !== "period") {
@@ -1439,7 +1530,7 @@
     return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
   }
 
-  function chartOptions(payload, theme, width) {
+  function chartOptions(payload, theme, width, compact) {
     const color = payload.score_color || theme.accent;
     const decimals = decimalsOf(payload.data);
     const unit = unitOf(payload.label);
@@ -1448,7 +1539,8 @@
     };
     const base = {
       chart: {
-        height: width && width < 480 ? 180 : 210,
+        // A figure (layout.py) is a compact card: its numbers lead, the chart supports them.
+        height: compact ? 130 : width && width < 480 ? 180 : 210,
         background: "transparent",
         fontFamily: "inherit",
         toolbar: { show: false },
@@ -1658,8 +1750,9 @@
       if (holder.dataset.rendered === "1") {
         return;
       }
-      // A chart needs the page's width to draw; cards are built before they are inserted.
-      if (!holder.isConnected) {
+      // A chart needs the page's width to draw; cards are built before they are inserted,
+      // and a closed "Show all data" fold has none until it is opened.
+      if (!holder.isConnected || holder.closest("details:not([open])")) {
         return;
       }
 
@@ -1710,7 +1803,8 @@
           theme.accent = window.getComputedStyle(probe).color;
           probe.remove();
         }
-        const chart = new window.ApexCharts(chartEl, chartOptions(payload, theme, chartEl.clientWidth));
+        const compact = Boolean(holder.closest(".ai-data-card.is-figure"));
+        const chart = new window.ApexCharts(chartEl, chartOptions(payload, theme, chartEl.clientWidth, compact));
         holder.aiChart = chart;
         chart.render().catch(function () {
           if (payload.type === "bar") {
@@ -1966,7 +2060,9 @@
     streamHtmlBuffer = "";
     streamViewAnchored = false;
     streamPreviewText = "";
+    streamDraftText = "";
     hideLoading();
+    syncComposerInput();
   }
 
   function clearChatOutput() {
@@ -1979,6 +2075,7 @@
     streamHtmlBuffer = "";
     streamViewAnchored = false;
     streamPreviewText = "";
+    streamDraftText = "";
     awaitingAssistantResponse = false;
     loadingElement = null;
   }
@@ -2181,12 +2278,20 @@
           return;
         }
 
+        if (payload.event === "status") {
+          showLoadingStep(String(payload.stage || ""), String(payload.kind || ""));
+          return;
+        }
+
         if (payload.is_stream) {
           if (!awaitingAssistantResponse) {
             return;
           }
-          hideLoading();
-          appendStreamChunk(payload.message || "", payload.preview);
+          // The loading line stays until there is text to show in its place.
+          if (payload.message || String(payload.draft || "").trim()) {
+            hideLoading();
+          }
+          appendStreamChunk(payload.message || "", payload.preview, payload.draft);
           return;
         }
 
@@ -2276,9 +2381,15 @@
     scrollToBottom();
   }
 
+  // One question at a time, as in other chat assistants: a second question sent while
+  // an answer streams would interleave the two. A lost answer frees the box after 2 minutes.
+  function isAnswering() {
+    return awaitingAssistantResponse && Date.now() - awaitingSince < ANSWER_TIMEOUT_MS;
+  }
+
   function sendMessage() {
     const value = (chatInput.value || "").trim();
-    if (!value) return;
+    if (!value || isAnswering()) return;
     clearFollowups();
 
     autoScrollPinned = true;
@@ -2295,9 +2406,12 @@
 
     showLoading();
     awaitingAssistantResponse = true;
+    awaitingSince = Date.now();
+    syncComposerInput();
     streamMessageElement = null;
     streamHtmlBuffer = "";
     streamPreviewText = "";
+    streamDraftText = "";
     streamViewAnchored = false;
     socket.send(JSON.stringify({ message: value }));
   }
@@ -2314,7 +2428,7 @@
   function syncComposerInput() {
     chatInput.style.height = "auto";
     chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + "px";
-    sendBtn.disabled = !chatInput.value.trim();
+    sendBtn.disabled = !chatInput.value.trim() || isAnswering();
     syncComposerSpace();
   }
 

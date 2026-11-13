@@ -38,6 +38,8 @@ dependencies = [
     "python-docx (>=1.1.2,<2.0.0)",
     "reportlab (>=4.2.5,<5.0.0)",
     "matplotlib (>=3.9.2,<4.0.0)",
+    # Admas AI writes Markdown; converted to safe HTML on the server (core/ai/engine/markdown.py).
+    "mistune (>=3.0.2,<4.0.0)",
 ]
 
 

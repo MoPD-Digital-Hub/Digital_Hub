@@ -53,6 +53,9 @@
 ## AI Architecture
 - Full description: `docs/ai.md`.
 - `core/ai/engine/pipeline.py`: plan (one model call, JSON schema) → resolve names against the entity catalog → fetch with typed tools (time-series and DPMES APIs, national SDG platform) → compose (streamed) → render tables/charts in code → check numbers. General questions that need outside facts are planned as `web`: SearXNG search, read the top pages, answer with [n] citations and a linked source line.
+- The writer writes Markdown; `core/ai/engine/markdown.py` turns it into the HTML clients get (raw HTML in the model's text is escaped) and `core/ai/engine/layout.py` places charts and tables where the writer marks them (`[[chart:N]]`).
+- The writer never does arithmetic: `core/ai/engine/stats.py` calculates changes, highs, lows, averages and shares, and tools attach them to each result as `stats`.
+- The national sources hold only Ethiopia's data: a question that names no country is about Ethiopia; another country alone is a web question.
 - `core/ai/engine/compat.py`: the message format the mobile app and web chat expect on `/ws/chat/` and `/api/ai-chat/answer/`.
 - `core/ai/consumers.py`: chat WebSocket consumers. `core/ai/api/views.py`: REST endpoints.
 - Chat persistence uses `ChatInstance` and `QuestionHistory`; every answer also writes an `AnswerTrace`.
